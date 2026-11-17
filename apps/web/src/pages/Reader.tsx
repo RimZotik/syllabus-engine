@@ -21,7 +21,6 @@ export function Reader() {
   const mod = loadedMod?.id === topicId ? loadedMod.mod : null;
   const [rawCur, setCur] = useState(0);
   const [panel, setPanel] = useState<"toc" | "notes" | "feedback" | null>(() => (new URLSearchParams(location.search).has("toc") ? "toc" : null));
-  const since = useRef(Date.now());
 
   useEffect(() => {
     setCur(search.has("p") ? Number(search.get("p")) : progress[topicId]?.page ?? 0);
@@ -78,9 +77,7 @@ export function Reader() {
 
   function go(i: number) {
     const next = Math.max(0, Math.min(pages.length - 1, i));
-    const seconds = Math.round((Date.now() - since.current) / 1000);
-    since.current = Date.now();
-    api.setProgress(topicId, "started", next, Math.min(seconds, 1800)).then(refreshProgress).catch(() => {});
+    api.setProgress(topicId, "started", next, 0).then(refreshProgress).catch(() => {});
     setCur(next); window.scrollTo(0, 0);
   }
 

@@ -75,6 +75,15 @@ MIGRATIONS: list[str] = [
     ALTER TABLE feedback ADD COLUMN quote TEXT;
     ALTER TABLE feedback ADD COLUMN page INTEGER;
     """,
+    # 4 — active study time per day and place (topic id, section id for a section test, or 'site')
+    """
+    CREATE TABLE study_time (
+        day      TEXT NOT NULL,              -- local date YYYY-MM-DD
+        scope    TEXT NOT NULL,
+        seconds  INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (day, scope)
+    );
+    """,
 ]
 
 

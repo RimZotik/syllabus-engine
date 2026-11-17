@@ -17,6 +17,8 @@ export type Attempt = { scope: string; item_id: string; kind: "single" | "multi"
 export type Note = { id: number; topic_id: string | null; term_id: string | null; text: string; created_at: string };
 export type Grade = { verdict: "pass" | "revise"; feedback: string; misconception?: string | null; attempt: number };
 export type GradeRequest = { scope: string; item_id: string; question: string; rubric: string[]; wrong_answers: string[]; answer: string; confidence: number | null };
+export type TimeStats = { total: number; today: number; week: number; days: { day: string; seconds: number }[]; by_scope: Record<string, number> };
+export type Results = Record<string, { passed: boolean; score: number | null; done: boolean; updated_at: string }>;
 export type FeedbackKind = "content_issue" | "bug" | "idea" | "question";
 
 async function call<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -40,6 +42,9 @@ export const api = {
   claude: () => call<ClaudeStatus>("GET", "/api/claude/status"),
   refreshLimits: () => call<ClaudeStatus>("POST", "/api/claude/limits/refresh"),
   saveAttempts: (items: Attempt[]) => call("POST", "/api/attempts", items),
+  addTime: (scope: string, seconds: number) => call("POST", "/api/time", { scope, seconds }),
+  time: () => call<TimeStats>("GET", "/api/time"),
+  results: () => call<Results>("GET", "/api/results"),
   grade: (g: GradeRequest) => call<Grade>("POST", "/api/grade", g),
   quizState: <T,>(scope: string) => call<{ state: T | null; passed: boolean }>("GET", `/api/quiz-state/${encodeURIComponent(scope)}`),
   saveQuizState: (scope: string, state: unknown, passed: boolean) => call("PUT", `/api/quiz-state/${encodeURIComponent(scope)}`, { state, passed }),

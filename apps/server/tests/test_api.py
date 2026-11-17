@@ -121,3 +121,23 @@ def test_feedback_keeps_quote_and_page(tmp_path, monkeypatch):
     c.post("/api/feedback", json={"kind": "content_issue", "topic_id": "intro1.what.2", "text": "перефразировать", "quote": "главная ловушка", "page": 3})
     row = c.get("/api/feedback").json()[0]
     assert row["quote"] == "главная ловушка" and row["page"] == 3
+
+
+def test_study_time_accumulates_and_includes_legacy(tmp_path, monkeypatch):
+    c = make_client(tmp_path, monkeypatch)
+    c.put("/api/progress/intro1.what.1", json={"status": "started", "page": 1, "seconds": 100})
+    for _ in range(3):
+        assert c.post("/api/time", json={"scope": "intro1.what.1", "seconds": 15}).status_code == 200
+    c.post("/api/time", json={"scope": "site", "seconds": 15})
+    assert c.post("/api/time", json={"scope": "x", "seconds": 999}).status_code == 422
+    s = c.get("/api/time").json()
+    assert s["by_scope"]["intro1.what.1"] == 145 and s["by_scope"]["site"] == 15
+    assert s["today"] == 60 and s["week"] == 60 and s["total"] == 160 and len(s["days"]) == 1
+
+
+def test_results_summary(tmp_path, monkeypatch):
+    c = make_client(tmp_path, monkeypatch)
+    c.put("/api/quiz-state/intro1.what.1", json={"state": {"done": True, "score": 0.9}, "passed": True})
+    c.put("/api/quiz-state/task:greet", json={"state": {"code": "x"}, "passed": True})
+    r = c.get("/api/results").json()
+    assert r == {"intro1.what.1": {"passed": True, "score": 0.9, "done": True, "updated_at": r["intro1.what.1"]["updated_at"]}}

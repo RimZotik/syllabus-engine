@@ -313,3 +313,32 @@ input[type=range]{accent-color:var(--green)}
 .fb-quote span{flex:1;min-width:0}
 .fb-quote .icon-btn{flex:none}
 @media (min-width:1000px){body.drawer-side .page,body.drawer-side .reader-nav-wrap{padding-right:min(440px,100vw);transition:padding .22s ease}}
+
+/* record book */
+.record{padding-block:40px 60px}
+.record h1{margin-top:10px}
+.rec-cards{margin-top:26px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.rec-card{padding:18px 20px;border-radius:var(--r-l);background:var(--card);box-shadow:var(--sh-soft)}
+.rec-card span{display:block;font-size:13px;color:var(--ink-3)}
+.rec-card b{display:block;margin-top:8px;font:500 26px/1.1 var(--f-head)}
+.rec-panel{margin-top:16px;padding:22px 24px;border-radius:var(--r-l);background:var(--card);box-shadow:var(--sh-soft)}
+.rec-panel p{margin:12px 0 0;font-size:13px}
+.rec-days{margin-top:16px;display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:8px;align-items:end}
+.rec-day{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--ink-3)}
+.rec-bar{width:100%;height:110px;display:flex;align-items:flex-end;border-radius:6px;background:var(--fill)}
+.rec-bar b{display:block;width:100%;border-radius:6px;background:var(--green)}
+.rec-course{margin-top:36px}
+.rec-course h2{font-size:22px}
+.rec-disc{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.rec-disc h3{font-size:18px}
+.rec-disc b{margin-left:auto;font-weight:600}
+.rec-sec{margin-top:16px}
+.rec-sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.rec-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-m);color:var(--ink);font-size:15px;line-height:1.3}
+.rec-row:hover{background:var(--fill)}
+.rec-row svg{display:block;flex:none;color:var(--ink-3)}
+.rec-row.done svg{color:var(--green)}
+.rec-title{flex:1;min-width:0}
+.rec-score{width:52px;text-align:right;color:var(--green-ink);font-weight:600}
+.rec-time{width:110px;text-align:right;color:var(--ink-2);font-size:14px}
+@media (max-width:640px){.rec-cards{grid-template-columns:1fr}.rec-time{width:auto}.rec-days{gap:4px}}

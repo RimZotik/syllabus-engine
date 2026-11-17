@@ -166,6 +166,40 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
                        (scope, json.dumps(body.state, ensure_ascii=False), int(body.passed)))
         return {"ok": True}
 
+    # ── study time (heartbeats from the open tab while the learner is active) ──
+    class TimeIn(BaseModel):
+        scope: str = Field(min_length=1, max_length=200)
+        seconds: int = Field(ge=1, le=120)
+
+    @app.post("/api/time")
+    def add_time(body: TimeIn) -> dict:
+        with transaction(db):
+            db.execute("INSERT INTO study_time (day, scope, seconds) VALUES (date('now', 'localtime'), ?, ?) "
+                       "ON CONFLICT(day, scope) DO UPDATE SET seconds = seconds + excluded.seconds", (body.scope, body.seconds))
+        return {"ok": True}
+
+    @app.get("/api/time")
+    def time_stats() -> dict:
+        """Totals for the record book. Topic time also includes the older page-turn estimate in topic_progress."""
+        by_scope: dict[str, int] = {r["scope"]: r["s"] for r in db.execute("SELECT scope, SUM(seconds) AS s FROM study_time GROUP BY scope")}
+        legacy = {r["topic_id"]: r["seconds"] for r in db.execute("SELECT topic_id, seconds FROM topic_progress WHERE seconds > 0")}
+        for k, v in legacy.items():
+            by_scope[k] = by_scope.get(k, 0) + v
+        days = [{"day": r["day"], "seconds": r["s"]} for r in db.execute(
+            "SELECT day, SUM(seconds) AS s FROM study_time WHERE day >= date('now', 'localtime', '-29 days') GROUP BY day ORDER BY day")]
+        today = db.execute("SELECT COALESCE(SUM(seconds), 0) FROM study_time WHERE day = date('now', 'localtime')").fetchone()[0]
+        week = db.execute("SELECT COALESCE(SUM(seconds), 0) FROM study_time WHERE day >= date('now', 'localtime', '-6 days')").fetchone()[0]
+        return {"total": sum(by_scope.values()), "today": today, "week": week, "days": days, "by_scope": by_scope}
+
+    @app.get("/api/results")
+    def results() -> dict:
+        """Per test (topic or section): passed flag and the last score — for the record book."""
+        out = {}
+        for r in db.execute("SELECT scope, state, passed, updated_at FROM quiz_state WHERE scope NOT LIKE 'task:%'"):
+            st = json.loads(r["state"])
+            out[r["scope"]] = {"passed": bool(r["passed"]), "score": st.get("score"), "done": bool(st.get("done")), "updated_at": r["updated_at"]}
+        return out
+
     # ── notes ───────────────────────────────────────────────
     class NoteIn(BaseModel):
         topic_id: str | None = None

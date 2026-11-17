@@ -1,6 +1,6 @@
 import { NavLink, Route, Routes, Link } from "react-router-dom";
 import { LoaderCircle, Moon, RefreshCw, Sun } from "lucide-react";
-import { Component, useEffect, useState, type ReactNode } from "react";
+import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { load, store } from "./persist";
 import { useApp } from "./state";
@@ -8,6 +8,7 @@ import { api, type LimitWindow } from "./api";
 import { Home } from "./pages/Home";
 import { Learn } from "./pages/Learn";
 import { Reader, SectionTest } from "./pages/Reader";
+import { Record } from "./pages/Record";
 import { TermDrawer } from "./components/Drawers";
 
 const limColor = (used: number) => (used >= 0.9 ? "var(--bad)" : used >= 0.7 ? "var(--amber)" : "var(--green)");
@@ -121,6 +122,31 @@ function RememberPlace() {
   return null;
 }
 
+/**
+ * Study clock: every 15 s while the tab is visible and the learner did something in the last 5 minutes,
+ * 15 s go to the current place — the topic, the section test, or the site in general.
+ */
+const TICK = 15, IDLE_MS = 5 * 60_000;
+function StudyClock() {
+  const loc = useLocation();
+  const where = useRef("site");
+  const last = useRef(Date.now());
+  useEffect(() => {
+    const m = /^\/(learn|test)\/([^/]+)/.exec(loc.pathname);
+    where.current = m ? decodeURIComponent(m[2]) : "site";
+  }, [loc.pathname]);
+  useEffect(() => {
+    const active = () => { last.current = Date.now(); };
+    const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "wheel"] as const;
+    events.forEach((e) => addEventListener(e, active, { passive: true }));
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible" && Date.now() - last.current < IDLE_MS) api.addTime(where.current, TICK).catch(() => {});
+    }, TICK * 1000);
+    return () => { events.forEach((e) => removeEventListener(e, active)); window.clearInterval(timer); };
+  }, []);
+  return null;
+}
+
 function Stub({ title, text }: { title: string; text: string }) {
   return <div className="wrap stub"><div className="eyebrow">Скоро</div><h1>{title}</h1><p>{text}</p><Link className="btn" to="/learn">К обучению</Link></div>;
 }
@@ -129,6 +155,7 @@ export function App() {
   return (
     <>
       <RememberPlace />
+      <StudyClock />
       <TopBar />
       <Guard><Routes>
         <Route path="/" element={<Home />} />
@@ -136,7 +163,7 @@ export function App() {
         <Route path="/learn/:topicId" element={<Reader />} />
         <Route path="/test/:sectionId" element={<SectionTest />} />
         <Route path="/trainer" element={<Stub title="Тренажёр" text="Ежедневное повторение, билеты и марафон появятся на этапе 2, когда накопятся пройденные темы и вопросы к ним." />} />
-        <Route path="/record" element={<Stub title="Зачётная книжка" text="Оценки за контрольные и экзамены появятся вместе с первыми рубежами и подключением преподавателя." />} />
+        <Route path="/record" element={<Record />} />
         <Route path="*" element={<Stub title="Страница не найдена" text="Такой страницы нет." />} />
       </Routes></Guard>
       <TermDrawer />
