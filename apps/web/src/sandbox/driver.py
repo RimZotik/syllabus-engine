@@ -41,9 +41,34 @@ def run(code, stdin):
     out, err, _ = _exec(code, stdin, True)
     return json.dumps({"stdout": out, "error": err}, ensure_ascii=False)
 
+def _forbidden(code, names):
+    """Names from `tests.forbid` that the code uses (as a name, attribute or import) — for tasks
+    «write it yourself without max/sum/sorted». Only real code counts, not comments or strings."""
+    import ast
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return []
+    used = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            used.add(node.id)
+        elif isinstance(node, ast.Attribute):
+            used.add(node.attr)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            used.update(a.name.split(".")[0] for a in node.names)
+            if isinstance(node, ast.ImportFrom) and node.module:
+                used.add(node.module.split(".")[0])
+    return [n for n in names if n in used]
+
+
 def check(code, tests_json):
     tests = json.loads(tests_json)
     results = []
+    banned = _forbidden(code, tests.get("forbid") or [])
+    if tests.get("forbid"):
+        results.append({"name": "Без готовых функций", "ok": not banned,
+                        "message": ("В этой задаче нужно обойтись без: " + ", ".join(banned) + ". Напишите это сами.") if banned else ""})
     for i, case in enumerate(tests.get("io") or []):
         out, err, _ = _exec(code, case.get("stdin", ""), False)
         name = case.get("name") or f"Пример {i + 1}"

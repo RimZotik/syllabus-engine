@@ -28,7 +28,8 @@ export type Task = {
   statement: string; starter?: string; solution?: string;
   /** default input for the «Запустить» button */
   stdin?: string;
-  tests: { io?: IoCase[]; asserts?: AssertCase[]; stdin?: string };
+  /** forbid — names the solution must not use (tasks «write your own max»), checked on the code's syntax tree */
+  tests: { io?: IoCase[]; asserts?: AssertCase[]; stdin?: string; forbid?: string[] };
   hints?: { level: number; text: string }[];
   timeout_ms?: number;
 };

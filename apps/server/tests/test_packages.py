@@ -260,3 +260,20 @@ def test_tests_never_see_the_real_home():
     tmp = Path(tempfile.gettempdir()).resolve()
     assert tmp in Path.home().resolve().parents
     assert tmp in Path(settings._env("DATA_DIR")).resolve().parents
+
+
+def run_taskcheck(code: str, tests: dict) -> list[dict]:
+    import json, subprocess
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "program" / "taskcheck.py")], input=json.dumps({"code": code, "tests": tests}).encode("utf-8"),
+                       capture_output=True, timeout=60)
+    return json.loads(r.stdout.decode("utf-8"))["results"]
+
+
+def test_task_forbid_catches_builtin_use_but_not_comments():
+    tests = {"forbid": ["max"], "asserts": [{"name": "works", "code": "assert biggest([1, 3, 2]) == 3"}]}
+    cheat = run_taskcheck("def biggest(xs):\n    return max(xs)\n", tests)
+    assert cheat[0]["ok"] is False and "max" in cheat[0]["message"] and cheat[1]["ok"] is True
+    own = run_taskcheck("def biggest(xs):  # no max here\n    m = xs[0]\n    for x in xs:\n        m = x if x > m else m\n    return m\n", tests)
+    assert all(r["ok"] for r in own)
+    via_import = run_taskcheck("from builtins import max as m\ndef biggest(xs):\n    return m(xs)\n", tests)
+    assert via_import[0]["ok"] is False
