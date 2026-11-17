@@ -76,7 +76,7 @@ courses:
       title: Краткая история
       requires: [intro1.what]
       topics:
-      - Тьюринг и вопрос «может ли машина мыслить» (1950)
+      - Тьюринг, машина Тьюринга как идея «вычисления» и вопрос «может ли машина мыслить» (1950)
       - Перцептрон Розенблатта (1958) и первая «зима» ИИ
       - Экспертные системы, статистическое обучение, бустинг
       - Возвращение нейросетей — ImageNet (2012), трансформеры (2017), ChatGPT (2022)
@@ -116,16 +116,16 @@ courses:
       requires: [intro1.map]
       topics:
       - Переменные и типы; арифметика; ввод и вывод
-      - Условия, логические операции
+      - Условия, логические операции; тернарный оператор (условное выражение)
       - Циклы while и for; range
     - id: prog1.functions
       title: Функции
       requires: [prog1.basics]
       topics:
-      - Параметры, возвращаемое значение, значения по умолчанию
-      - Область видимости; рекурсия (база)
-      - Документирование; чистые функции
-      - lambda-функции; аннотации типов — основы
+      - Параметры, возвращаемое значение, значения по умолчанию; именованные аргументы
+      - Область видимости; документирование; чистые функции
+      - Функции как значения — передать функцию в функцию, key-функции и компараторы, lambda
+      - Аннотации типов — основы
     - id: prog1.collections
       title: Коллекции
       requires: [prog1.functions]
@@ -160,7 +160,7 @@ courses:
       title: Как устроен компьютер
       requires: [prog1.errors_modules]
       topics:
-      - Процессор, память, диск; операционная система; программа и процесс
+      - Процессор, память, диск; операционная система; программа, процесс, поток; как ОС делит процессор между программами
       - Биты и байты; двоичная и шестнадцатеричная системы
       - Кодировки текста (ASCII, Unicode, UTF-8) и почему «ломается» кириллица
     - id: infra1.shell
@@ -216,7 +216,7 @@ courses:
     subject: math
     level: 1
     title: Язык математики
-    hours: 45
+    hours: 50
     summary: Вход в высшую математику — функции, логарифмы, тригонометрия, множества, суммы и умение читать формулы.
     sections:
     - id: math1.school
@@ -252,7 +252,7 @@ courses:
       used_by: [linalg1.vectors, dl4.attention]
       why: Косинус угла — это мера похожести векторов; синусы кодируют позиции слов в трансформерах
       topics:
-      - Единичная окружность; синус и косинус наглядно
+      - Единичная окружность; синус и косинус наглядно; полярные координаты
       - Угол между направлениями; периодические функции
     - id: math1.logic_sets
       title: Логика и множества
@@ -263,6 +263,15 @@ courses:
       - Высказывания и логические операции
       - Множества и операции над ними; диаграммы Эйлера–Венна
       - Декартово произведение и отношения
+    - id: math1.graphs
+      title: Графы
+      requires: [math1.logic_sets]
+      used_by: [algo3.graphs, dl1.backprop]
+      why: Почти всё можно представить графом — от связей в соцсети до вычислений внутри нейросети
+      topics:
+      - Вершины и рёбра; ориентированные и взвешенные графы
+      - Степени, пути, циклы, связность; деревья как особые графы
+      - Где графы встречаются — дороги, ссылки, зависимости, коммиты Git
     - id: math1.sums
       title: Суммы и обозначения
       requires: [math1.logic_sets]
@@ -290,7 +299,7 @@ courses:
     subject: algo
     level: 1
     title: Первые алгоритмы
-    hours: 25
+    hours: 30
     summary: Что такое алгоритм, как оценить его скорость и как объяснить решение словами до того, как писать код.
     sections:
     - id: algo1.thinking
@@ -311,7 +320,13 @@ courses:
       - Линейный поиск, максимум, подсчёт, разворот
       - Сортировки пузырьком, выбором, вставками
       - Бинарный поиск — первое знакомство
-      - Рекурсия — факториал, числа Фибоначчи и почему наивная рекурсия медленная
+    - id: algo1.recursion
+      title: Рекурсия
+      requires: [algo1.basic]
+      topics:
+      - Стек вызовов — как функция вызывает сама себя
+      - Рекурсия против цикла — когда что удобнее; почему наивные числа Фибоначчи медленные
+      - Рекурсия в деле — обход вложенных папок, фракталы (ковёр Серпинского, дерево Пифагора)
 
   - id: db1
     subject: db
@@ -375,24 +390,24 @@ courses:
       requires: [prog1.errors_modules]
       topics:
       - Класс, объект, атрибуты, методы; инкапсуляция
-      - Наследование и композиция; полиморфизм
+      - Наследование, переопределение методов, super(); композиция вместо наследования; полиморфизм
       - Магические методы — __repr__, __eq__, __add__, __matmul__, __getitem__
       - dataclasses
-      - Декораторы @property и @dataclass — как пользоваться (устройство — в Программировании III)
+      - Знак @ перед функцией — что это такое; декораторы @property и @dataclass как пользоваться (устройство — в Программировании III)
     - id: prog2.principles
       title: Принципы проектирования
       requires: [prog2.oop]
       topics:
       - DRY, KISS, YAGNI
-      - SOLID на примерах
-      - Именование, функции «делают одно», рефакторинг
+      - SOLID на примерах; закон Деметры
+      - Именование, функции «делают одно», рефакторинг; запахи кода
     - id: prog2.testing
       title: Тестирование
       requires: [prog2.principles]
       topics:
-      - pytest, фикстуры, параметризация
-      - Разработка через тесты (TDD)
-      - Исключения как часть интерфейса
+      - Зачем тесты; пирамида тестов — модульные, интеграционные, сквозные
+      - pytest, фикстуры, параметризация; заглушки и mock-объекты; покрытие
+      - Разработка через тесты (TDD); исключения как часть интерфейса
 
   - id: linalg1
     subject: linalg
@@ -441,12 +456,19 @@ courses:
     level: 1
     title: Инструменты анализа данных
     hours: 45
-    unlocks: [matplotlib, pandas, Polars]
-    summary: NumPy изнутри, свой график и своя таблица — а затем matplotlib, pandas и Polars.
+    unlocks: [matplotlib, pandas]
+    summary: Что такое анализ данных, NumPy изнутри, свой график и своя таблица — а затем matplotlib и pandas.
     sections:
+    - id: data1.intro
+      title: Что такое анализ данных
+      requires: [linalg1.numpy_unlock]
+      topics:
+      - "Вопрос → данные → анализ → вывод → решение: как работает аналитик"
+      - Откуда берутся данные и какими они бывают
+      - Инструменты (NumPy, pandas, matplotlib) — не анализ, а его руки
     - id: data1.numpy
       title: NumPy изнутри
-      requires: [linalg1.numpy_unlock, prog2.testing]
+      requires: [data1.intro, prog2.testing]
       topics:
       - Jupyter-ноутбуки — как в них работают и чем они опасны
       - dtype, shape, strides, память; копии и представления
@@ -464,7 +486,21 @@ courses:
       topics:
       - Своя мини-таблица на словарях — фильтр, группировка, соединение
       - Открытие pandas — Series, DataFrame, groupby, merge, pivot; время
-      - Polars и DuckDB — когда pandas мало
+
+  - id: eng1
+    subject: eng
+    level: 1
+    title: Словарь программиста
+    hours: 8
+    summary: Лексика ошибок, документации и интерфейсов — и откуда взялись слова log, backup, bug, deploy.
+    sections:
+    - id: eng1.vocab
+      title: Словарь программиста
+      requires: [prog1.errors_modules]
+      topics:
+      - Как устроено английское техническое слово — корни и происхождение (bug, log, backup, cache, deploy)
+      - Сообщения об ошибках и предупреждениях — читаем без переводчика
+      - Термины курса — карточки в ежедневном повторении
 
   - id: calc1
     subject: calc
@@ -486,8 +522,10 @@ courses:
       used_by: [dl1.backprop]
       why: Обратное распространение ошибки — это цепное правило
       topics:
-      - Производная как скорость и наклон; правила дифференцирования
-      - Цепное правило; численная производная в Python
+      - Производная — геометрический смысл (наклон касательной) и физический (скорость)
+      - Правила дифференцирования; цепное правило
+      - Вторая производная — ускорение и выпуклость; производные высших порядков
+      - Численная производная в Python
     - id: calc1.optim
       title: Поиск минимума
       requires: [calc1.derivative]
@@ -524,7 +562,7 @@ courses:
       - Два указателя; скользящее окно; префиксные суммы
     - id: algo2.sorting
       title: Эффективные сортировки и поиск
-      requires: [algo2.patterns]
+      requires: [algo2.patterns, algo1.recursion]
       topics:
       - Сортировка слиянием и быстрая; устойчивость; нижняя оценка
       - Бинарный поиск по ответу
@@ -532,7 +570,8 @@ courses:
       title: Линейные структуры
       requires: [algo2.sorting]
       topics:
-      - Стек, очередь, дек, связный список
+      - Стек, очередь, дек — свои реализации
+      - Односвязный, двусвязный и кольцевой списки — свои реализации
       - Скобочные последовательности; монотонный стек
 
   - id: prob1
@@ -564,26 +603,11 @@ courses:
       - Матожидание и дисперсия
     - id: prob1.descriptive
       title: Описательная статистика
-      requires: [prob1.rv]
+      requires: [prob1.rv, data1.viz]
       used_by: [data2.eda]
       topics:
       - Среднее, медиана, квантили, разброс; выбросы
       - Гистограмма и boxplot своими руками, затем в matplotlib
-
-  - id: eng1
-    subject: eng
-    level: 1
-    title: Чтение документации
-    hours: 10
-    summary: Английский, достаточный для документации, сообщений об ошибках и поиска ответов.
-    sections:
-    - id: eng1.docs
-      title: Документация и ошибки
-      requires: [prog2.testing]
-      topics:
-      - Лексика программиста — ошибки, документация, README
-      - Чтение документации библиотек
-      - Поиск ответов на английском
 
 # ═══════════════════════════════════════════════════════════════════
 - id: III
@@ -609,15 +633,17 @@ courses:
       title: Функции как объекты
       requires: [prog3.iter]
       topics:
-      - Замыкания, lambda, functools; декораторы; контекстные менеджеры
+      - Замыкания, functools; lambda — ограничения; декораторы; контекстные менеджеры
+      - Как устроен декоратор изнутри — функция, которая принимает и возвращает функцию
     - id: prog3.quality
       title: Качество и упаковка
-      requires: [prog3.functional]
+      requires: [prog3.functional, vcs1.remote]
       topics:
       - Аннотации типов и mypy; ruff; pre-commit
       - Пакет и pyproject.toml; логирование; CLI
       - Профилирование — где программа тратит время
       - ИИ-ассистенты в работе — как ставить задачу, проверять результат и когда не использовать
+      - GitHub Actions — тесты и линтер на каждый pull request
 
   - id: linalg2
     subject: linalg
@@ -641,7 +667,8 @@ courses:
       used_by: [ml3.unsupervised, ml3.recsys, ai1.finetune]
       why: PCA, рекомендательные системы и LoRA построены на SVD
       topics:
-      - Собственные векторы и числа; симметричные матрицы
+      - Смена базиса — матрица перехода
+      - Собственные векторы и числа; диагонализация как смена базиса; симметричные матрицы
       - SVD и низкоранговое приближение
       - Обусловленность и численная устойчивость
 
@@ -650,6 +677,7 @@ courses:
     level: 2
     title: Аналитический SQL
     hours: 25
+    unlocks: [Polars, DuckDB]
     summary: Оконные функции, CTE и аналитика продукта — SQL уровня собеседования аналитика.
     sections:
     - id: db2.windows
@@ -659,22 +687,23 @@ courses:
       - ROW_NUMBER, RANK, LAG, LEAD; скользящие агрегаты; рамки окна
     - id: db2.analytics
       title: Аналитические запросы
-      requires: [db2.windows]
+      requires: [db2.windows, algo1.recursion]
       topics:
       - CTE и рекурсивные CTE
       - Ретеншн, когорты, воронки, DAU/MAU
     - id: db2.olap
       title: Аналитические СУБД
-      requires: [db2.analytics]
+      requires: [db2.analytics, prog3.iter, data1.tables]
       topics:
       - OLTP и OLAP; колоночное хранение — идея; формат Parquet
       - DuckDB — аналитика прямо по файлам
+      - Polars — ленивые вычисления над таблицами; когда pandas мало
 
   - id: calc2
     subject: calc
     level: 2
     title: Многомерный анализ
-    hours: 40
+    hours: 50
     summary: Градиенты по матрицам, интегралы и приближения — всё, что нужно для вывода обучения моделей и непрерывных вероятностей.
     sections:
     - id: calc2.matrix
@@ -700,6 +729,29 @@ courses:
       why: Объясняет, почему работают оптимизаторы
       topics:
       - Линейное и квадратичное приближение; ряд Тейлора
+    - id: calc2.numerical
+      title: Вычислительная математика
+      requires: [calc2.taylor, linalg1.systems]
+      used_by: [optim1.methods, ml1.linear]
+      why: Компьютер решает уравнения приближённо — надо понимать, где и как он ошибается
+      topics:
+      - Численное решение уравнений — деление пополам и метод Ньютона; погрешности
+      - Итерационные методы для систем уравнений
+      - Интерполяция и приближение функций
+
+  - id: eng2
+    subject: eng
+    level: 2
+    title: Чтение документации
+    hours: 8
+    summary: Быстро находить нужное в документации библиотек — по структуре и ключевым словам.
+    sections:
+    - id: eng2.vocab
+      title: Чтение документации
+      requires: [eng1.vocab]
+      topics:
+      - Структура справочника API — parameters, returns, raises, deprecated
+      - Чтение README и руководств; поиск ответов на английском
 
   - id: algo3
     subject: algo
@@ -710,13 +762,13 @@ courses:
     sections:
     - id: algo3.trees
       title: Деревья и кучи
-      requires: [algo2.linear]
+      requires: [algo2.linear, algo1.recursion]
       topics:
       - Обходы деревьев; бинарное дерево поиска
       - Своя куча; очередь с приоритетом; top-k
     - id: algo3.graphs
       title: Графы
-      requires: [algo3.trees]
+      requires: [algo3.trees, math1.graphs]
       topics:
       - Представление графов; BFS и DFS
       - Топологическая сортировка; Дейкстра; система непересекающихся множеств
@@ -731,7 +783,7 @@ courses:
     sections:
     - id: prob2.continuous
       title: Непрерывные распределения
-      requires: [prob1.descriptive, calc2.integral]
+      requires: [prob1.descriptive, calc2.integral, linalg1.matrices]
       used_by: [prob2.limits]
       topics:
       - Плотность и функция распределения; нормальное, экспоненциальное
@@ -754,7 +806,7 @@ courses:
       - Бета-распределение и сопряжённые априорные — идея
     - id: prob2.inference
       title: Статистический вывод
-      requires: [prob2.info]
+      requires: [prob2.info, linalg2.geometry]
       used_by: [exp1.design]
       topics:
       - Выборка и стандартная ошибка; доверительные интервалы; бутстрап
@@ -771,10 +823,11 @@ courses:
     sections:
     - id: data2.sources
       title: Источники данных
-      requires: [data1.tables, db2.olap]
+      requires: [data1.tables]
       topics:
-      - Как устроен HTTP — запрос, ответ, коды; REST API; пагинация и лимиты
+      - Клиент, сервер и API глазами пользователя — что это, откуда взялось (от RPC до REST); как устроен HTTP-запрос
       - HTML и DOM — основы для скрапинга
+      - REST API — пагинация, лимиты, ключи доступа
       - Веб-скрапинг и его этика; Kaggle API
     - id: data2.cleaning
       title: Очистка
@@ -783,7 +836,7 @@ courses:
       - Типы, дубликаты, категории; пропуски и стратегии; выбросы; проверки качества
     - id: data2.eda
       title: Разведочный анализ
-      requires: [data2.cleaning, prob1.descriptive]
+      requires: [data2.cleaning, prob1.descriptive, prob2.continuous]
       topics:
       - Вопросы к данным; распределения, связи, срезы; отчёт EDA
     - id: data2.features
@@ -805,9 +858,10 @@ courses:
     sections:
     - id: db3.design
       title: Проектирование схемы
-      requires: [db2.olap]
+      requires: [db1.modify]
       topics:
       - Нормальные формы; денормализация и почему
+      - База, схема, таблица; пользователи, роли и права (GRANT); резервные копии
     - id: db3.internals
       title: Устройство СУБД
       requires: [db3.design, algo3.trees]
@@ -816,7 +870,7 @@ courses:
       - Транзакции, уровни изоляции, ACID
     - id: db3.python
       title: Базы данных из Python
-      requires: [db3.internals, prog3.quality]
+      requires: [db3.internals, prog3.quality, infra1.scripts]
       topics:
       - PostgreSQL — установка, psql, отличия от SQLite
       - Драйвер и SQL-инъекции
@@ -837,6 +891,20 @@ courses:
       - Аналитический запрос продакт-менеджера — SQL и отчёт
       - Исследование данных по просьбе заказчика — выводы и рекомендации
 
+  - id: career1
+    subject: career
+    level: 1
+    title: Первая стажировка
+    hours: 6
+    summary: Резюме, профиль на GitHub и календарь отборов на стажировки — чтобы подаваться вовремя, с Курса IV.
+    sections:
+    - id: career1.internship
+      title: Стажировки
+      requires: [practice1.cases]
+      topics:
+      - Как устроены отборы на стажировки в бигтехе и когда они проходят
+      - Первое резюме и профиль GitHub; какие проекты показывать
+
 # ═══════════════════════════════════════════════════════════════════
 - id: IV
   title: Машинное обучение
@@ -854,13 +922,14 @@ courses:
     sections:
     - id: optim1.methods
       title: Безусловная оптимизация
-      requires: [calc2.taylor, linalg2.eigen]
+      requires: [calc2.numerical, linalg2.eigen]
       used_by: [ml1.linear, dl1.training]
       why: Скорость и устойчивость обучения моделей объясняются здесь
       topics:
       - Выпуклость в многомерии; гессиан и положительная определённость
       - Обусловленность и скорость градиентного спуска (с доказательством на квадратичной функции)
       - Стохастический градиентный спуск; моментум; метод Ньютона и идея L-BFGS
+      - Эвристический поиск — случайный поиск, имитация отжига, генетические алгоритмы (обзор)
     - id: optim1.constrained
       title: Условная оптимизация
       requires: [optim1.methods]
@@ -868,6 +937,7 @@ courses:
       why: На этом построен метод опорных векторов
       topics:
       - Множители Лагранжа; условия ККТ — интуиция; двойственность
+      - Линейное программирование — постановка и идея симплекс-метода (обзор)
 
   - id: ml1
     subject: ml
@@ -900,13 +970,13 @@ courses:
       - kNN — с нуля; наивный Байес — с нуля
     - id: ml1.linear
       title: Линейная регрессия
-      requires: [ml1.baselines]
+      requires: [ml1.baselines, linalg2.geometry, calc2.numerical, optim1.methods]
       topics:
       - Нормальное уравнение и градиентный спуск — с нуля; регуляризация L1 и L2
       - Субградиент — как оптимизировать L1
     - id: ml1.logistic
       title: Логистическая регрессия
-      requires: [ml1.linear]
+      requires: [ml1.linear, prob2.info, calc2.matrix]
       topics:
       - Сигмоида; log-loss из правдоподобия; вывод градиента
       - Softmax и его градиент; устойчивый softmax (log-sum-exp)
@@ -932,10 +1002,24 @@ courses:
       topics:
       - Полный цикл — baseline, итерации, анализ ошибок
       - Утечки, дисбаланс и пересэмплирование (SMOTE), сдвиг распределений, калибровка
-      - Подбор гиперпараметров; интерпретация — SHAP
+      - Подбор гиперпараметров; важность признаков перестановкой — с нуля, затем SHAP
       - Соревнования — схема валидации, ансамбли
-      - Сохранение и загрузка моделей; учёт экспериментов (MLflow — основы)
+      - Сохранение и загрузка моделей; свой журнал экспериментов в JSON, затем MLflow
       - Ответственный ИИ — персональные данные, справедливость, лицензии данных
+
+  - id: eng3
+    subject: eng
+    level: 3
+    title: Научные статьи
+    hours: 8
+    summary: Как читать abstract, методы и выводы статьи — подготовка к трансформерам.
+    sections:
+    - id: eng3.vocab
+      title: Научные статьи
+      requires: [eng2.vocab]
+      topics:
+      - Структура научной статьи; типовые обороты
+      - Чтение abstract и выводов; как не утонуть в формулах
 
   - id: algo4
     subject: algo
@@ -969,14 +1053,14 @@ courses:
     summary: Как программы общаются по сети — свой HTTP-сервер на сокетах, REST API и свой MCP-сервер, к которому подключится Claude.
     sections:
     - id: prog4.network
-      title: Как программы общаются
+      title: Сеть изнутри
       requires: [prog3.quality, data2.sources]
       topics:
       - IP-адреса, порты, DNS — минимум для программиста; клиент и сервер; сокеты; TCP
-      - Протокол HTTP изнутри — пишем свой простейший сервер
+      - Протокол HTTP изнутри — пишем свой сервер, которому раньше только отправляли запросы
     - id: prog4.api
       title: Веб-API
-      requires: [prog4.network]
+      requires: [prog4.network, db3.python]
       topics:
       - REST; JSON-схемы и pydantic; открытие FastAPI
       - async и await — минимум для веб-сервера
@@ -1030,20 +1114,20 @@ courses:
       - Максимальный зазор; hinge loss; ядра
     - id: ml3.unsupervised
       title: Обучение без учителя
-      requires: [ml1.validation, linalg2.eigen]
+      requires: [ml1.validation, linalg2.eigen, prob2.info]
       topics:
       - K-Means с нуля; иерархическая кластеризация; DBSCAN; GMM и EM — идея; качество кластеров
       - PCA через SVD с нуля; t-SNE и UMAP (обзор); поиск аномалий
     - id: ml3.timeseries
       title: Временные ряды
-      requires: [ml2.practice, data1.tables]
+      requires: [ml2.practice, data1.tables, prob2.inference]
       topics:
       - Тренд, сезонность, автокорреляция; ETS и ARIMA — интуиция
       - Стационарность; разбиение по времени
       - Бустинг на лагах; бэктестинг
     - id: ml3.recsys
       title: Рекомендательные системы и ранжирование
-      requires: [ml3.unsupervised, linalg2.eigen]
+      requires: [ml3.unsupervised, linalg2.eigen, ml2.trees]
       topics:
       - Коллаборативная фильтрация; ALS — с нуля
       - Двухэтапная схема — кандидаты и ранжирование; холодный старт
@@ -1088,7 +1172,7 @@ courses:
       - Продуктовые метрики; размер выборки и мощность; рандомизация
     - id: exp1.analysis
       title: Анализ эксперимента
-      requires: [exp1.design, prob3.bayes]
+      requires: [exp1.design, prob3.bayes, calc2.taylor]
       topics:
       - t-тест, бутстрап, дельта-метод, CUPED; метрики-отношения
       - SRM и A/A-тесты; подглядывание; множественные метрики; бандиты
@@ -1097,20 +1181,6 @@ courses:
       requires: [exp1.analysis, prob3.glm]
       topics:
       - Конфаундеры; uplift; разность разностей
-
-  - id: eng2
-    subject: eng
-    level: 2
-    title: Статьи и технический текст
-    hours: 10
-    summary: Чтение научных статей и письмо на английском — issue, pull request, README.
-    sections:
-    - id: eng2.papers
-      title: Статьи и письмо
-      requires: [eng1.docs]
-      topics:
-      - Структура научной статьи; как читать abstract и выводы
-      - Issue, pull request и README на английском
 
   - id: practice2
     subject: practice
@@ -1123,7 +1193,7 @@ courses:
       title: Кейсы
       requires: [exp1.causal, infra2.publish, practice1.cases]
       topics:
-      - Аналитический запрос от «продакт-менеджера» — SQL и отчёт
+      - Прогноз спроса для «ритейла» — временные ряды и бэктестинг
       - Модель оттока для «банка» — от данных до записки
       - Решение по A/B-тесту для «маркетплейса»
       - Тестовые задания с реальных отборов (take-home)
@@ -1145,10 +1215,12 @@ courses:
     sections:
     - id: prog5.concurrency
       title: Параллельность
-      requires: [prog4.mcp]
+      requires: [prog3.quality, infra1.machine]
       topics:
+      - Планировщик ОС — переключение контекста, round-robin и приоритеты (обзор)
       - Процессы и потоки; GIL; multiprocessing и concurrent.futures
-      - Гонки данных и блокировки
+      - Синхронизация — блокировки, семафоры, очереди; гонки и взаимоблокировки
+      - Общение между процессами — каналы, очереди сообщений
     - id: prog5.async
       title: Асинхронность
       requires: [prog5.concurrency]
@@ -1158,9 +1230,11 @@ courses:
       title: Ниже Python
       requires: [prog5.async, data1.numpy]
       topics:
+      - Как Python читает код — лексер, парсер, синтаксическое дерево (обзор)
       - Как выполняется Python — байткод, CPython
       - Основы C — память, указатели, массивы; вызов C из Python
       - Векторные инструкции и идея GPU-вычислений
+      - Параллельный цикл на C с OpenMP — считаем π на нескольких ядрах
 
   - id: algo5
     subject: algo
@@ -1219,7 +1293,7 @@ courses:
       - Многослойная сеть; визуализация разделяющей поверхности
     - id: dl1.backprop
       title: Обратное распространение
-      requires: [dl1.perceptron]
+      requires: [dl1.perceptron, math1.graphs, calc1.derivative]
       topics:
       - Вычислительный граф; свой autograd; численная проверка градиентов
     - id: dl1.training
@@ -1235,6 +1309,12 @@ courses:
       - Тензоры, nn.Module, DataLoader, цикл обучения
       - Регуляризация, нормализация, отладка обучения; GPU и бесплатные Kaggle/Colab
       - Смешанная точность — float16, bfloat16, int8
+    - id: dl1.hardware
+      title: Железо для обучения
+      requires: [dl1.torch, prog5.lowlevel]
+      topics:
+      - Почему нейросети учат на GPU и ускорителях, а не на CPU
+      - Память — VRAM и HBM, пропускная способность; поместится ли модель в видеокарту
 
   - id: dl2
     subject: dl
@@ -1245,7 +1325,7 @@ courses:
     sections:
     - id: dl2.conv
       title: Свёрточные сети
-      requires: [dl1.torch]
+      requires: [dl1.hardware]
       topics:
       - Свёртка с нуля; пулинг; от LeNet до ResNet
     - id: dl2.practice
@@ -1302,10 +1382,24 @@ courses:
       - Мультимодальные модели — CLIP, VLM, речь (обзор)
     - id: dl4.papers
       title: Как читать научные статьи
-      requires: [dl4.hf, eng2.papers]
+      requires: [dl4.hf, eng3.vocab]
       topics:
       - Чтение статьи в три прохода
       - Воспроизводим небольшую работу
+
+  - id: eng4
+    subject: eng
+    level: 4
+    title: Письменная коммуникация
+    hours: 8
+    summary: Описать проблему, задачу и решение по-английски — issue, pull request, README, письмо заказчику.
+    sections:
+    - id: eng4.vocab
+      title: Письменная коммуникация
+      requires: [eng3.vocab]
+      topics:
+      - Issue и pull request; описание бага
+      - README и техническое письмо заказчику
 
   - id: db4
     subject: db
@@ -1363,7 +1457,7 @@ courses:
     level: 2
     title: Поиск, RAG и агенты
     hours: 40
-    unlocks: [LangChain, LlamaIndex]
+    unlocks: [LangChain, LlamaIndex, Gradio]
     summary: Свой поисковик, свой RAG и свой агент — сначала без фреймворков.
     sections:
     - id: ai2.search
@@ -1378,12 +1472,15 @@ courses:
       topics:
       - Чанкинг, эмбеддинги, хранилище, сборка контекста, ответ с цитатами
       - Оценка — recall@k, достоверность; анализ ошибок; фреймворки после своей реализации
+      - Демо-интерфейс — сначала своя HTML-форма, затем Gradio или Streamlit
     - id: ai2.agents
       title: Агенты
       requires: [ai2.rag, prog4.mcp, db4.nosql]
       topics:
       - Цикл агента; инструменты через MCP; память и планирование
       - Промпт-инъекции, ограничения, стоимость, наблюдаемость
+      - Оценка агентов — траектории и успешность задач; контекст-инжиниринг и кэширование промптов
+      - Модели с рассуждением — когда за размышление стоит платить
 
   - id: sec1
     subject: sec
@@ -1472,7 +1569,7 @@ courses:
     sections:
     - id: infra4.cicd
       title: Автоматическое развёртывание
-      requires: [infra3.compose, prog6.review]
+      requires: [infra3.compose, vcs1.remote, prog3.quality]
       topics:
       - CI/CD на GitHub Actions — от коммита до сервера
       - Секреты; переменные окружения; откаты
@@ -1488,7 +1585,7 @@ courses:
     subject: infra
     level: 5
     title: Оркестрация и облака
-    hours: 20
+    hours: 25
     summary: Kubernetes и облака — как запускают десятки сервисов и масштабируют их.
     sections:
     - id: infra5.k8s
@@ -1496,6 +1593,12 @@ courses:
       requires: [infra4.ops]
       topics:
       - Pod, Deployment, Service, ConfigMap; манифесты; масштабирование; Helm
+    - id: infra5.hardware
+      title: Серверы для ИИ
+      requires: [infra5.k8s, dl1.hardware, ai1.eval]
+      topics:
+      - Серверы и стойки; связь между ускорителями
+      - Аренда против покупки; стоимость обучения и инференса
     - id: infra5.cloud
       title: Облака
       requires: [infra5.k8s]
@@ -1534,6 +1637,7 @@ courses:
       requires: [algo5.parallel, prog5.concurrency]
       topics:
       - Параллелизм и распределённость; репликация, партиционирование, CAP
+      - Время в распределённых системах — часы Лэмпорта, согласованность
       - MapReduce своими руками
     - id: de1.spark
       title: Spark
@@ -1550,18 +1654,18 @@ courses:
     sections:
     - id: de2.storage
       title: Хранилища данных
-      requires: [de1.spark, db2.olap]
+      requires: [de1.spark, db2.olap, db3.design]
       topics:
       - Data lake, DWH, lakehouse; звезда и SCD
       - ClickHouse — MergeTree, ключ сортировки, партиции, материализованные представления
     - id: de2.streaming
       title: Потоки
-      requires: [de2.storage]
+      requires: [de2.storage, infra3.compose]
       topics:
       - Kafka; события и окна
     - id: de2.orchestration
       title: Оркестрация и качество
-      requires: [de2.streaming]
+      requires: [de2.streaming, infra3.compose]
       topics:
       - Airflow; dbt; проверки качества и контракты данных; feature store
 
@@ -1574,7 +1678,7 @@ courses:
     sections:
     - id: mlops2.monitoring
       title: Пайплайны и мониторинг
-      requires: [de2.orchestration]
+      requires: [de2.orchestration, mlops1.tracking, infra4.ops, prob2.inference]
       topics:
       - Воспроизводимые пайплайны обучения
       - Дрейф данных (PSI, тест Колмогорова–Смирнова); мониторинг качества; переобучение
@@ -1588,9 +1692,10 @@ courses:
     sections:
     - id: mlsd1.method
       title: Метод
-      requires: [mlops2.monitoring]
+      requires: [mlops2.monitoring, ml3.recsys, ml3.timeseries, ai2.agents, exp1.causal, mlops1.serving]
       topics:
       - Требования, данные, метрики, модель, сервинг, мониторинг
+      - Теория очередей — нагрузка, пропускная способность, закон Литтла
       - Оценка нагрузки, задержек и стоимости; дизайн-документ
     - id: mlsd1.cases
       title: Кейсы
@@ -1613,38 +1718,38 @@ courses:
       - Ревью кода «коллеги»; дежурство и разбор инцидента
       - Общение с «заказчиком» и презентация результата
 
-  - id: eng3
+  - id: eng5
     subject: eng
-    level: 3
+    level: 5
     title: Устная речь и собеседование
-    hours: 10
-    summary: Рассказать о своих проектах и пройти техническое собеседование на английском.
+    hours: 8
+    summary: Рассказать о своих проектах и пройти собеседование на английском.
     sections:
-    - id: eng3.speaking
-      title: Говорим о работе
-      requires: [eng2.papers]
+    - id: eng5.vocab
+      title: Устная речь и собеседование
+      requires: [eng4.vocab]
       topics:
       - Рассказ о своём проекте
       - Техническое собеседование на английском — пробные раунды
 
-  - id: career1
+  - id: career2
     subject: career
-    level: 1
+    level: 2
     title: Выход на рынок
     hours: 20
     summary: Резюме, портфолио, собеседования и первые недели на работе.
     sections:
-    - id: career1.communication
+    - id: career2.communication
       title: Коммуникация
-      requires: [practice4.job]
+      requires: [practice4.job, career1.internship]
       topics:
       - Презентация результатов людям без технического бэкграунда
       - Технический текст — README, статья
-    - id: career1.jobsearch
+    - id: career2.jobsearch
       title: Поиск работы
-      requires: [career1.communication]
+      requires: [career2.communication]
       topics:
-      - Резюме, GitHub, календарь стажировок
+      - Резюме и портфолио — финальная версия
       - Поведенческое интервью; разбор своих проектов вслух
 
 graduation:

@@ -93,6 +93,10 @@ def validate(data: dict) -> list[str]:
                 errors.append(f"{sid}: used_by unknown {use}")
             elif order[use] <= order[sid]:
                 errors.append(f"{sid}: used_by {use}, which comes earlier")
+        req_map = {x["id"]: list(x.get("requires", []) or []) for x in sections}
+        for use in s.get("used_by", []) or []:
+            if use in order and sid not in closure(use, req_map):
+                errors.append(f"{sid}: used_by {use}, but {use} does not depend on it via requires")
         if disc_of[sid]["subject"] in math and not s.get("used_by") and not sid.endswith("_unlock"):
             errors.append(f"{sid}: math section without used_by")
     return errors
@@ -164,6 +168,10 @@ def render_curriculum(data: dict) -> str:
         for i, d in enumerate(c["disciplines"], 1):
             unlock = f" · открывает: {', '.join(d['unlocks'])}" if d.get("unlocks") else ""
             L += ["", f"### {c['id']}.{i}. {disc_name(data, d)}" + (f" — {d['title']}" if d['title'] != disc_name(data, d) else "") + f" · {d['hours']} ч{unlock}", ""]
+            prev = [x for cc in data["courses"] for x in cc["disciplines"] if x["subject"] == d["subject"] and x["level"] == d["level"] - 1]
+            intro = (f"что изменилось после уровня {ROMAN[d['level'] - 1]} ({prev[0]['title']}) и зачем идём дальше" if prev
+                     else "что это за предмет, зачем он нужен в профессии и как до него додумались — через историю проблемы и её решения")
+            L += [f"**0. Вводная лекция** — {intro}", ""]
             for si, s in enumerate(d["sections"], 1):
                 L.append(f"**{si}. {s['title']}**")
                 if s.get("why"):
