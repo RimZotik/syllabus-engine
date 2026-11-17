@@ -1775,7 +1775,7 @@ graduation:
   - Государственный экзамен — мок-собеседование в формате бигтеха (контест, алгоритмы, ML-теория, вероятности и статистика, SQL, ML System Design устно с Claude)
   - Защита дипломного проекта
 
-# Ключевые темы, для которых строятся деревья предпосылок (content/forge-ml/docs/prerequisite-trees.md)
+# Ключевые темы, для которых строятся деревья предпосылок (courses/ml-bigdata-ai/docs/prerequisite-trees.md)
 trees:
   - ai2.rag
   - ai2.agents

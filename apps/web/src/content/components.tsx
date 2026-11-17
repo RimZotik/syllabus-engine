@@ -96,6 +96,6 @@ export function Wide({ children }: { children: ReactNode }) {
 
 // A package may add its own components (interactive demos of its subject): content/<id>/components/index.ts(x)
 // exporting named React components. They become available in every topic of that package.
-const packageComponents = Object.values(import.meta.glob<Record<string, unknown>>("@pkg/components/index.{ts,tsx}", { eager: true }))[0] ?? {};
+const packageComponents = Object.assign({}, ...Object.values(import.meta.glob<Record<string, unknown>>("@pkg/components/index.{ts,tsx}", { eager: true })));
 
 export const mdxComponents = { Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, Sandbox, ...packageComponents };

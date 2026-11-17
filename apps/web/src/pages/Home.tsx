@@ -61,7 +61,7 @@ const plural = (n: number, one: string, few: string, many: string) =>
 
 /** Landing of the active learning package: texts from its package.yaml, structure from its program.yaml. */
 export function Home() {
-  const { program, pkg } = useApp();
+  const { program, pkg, error } = useApp();
   const subjects = new Map<string, { title: string; cells: Record<string, number[]> }>();
   program?.courses.forEach((c) => c.disciplines.forEach((d) => {
     const s = subjects.get(d.subject) ?? { title: d.subjectTitle, cells: {} };
@@ -71,6 +71,7 @@ export function Home() {
   const discCount = program?.courses.reduce((n, c) => n + c.disciplines.length, 0) ?? 0;
   const stages = program?.levels ?? [];
   const hl = pkg?.landing.highlight_subject;
+  if (error) return <div className="wrap stub"><h1>Нет связи с обучением</h1><p>{error}</p></div>;
   if (!program || !pkg) return <div className="wrap stub faint">Загружаю…</div>;
 
   return (

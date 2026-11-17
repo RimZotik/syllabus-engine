@@ -35,16 +35,19 @@ function pyodideAssets(): Plugin {
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const env = (k: string) => process.env[`SYLLABUS_${k}`] ?? process.env[`FORGE_${k}`];
 
-// The active learning package: content/<id>/ (syllabus.yaml or $SYLLABUS_PACKAGE). Only it gets bundled.
+// The active learning package: courses/<id>/ (courses/active.yaml or $SYLLABUS_PACKAGE). Only it gets bundled.
+// Same rules as apps/server/syllabus_server/settings.py: a plain folder name, the value may be quoted.
+const coursesDir = join(repoRoot, "courses");
 function activePackage(): string {
-  const fromEnv = process.env.SYLLABUS_PACKAGE;
-  const cfg = join(repoRoot, "syllabus.yaml");
-  const id = fromEnv ?? (existsSync(cfg) ? /^active:\s*([\w.-]+)/m.exec(readFileSync(cfg, "utf-8"))?.[1] : undefined);
-  if (!id) throw new Error("Не выбрано обучение: укажите active: <папка> в syllabus.yaml");
-  if (!existsSync(join(repoRoot, "content", id, "package.yaml"))) throw new Error(`Пакет обучения content/${id}/ не найден (нет package.yaml)`);
+  const cfg = join(coursesDir, "active.yaml");
+  const fromEnv = process.env.SYLLABUS_PACKAGE || undefined;
+  const id = fromEnv ?? (existsSync(cfg) ? /^active:[ \t]*["']?([A-Za-z0-9_.-]+)/m.exec(readFileSync(cfg, "utf-8"))?.[1] : undefined);
+  if (!id) throw new Error("Не выбрано обучение: укажите active: <папка> в courses/active.yaml");
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(id)) throw new Error(`Недопустимое имя обучения ${JSON.stringify(id)}: только латиница, цифры, '-', '_', '.'`);
+  if (!existsSync(join(coursesDir, id, "package.yaml"))) throw new Error(`Обучение courses/${id}/ не найдено (нет package.yaml)`);
   return id;
 }
-const pkgDir = join(repoRoot, "content", activePackage());
+const pkgDir = join(coursesDir, activePackage());
 
 export default defineConfig({
   plugins: [

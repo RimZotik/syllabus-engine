@@ -261,4 +261,10 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     return app
 
 
-app = create_app()
+def __getattr__(name: str):
+    """`syllabus_server.app:app` for uvicorn, created on first access — importing this module
+    (e.g. in tests) never opens the learner database by itself."""
+    if name == "app":
+        globals()["app"] = instance = create_app()
+        return instance
+    raise AttributeError(name)

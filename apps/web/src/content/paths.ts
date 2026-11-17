@@ -1,7 +1,7 @@
 // Topic and section ids from file paths inside a package. The depth is fixed, so paths are read
 // from the end — whatever the package folder or the glob key prefix looks like:
-//   courses/<course>/<discipline>/<section>/<NN-slug>/topic.mdx | quiz.yaml  → "<discipline>.<section>.<NN>"
-//   courses/<course>/<discipline>/<section>/test.yaml                        → "<discipline>.<section>"
+//   lessons/<discipline>/<section>/<NN-slug>/topic.mdx | quiz.yaml  → "<discipline>.<section>.<NN>"
+//   lessons/<discipline>/<section>/test.yaml                        → "<discipline>.<section>"
 
 const segs = (path: string) => path.replace(/\\/g, "/").split("/");
 

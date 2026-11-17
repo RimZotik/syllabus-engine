@@ -1,10 +1,10 @@
 /**
- * Finds the content of the ACTIVE learning package (`@pkg` = content/<id>/, set in vite.config.ts).
+ * Finds the content of the ACTIVE learning package (`@pkg` = courses/<id>/, set in vite.config.ts).
  * Layout inside the package (docs/template/course-package.md):
- *   courses/<course>/<discipline>/<section>/<NN-slug>/topic.mdx   → topic id  <discipline>.<section>.<NN>
- *   courses/<course>/<discipline>/<section>/<NN-slug>/quiz.yaml   → topic test
- *   courses/<course>/<discipline>/<section>/test.yaml             → section test (контрольная)
- *   courses/<course>/<discipline>/<section>/<NN-slug>/tasks/<id>/task.yaml → coding task, <Sandbox task="<id>" />
+ *   lessons/<discipline>/<section>/<NN-slug>/topic.mdx   → topic id  <discipline>.<section>.<NN>
+ *   lessons/<discipline>/<section>/<NN-slug>/quiz.yaml   → topic test
+ *   lessons/<discipline>/<section>/test.yaml             → section test (контрольная)
+ *   lessons/<discipline>/<section>/<NN-slug>/tasks/<id>/task.yaml → coding task, <Sandbox task="<id>" />
  */
 import type { ComponentType } from "react";
 import { sectionIdOf, topicIdOf } from "./paths";
@@ -33,11 +33,11 @@ export type Task = {
   timeout_ms?: number;
 };
 
-const topicFiles = import.meta.glob<TopicModule>("@pkg/courses/**/topic.mdx");
-const quizFiles = import.meta.glob<{ default: QuizData }>("@pkg/courses/**/quiz.yaml", { eager: true });
-const testFiles = import.meta.glob<{ default: QuizData }>("@pkg/courses/*/*/*/test.yaml", { eager: true });
+const topicFiles = import.meta.glob<TopicModule>("@pkg/lessons/*/*/*/topic.mdx");
+const quizFiles = import.meta.glob<{ default: QuizData }>("@pkg/lessons/*/*/*/quiz.yaml", { eager: true });
+const testFiles = import.meta.glob<{ default: QuizData }>("@pkg/lessons/*/*/test.yaml", { eager: true });
 
-const taskFiles = import.meta.glob<{ default: Task }>("@pkg/courses/**/tasks/*/task.yaml", { eager: true });
+const taskFiles = import.meta.glob<{ default: Task }>("@pkg/lessons/*/*/*/tasks/*/task.yaml", { eager: true });
 const tasks = new Map<string, Task>();
 for (const mod of Object.values(taskFiles)) tasks.set(mod.default.id, mod.default);
 

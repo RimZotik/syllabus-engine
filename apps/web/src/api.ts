@@ -10,7 +10,7 @@ export type Discipline = {
 export type Course = { id: string; title: string; tagline: string; project: string | null; hours: number; disciplines: Discipline[] };
 export type Stage = { id: string; title: string; gate: string };
 export type Program = { title: string; levels: Stage[]; courses: Course[] };
-/** Passport of the active learning package (content/<id>/package.yaml). */
+/** Passport of the active learning package (courses/<id>/package.yaml). */
 export type Package = {
   id: string; title: string; language: string; summary: string;
   landing: { headline: string; lead: string; cta: string; subjects_lead: string; highlight_subject: string | null };

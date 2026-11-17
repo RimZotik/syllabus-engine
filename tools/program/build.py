@@ -1,4 +1,4 @@
-"""Validate a learning package (content/<id>/) and generate its curriculum documents.
+"""Validate a learning package (courses/<id>/) and generate its curriculum documents.
 
 Checks:
   * package.yaml exists, its id matches the folder, title is set;
@@ -15,7 +15,7 @@ Outputs (inside the package):
 and the progress block of the root README for the active package.
 
 Run: uv run --with pyyaml tools/program/build.py [--check] [--package <id> | --all]
-  default package — `active:` in syllabus.yaml (or $SYLLABUS_PACKAGE)
+  default package — `active:` in courses/active.yaml (or $SYLLABUS_PACKAGE)
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-CONTENT_ROOT = ROOT / "content"
+CONTENT_ROOT = ROOT / "courses"
 README = ROOT / "README.md"
 # Paths of the package being checked — set by use_package().
 PKG = PKG_DIR = SRC = OUT = TREES = COURSES = GLOSSARY = None  # type: ignore[assignment]
@@ -40,10 +40,10 @@ def active_package() -> str:
     import os
     if os.environ.get("SYLLABUS_PACKAGE"):
         return os.environ["SYLLABUS_PACKAGE"]
-    cfg = ROOT / "syllabus.yaml"
+    cfg = CONTENT_ROOT / "active.yaml"
     m = re.search(r"""^active:[ \t]*["']?([A-Za-z0-9_.-]+)""", cfg.read_text(encoding="utf-8"), re.M) if cfg.exists() else None
     if not m:
-        raise SystemExit("syllabus.yaml: не указано active: <папка пакета>")
+        raise SystemExit("courses/active.yaml: не указано active: <папка обучения>")
     return m.group(1)
 
 
@@ -52,22 +52,22 @@ def all_packages() -> list[str]:
 
 
 def use_package(pkg: str) -> list[str]:
-    """Point every path at content/<pkg>/ and read its passport. Returns passport errors."""
+    """Point every path at courses/<pkg>/ and read its passport. Returns passport errors."""
     global PKG, PKG_DIR, SRC, OUT, TREES, COURSES, GLOSSARY, META
     PKG, PKG_DIR = pkg, CONTENT_ROOT / pkg
-    SRC, COURSES, GLOSSARY = PKG_DIR / "program.yaml", PKG_DIR / "courses", PKG_DIR / "glossary.yaml"
+    SRC, COURSES, GLOSSARY = PKG_DIR / "program.yaml", PKG_DIR / "lessons", PKG_DIR / "glossary.yaml"
     OUT, TREES = PKG_DIR / "docs" / "curriculum.md", PKG_DIR / "docs" / "prerequisite-trees.md"
     errors: list[str] = []
     meta_file = PKG_DIR / "package.yaml"
     if not meta_file.is_file():
-        return [f"content/{pkg}: нет package.yaml"]
+        return [f"courses/{pkg}: нет package.yaml"]
     META = yaml.safe_load(meta_file.read_text(encoding="utf-8")) or {}
     if META.get("id") != pkg:
-        errors.append(f"content/{pkg}/package.yaml: id '{META.get('id')}' must equal the folder name '{pkg}'")
+        errors.append(f"courses/{pkg}/package.yaml: id '{META.get('id')}' must equal the folder name '{pkg}'")
     if not META.get("title"):
-        errors.append(f"content/{pkg}/package.yaml: missing title")
+        errors.append(f"courses/{pkg}/package.yaml: missing title")
     if not SRC.is_file():
-        errors.append(f"content/{pkg}: нет program.yaml")
+        errors.append(f"courses/{pkg}: нет program.yaml")
     return errors
 ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
@@ -191,7 +191,7 @@ def render_curriculum(data: dict) -> str:
     L = [
         "# Учебный план",
         "",
-        f"> **Файл сгенерирован** из `content/{PKG}/program.yaml` скриптом `tools/program/build.py` — правьте YAML, не этот файл.",
+        f"> **Файл сгенерирован** из `courses/{PKG}/program.yaml` скриптом `tools/program/build.py` — правьте YAML, не этот файл.",
         "> " + ", ".join(f"{n} {plural(n, *w)}" for n, w in [
             (len(data['courses']), ("курс", "курса", "курсов")), (len(data['subjects']), ("предмет", "предмета", "предметов")),
             (len(discs), ("дисциплина", "дисциплины", "дисциплин")), (len(sections), ("раздел", "раздела", "разделов")),
@@ -304,8 +304,8 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
     section_ids = {s["id"] for s in sections}
     glossary = {t["id"] for t in yaml.safe_load(GLOSSARY.read_text(encoding="utf-8"))} if GLOSSARY.exists() else set()
     authored: set[str] = set()
-    for mdx in sorted(COURSES.glob("*/*/*/*/topic.mdx")):
-        _, disc, sec, folder = mdx.relative_to(COURSES).parts[:4]
+    for mdx in sorted(COURSES.glob("*/*/*/topic.mdx")):
+        disc, sec, folder = mdx.relative_to(COURSES).parts[:3]
         tid = f"{disc}.{sec}.{int(folder.split('-')[0])}"
         if tid not in topic_ids:
             errors.append(f"{rel(mdx)}: topic {tid} is not in program.yaml")
@@ -313,14 +313,14 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
         for term_id in re.findall(r'<Term id="([^"]+)"', mdx.read_text(encoding="utf-8")):
             if term_id not in glossary:
                 errors.append(f"{rel(mdx)}: term '{term_id}' missing in glossary.yaml")
-    for qf in sorted(list(COURSES.glob("*/*/*/*/quiz.yaml")) + list(COURSES.glob("*/*/*/test.yaml"))):
+    for qf in sorted(list(COURSES.glob("*/*/*/quiz.yaml")) + list(COURSES.glob("*/*/test.yaml"))):
         try:
             quiz = yaml.safe_load(qf.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError as e:
             errors.append(f"{rel(qf)}: invalid YAML: {e}")
             continue
         if qf.name == "test.yaml":
-            _, disc, sec = qf.relative_to(COURSES).parts[:3]
+            disc, sec = qf.relative_to(COURSES).parts[:2]
             if f"{disc}.{sec}" not in section_ids:
                 errors.append(f"{rel(qf)}: section {disc}.{sec} is not in program.yaml")
         ids = set()
@@ -411,13 +411,13 @@ def render_progress(data: dict, authored: set[str]) -> str:
         done = len([i for i in ids if i in authored])
         per_course.append(f"| Курс {c['id']}. {c['title']} | {done} / {len(ids)} |")
     return "\n".join([
-        "<!-- progress:start -->",
+        f"<!-- progress:{PKG}:start -->",
         f"**Готовность учебных материалов: {pct:.1f} %** — написано тем: {len(authored)} из {total}.",
         "",
         "| Курс | Темы |",
         "|---|---|",
         *per_course,
-        "<!-- progress:end -->",
+        f"<!-- progress:{PKG}:end -->",
     ])
 
 
@@ -440,9 +440,10 @@ def check_package(pkg: str, check: bool, readme: bool) -> int:
     outputs = {OUT: render_curriculum(data), TREES: render_trees(data)}
     if readme:
         text = README.read_text(encoding="utf-8")
-        if "<!-- progress:start -->" in text:
-            head, rest = text.split("<!-- progress:start -->", 1)
-            tail = rest.split("<!-- progress:end -->", 1)[1]
+        start, end = f"<!-- progress:{pkg}:start -->", f"<!-- progress:{pkg}:end -->"
+        if start in text and end in text:
+            head, rest = text.split(start, 1)
+            tail = rest.split(end, 1)[1]
             outputs[README] = head + render_progress(data, authored) + tail
     if check:
         stale = [str(rel(p)) for p, text in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
@@ -467,9 +468,9 @@ def main() -> int:
     else:
         pkgs = [active]
     if not pkgs:
-        print("content/: no learning packages (folders with package.yaml)", file=sys.stderr)
+        print("courses/: no learning packages (folders with package.yaml)", file=sys.stderr)
         return 1
-    return max(safe_check(p, "--check" in args, readme=p == active) for p in pkgs)
+    return max(safe_check(p, "--check" in args, readme=True) for p in pkgs)
 
 
 def safe_check(pkg: str, check: bool, readme: bool) -> int:

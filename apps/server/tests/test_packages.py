@@ -46,15 +46,19 @@ def make_package(root: Path, pkg: str = "drawing", package_yaml: str | None = No
     (d / "package.yaml").write_text(package_yaml or f"id: {pkg}\ntitle: Рисование с нуля\n{rules}", encoding="utf-8")
     (d / "program.yaml").write_text(PROGRAM, encoding="utf-8")
     (d / "glossary.yaml").write_text("- id: line\n  term: линия\n  short: След движения карандаша.\n", encoding="utf-8")
+    topic = d / "lessons" / "draw1" / "line" / "01-straight"
+    topic.mkdir(parents=True)
+    (topic / "topic.mdx").write_text('<Page title="Прямая">\n\n<Term id="line">Линия</Term> бывает прямой.\n\n</Page>\n', encoding="utf-8")
+    (topic / "quiz.yaml").write_text("questions:\n- id: q1\n  type: single\n  q: Какая линия?\n  options: [Прямая, Круглая]\n  answer: 0\n", encoding="utf-8")
     return d
 
 
 @pytest.fixture
 def content(tmp_path, monkeypatch):
-    """An isolated content/ folder with one package and its own syllabus.yaml."""
-    croot = tmp_path / "content"
+    """An isolated courses/ folder with one package and its own active.yaml."""
+    croot = tmp_path / "courses"
     make_package(croot)
-    cfg = tmp_path / "syllabus.yaml"
+    cfg = croot / "active.yaml"
     cfg.write_text("active: drawing\n", encoding="utf-8")
     monkeypatch.setattr(settings, "CONTENT_ROOT", croot)
     monkeypatch.setattr(settings, "CONFIG_FILE", cfg)
@@ -73,7 +77,7 @@ def test_active_package_from_config_and_env(content, monkeypatch):
 
 def test_unknown_or_unset_package_is_a_clear_error(content, monkeypatch):
     monkeypatch.setenv("SYLLABUS_PACKAGE", "nope")
-    with pytest.raises(settings.PackageError, match="content/nope"):
+    with pytest.raises(settings.PackageError, match="courses/nope"):
         settings.active_package()
     monkeypatch.delenv("SYLLABUS_PACKAGE")
     settings.CONFIG_FILE.write_text("# nothing chosen\n", encoding="utf-8")
@@ -157,19 +161,20 @@ def load_build(monkeypatch, croot: Path):
 
 
 def test_validator_accepts_a_minimal_package(tmp_path, monkeypatch):
-    croot = tmp_path / "content"
+    croot = tmp_path / "courses"
     make_package(croot)
     b = load_build(monkeypatch, croot)
     assert b.use_package("drawing") == []
     assert b.validate(b.load()) == []
-    assert b.check_content(b.load())[0] == []
+    errors, authored = b.check_content(b.load())
+    assert errors == [] and authored == {"draw1.line.1"}
     # documents render without optional fields (residual_check, graduation, trees, project)
     assert "Рисунок" in b.render_curriculum(b.load())
     b.render_trees(b.load())
 
 
 def test_validator_rejects_wrong_passport(tmp_path, monkeypatch):
-    croot = tmp_path / "content"
+    croot = tmp_path / "courses"
     make_package(croot, "drawing", package_yaml="id: painting\n")
     b = load_build(monkeypatch, croot)
     errors = b.use_package("drawing")
@@ -177,7 +182,7 @@ def test_validator_rejects_wrong_passport(tmp_path, monkeypatch):
 
 
 def test_validator_applies_package_rules(tmp_path, monkeypatch):
-    croot = tmp_path / "content"
+    croot = tmp_path / "courses"
     make_package(croot, rules="rules:\n  every_course_has: {subject: color, except: []}\n")
     b = load_build(monkeypatch, croot)
     b.use_package("drawing")
@@ -185,10 +190,9 @@ def test_validator_applies_package_rules(tmp_path, monkeypatch):
 
 
 def test_broken_yaml_is_reported_not_a_traceback(tmp_path, monkeypatch, capsys):
-    croot = tmp_path / "content"
+    croot = tmp_path / "courses"
     d = make_package(croot)
-    (d / "courses" / "I" / "draw1" / "line").mkdir(parents=True)
-    (d / "courses" / "I" / "draw1" / "line" / "test.yaml").write_text("questions:\n- q: Что это: линия?\n  x: : y\n", encoding="utf-8")
+    (d / "lessons" / "draw1" / "line" / "test.yaml").write_text("questions:\n- q: Что это: линия?\n  x: : y\n", encoding="utf-8")
     b = load_build(monkeypatch, croot)
     b.use_package("drawing")
     errors, _ = b.check_content(b.load())
@@ -199,7 +203,7 @@ def test_broken_yaml_is_reported_not_a_traceback(tmp_path, monkeypatch, capsys):
 
 
 def test_every_package_in_the_repo_is_valid():
-    """The same check CI runs: all packages in content/ pass the validator."""
+    """The same check CI runs: all packages in courses/ pass the validator."""
     import subprocess
     import os
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}  # the child prints Cyrillic

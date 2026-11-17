@@ -1,8 +1,8 @@
 """Paths and settings. Learner data lives outside the repo (never committed).
 
-The platform runs one learning package at a time: a folder `content/<id>/` (see
-docs/template/course-package.md). The active one is `active:` in `syllabus.yaml` at the repo
-root, or $SYLLABUS_PACKAGE. Every package keeps its own learner database.
+The platform runs one learning package at a time: a folder `courses/<id>/` (see
+docs/template/course-package.md). The active one is `active:` in `courses/active.yaml`,
+or $SYLLABUS_PACKAGE. Every package keeps its own learner database.
 """
 from __future__ import annotations
 
@@ -13,16 +13,16 @@ from contextlib import closing
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-CONTENT_ROOT = REPO_ROOT / "content"
-CONFIG_FILE = REPO_ROOT / "syllabus.yaml"
+CONTENT_ROOT = REPO_ROOT / "courses"
+CONFIG_FILE = CONTENT_ROOT / "active.yaml"
 
 # Before packages existed, Forge ML progress lived here. It is copied (never moved) on first start.
-LEGACY_DB = {"forge-ml": Path.home() / ".forge-ml" / "forge.sqlite3"}
+LEGACY_DB = {"ml-bigdata-ai": Path.home() / ".forge-ml" / "forge.sqlite3"}
 
 
 # A package id is a plain folder name (it also names the learner database), never a path.
 PACKAGE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
-# `active: <id>` in syllabus.yaml; the value may be quoted.
+# `active: <id>` in courses/active.yaml; the value may be quoted.
 ACTIVE_LINE = re.compile(r"""^active:[ \t]*["']?([A-Za-z0-9_.-]+)""", re.M)
 
 
@@ -40,12 +40,12 @@ def active_package() -> str:
     if not pkg:
         m = ACTIVE_LINE.search(CONFIG_FILE.read_text(encoding="utf-8")) if CONFIG_FILE.exists() else None
         if not m:
-            raise PackageError(f"не выбрано обучение: укажите active: <папка> в {CONFIG_FILE.name}")
+            raise PackageError(f"не выбрано обучение: укажите active: <папка> в courses/{CONFIG_FILE.name}")
         pkg = m.group(1)
     if not PACKAGE_ID.fullmatch(pkg):
         raise PackageError(f"недопустимое имя пакета обучения {pkg!r}: только латиница, цифры, '-', '_', '.'")
     if not (CONTENT_ROOT / pkg / "package.yaml").is_file():
-        raise PackageError(f"пакет обучения content/{pkg}/ не найден (нет package.yaml)")
+        raise PackageError(f"обучение courses/{pkg}/ не найдено (нет package.yaml)")
     return pkg
 
 

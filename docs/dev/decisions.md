@@ -4,11 +4,12 @@
 
 ## 2026-11-18 · Пакеты обучения: одна платформа — много курсов
 
-- Всё про конкретное обучение лежит в `content/<id>/` (пакет): `package.yaml` (паспорт: название, тексты главной, роль преподавателя, правила плана), `program.yaml`, `glossary.yaml`, `courses/`, свои компоненты `components/`, сгенерированные `docs/`. Формат — [template/course-package.md](../template/course-package.md).
-- Активный пакет — `active:` в `syllabus.yaml` в корне (или `SYLLABUS_PACKAGE`). Vite подключает только его (`@pkg` → `content/<id>/`), сервер читает только его.
-- У каждого пакета своя база ученика: `~/.syllabus-engine/<id>.sqlite3`. Прогресс Forge ML из `~/.forge-ml/forge.sqlite3` при первом запуске **копируется** (оригинал остаётся резервной копией).
+- Всё про конкретное обучение лежит в `courses/<id>/` (пакет): `package.yaml` (паспорт: название, тексты главной, роль преподавателя, правила плана), `program.yaml`, `glossary.yaml`, `lessons/` (темы по пути `<дисциплина>/<раздел>/<NN-тема>`, без папки курса — курс записан в плане), свои компоненты `components/`, сгенерированные `docs/`, `LICENSE`. Вся папка `courses/` содержит только обучения и `active.yaml`. Формат — [template/course-package.md](../template/course-package.md).
+- Обучение Forge ML лежит в `courses/ml-bigdata-ai/` (по составу предметов: ML, большие данные, ИИ).
+- Активный пакет — `active:` в `courses/active.yaml` (или `SYLLABUS_PACKAGE`). Vite подключает только его (`@pkg` → `courses/<id>/`), сервер читает только его.
+- У каждого пакета своя база ученика: `~/.syllabus-engine/<id>.sqlite3`. Прогресс Forge ML из `~/.forge-ml/forge.sqlite3` при первом запуске **копируется** в `ml-bigdata-ai.sqlite3` (оригинал остаётся резервной копией).
 - Правило «Алгоритмы в каждом курсе» перестало быть зашитым в валидатор: теперь это `rules.every_course_has` в паспорте Forge ML. Тексты главной — из паспорта, ступени — из `program.levels`.
-- Демонстрации KnnDemo и LineFitDemo переехали в `content/forge-ml/components/`: это предметные компоненты пакета, а не движка.
+- Демонстрации KnnDemo и LineFitDemo переехали в `courses/ml-bigdata-ai/components/`: это предметные компоненты пакета, а не движка.
 - Серверный модуль `forge_server` → `syllabus_server`, переменные `FORGE_*` → `SYLLABUS_*` (старые имена продолжают работать).
 - Пути внутри пакета разбираются с конца (`content/paths.ts`): глубина папок фиксирована, поэтому имя пакета или раздела не может сбить разбор.
 
