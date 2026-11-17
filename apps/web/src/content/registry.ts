@@ -11,6 +11,8 @@ export type TopicModule = { default: ComponentType<{ components?: Record<string,
 export type Question = {
   id: string; type: "single" | "multi" | "open"; q: string; options?: string[];
   answer?: number | number[]; explain?: string; rubric?: string[];
+  /** for the teacher: typical wrong answers and follow-up probes of the oral check */
+  wrong_answers?: string[]; followups?: string[];
 };
 export type QuizData = { title?: string; pass?: number; minutes?: number; questions: Question[] };
 

@@ -5,6 +5,12 @@ import type { Question, QuizData } from "../content/registry";
 
 type Answer = number | number[] | string | undefined;
 
+function shuffled<T>(xs: T[]): T[] {
+  const a = [...xs];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
 function isRight(q: Question, a: Answer): boolean | null {
   if (q.type === "open") return null;
   if (q.type === "single") return a === q.answer;
@@ -19,6 +25,8 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
   const [done, setDone] = useState(false);
   const started = useRef(Date.now());
   const pass = data.pass ?? 0.85;
+  // New order of questions and options on every attempt: no position bias, no memorising «the second one».
+  const [view] = useState(() => shuffled(data.questions).map((q) => ({ q, perm: shuffled((q.options ?? []).map((_, i) => i)) })));
 
   const auto = data.questions.filter((q) => q.type !== "open");
   const score = useMemo(() => (auto.length ? auto.filter((q) => isRight(q, answers[q.id])).length / auto.length : 1), [answers, auto]);
@@ -45,14 +53,15 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
         <div><div className="eyebrow">{data.title ?? "Проверка темы"}</div><h2 style={{ marginTop: 10 }}>{data.questions.length} вопросов</h2></div>
         <span className="faint" style={{ fontSize: 14 }}>Порог {Math.round(pass * 100)}% · подсказки недоступны</span>
       </div>
-      {data.questions.map((q, n) => {
+      {view.map(({ q, perm }, n) => {
         const verdict = done ? isRight(q, answers[q.id]) : null;
         return (
           <div className="qitem" key={q.id}>
             <div className="qtitle"><b>{n + 1}. {q.q}</b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : "развёрнутый ответ"}</span></div>
             {q.type === "open" ? (
               <textarea value={(answers[q.id] as string) ?? ""} disabled={done} placeholder="Ответьте своими словами" onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
-            ) : q.options!.map((o, i) => {
+            ) : perm.map((i) => {
+              const o = q.options![i];
               const chosen = q.type === "single" ? answers[q.id] === i : ((answers[q.id] as number[]) ?? []).includes(i);
               const correct = q.type === "single" ? q.answer === i : (q.answer as number[]).includes(i);
               return (

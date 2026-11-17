@@ -29,7 +29,7 @@ export function KnnDemo() {
       ctx.fillStyle = colors[vote > .5 ? 1 : 0]; ctx.globalAlpha = .13 + Math.abs(vote - .5) * .2; ctx.fillRect(px, py, step, step);
     }
     ctx.globalAlpha = 1;
-    for (const p of pts) { ctx.beginPath(); ctx.arc(p.x * W, p.y * H, 7, 0, 7); ctx.fillStyle = colors[p.c]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = css.getPropertyValue("--card").trim(); ctx.stroke(); }
+    for (const p of pts) { ctx.beginPath(); if (p.c === 1) ctx.rect(p.x * W - 6.5, p.y * H - 6.5, 13, 13); else ctx.arc(p.x * W, p.y * H, 7, 0, 7); ctx.fillStyle = colors[p.c]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = css.getPropertyValue("--card").trim(); ctx.stroke(); }
   }, [pts, k]);
 
   return (
@@ -37,8 +37,8 @@ export function KnnDemo() {
       <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", marginBottom: 14 }}>
         <span className="eyebrow">Нажмите на поле, чтобы добавить пример</span>
         <div className="row">
-          <button className={`chip ${cls === 0 ? "green" : ""}`} onClick={() => setCls(0)}>класс «зелёные»</button>
-          <button className={`chip ${cls === 1 ? "lav" : ""}`} onClick={() => setCls(1)}>класс «фиолетовые»</button>
+          <button className={`chip ${cls === 0 ? "green" : ""}`} onClick={() => setCls(0)}>класс «зелёные круги»</button>
+          <button className={`chip ${cls === 1 ? "lav" : ""}`} onClick={() => setCls(1)}>класс «фиолетовые квадраты»</button>
         </div>
       </div>
       <canvas ref={ref} style={{ width: "100%", height: 340, borderRadius: 12, background: "var(--paper)", cursor: "crosshair", display: "block" }}
