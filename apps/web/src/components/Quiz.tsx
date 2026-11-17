@@ -87,6 +87,9 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
             )}
             {done && q.type === "open" && teacher && <div className="explain">Ответ сохранён. Его проверит преподаватель по критериям: {(q.rubric ?? []).join("; ")}.{q.explain ? ` Подсказка для самопроверки: ${q.explain}` : ""}</div>}
             {done && q.type !== "open" && <div className="explain">{verdict ? "Верно. " : "Неверно. "}{q.explain}</div>}
+            {done && (q.traps ?? []).some((t) => (Array.isArray(answers[q.id]) ? (answers[q.id] as number[]).includes(t) : answers[q.id] === t)) && (
+              <div className="explain trap">Это ловушка: вариант звучит почти как фраза из лекции, но смысл в нём другой. Читайте каждый вариант до конца.</div>
+            )}
           </div>
         );
       })}

@@ -272,6 +272,9 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
                     errors.append(f"{where}: single-choice needs one answer")
                 if not ans or any(not isinstance(a, int) or not 0 <= a < n for a in ans):
                     errors.append(f"{where}: answer index out of range")
+                for t in q.get("traps", []) or []:
+                    if not isinstance(t, int) or not 0 <= t < n or t in ans:
+                        errors.append(f"{where}: trap {t} must be a wrong option index")
             elif q["type"] == "open" and not q.get("rubric"):
                 errors.append(f"{where}: open question needs a rubric for the teacher")
     return errors, authored

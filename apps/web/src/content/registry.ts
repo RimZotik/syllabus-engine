@@ -13,6 +13,8 @@ export type Question = {
   answer?: number | number[]; explain?: string; rubric?: string[];
   /** for the teacher: typical wrong answers and follow-up probes of the oral check */
   wrong_answers?: string[]; followups?: string[];
+  /** wrong options deliberately worded like the lecture — the teacher watches them */
+  traps?: number[];
 };
 export type QuizData = { title?: string; pass?: number; minutes?: number; questions: Question[] };
 

@@ -1,6 +1,6 @@
 import { Children, isValidElement, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Flag, List, NotebookPen } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, CircleDashed, Flag, List, NotebookPen, Target } from "lucide-react";
 import { api } from "../api";
 import { useApp } from "../state";
 import { content, type TopicModule } from "../content/registry";
@@ -18,7 +18,7 @@ export function Reader() {
   const where = place(topicId);
   const [mod, setMod] = useState<TopicModule | null>(null);
   const [cur, setCur] = useState(0);
-  const [panel, setPanel] = useState<"toc" | "notes" | "feedback" | null>(null);
+  const [panel, setPanel] = useState<"toc" | "notes" | "feedback" | null>(() => (new URLSearchParams(location.search).has("toc") ? "toc" : null));
   const since = useRef(Date.now());
 
   useEffect(() => {
@@ -102,12 +102,23 @@ export function Reader() {
       </div></div>
 
       {panel === "toc" && (
-        <Drawer side="left" label={where.discipline.name} onClose={() => setPanel(null)}>
-          <nav className="toc">{where.discipline.sections.map((s) => (
-            <div key={s.id}><div className="grp">{s.title}</div>
-              {s.topics.map((t) => <Link key={t.id} to={`/learn/${t.id}`} className={t.id === topicId ? "on" : ""} onClick={() => setPanel(null)}>{t.title}</Link>)}
-              {content.sectionTest(s.id) && <Link to={`/test/${s.id}`} onClick={() => setPanel(null)}>Контрольная раздела</Link>}
-            </div>
+        <Drawer side="left" label="Содержание" onClose={() => setPanel(null)}>
+          <div className="toc-head"><span className="eyebrow">Курс {where.course.id} · {where.course.title}</span><h3>{where.discipline.name}</h3>{where.discipline.name !== where.discipline.title && <div className="muted">{where.discipline.title}</div>}</div>
+          <nav className="toc">{where.discipline.sections.map((s, si) => (
+            <section key={s.id} className={`toc-sec${s.id === where.section.id ? " cur" : ""}`}>
+              <div className="toc-sec-h"><span className="toc-n">Раздел {si + 1}</span><b>{s.title}</b></div>
+              <ol className="toc-topics">
+                {s.topics.map((t, ti) => {
+                  const done = progress[t.id]?.status === "done";
+                  const written = content.hasTopic(t.id);
+                  const cls = t.id === topicId ? "on" : done ? "done" : !written ? "na" : "";
+                  const icon = done ? <Check size={15} /> : written ? <BookOpen size={15} /> : <CircleDashed size={15} />;
+                  const label = <><span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span>{t.title}</span></>;
+                  return <li key={t.id}>{written ? <Link to={`/learn/${t.id}`} className={cls} onClick={() => setPanel(null)}>{label}</Link> : <span className={`toc-item ${cls}`} title="Тема ещё не написана">{label}</span>}</li>;
+                })}
+                {content.sectionTest(s.id) && <li><Link to={`/test/${s.id}`} className="test" onClick={() => setPanel(null)}><span className="toc-num" /><Target size={15} /><span>Контрольная раздела {si + 1}</span></Link></li>}
+              </ol>
+            </section>
           ))}</nav>
         </Drawer>
       )}
