@@ -41,6 +41,105 @@ def run(code, stdin):
     out, err, _ = _exec(code, stdin, True)
     return json.dumps({"stdout": out, "error": err}, ensure_ascii=False)
 
+
+# ── step-by-step trace: names → objects, for the visualiser ─────────────────────
+_CONTAINERS = (list, tuple, dict, set, frozenset)
+MAX_STEPS = 400
+
+
+class _TooLong(Exception):
+    pass
+
+
+def trace(code, stdin):
+    """Execute the code line by line and record, before every line, which names exist in each
+    function call and which values they point to. Containers become numbered objects, so two
+    names pointing at the same list visibly share one object."""
+    import types
+    labels = {}          # id(obj) → small stable number
+    keep = []            # keep traced objects alive so their ids are not reused
+    steps = []
+    out = io.StringIO()
+
+    def label(obj):
+        k = id(obj)
+        if k not in labels:
+            labels[k] = len(labels) + 1
+            keep.append(obj)
+        return labels[k]
+
+    def enc(v, heap, depth=0):
+        if isinstance(v, _CONTAINERS):
+            n = label(v)
+            if n not in heap and depth < 6:
+                heap[n] = None  # reserve: protects against self-references
+                if isinstance(v, dict):
+                    items = [[enc(k, heap, depth + 1), enc(x, heap, depth + 1)] for k, x in list(v.items())[:40]]
+                else:
+                    seq = sorted(v, key=repr) if isinstance(v, (set, frozenset)) else v
+                    items = [enc(x, heap, depth + 1) for x in list(seq)[:40]]
+                heap[n] = {"t": type(v).__name__, "items": items, "more": len(v) > 40}
+            return {"r": n}
+        if isinstance(v, types.FunctionType):
+            return {"p": f"функция {v.__name__}"}
+        if isinstance(v, types.ModuleType):
+            return {"p": f"модуль {v.__name__}"}
+        if v is None or isinstance(v, (bool, int, float, complex)):
+            return {"p": repr(v)}
+        if isinstance(v, str):
+            return {"p": repr(v if len(v) <= 60 else v[:57] + "…")}
+        return {"p": f"<{type(v).__name__}>"}
+
+    def snapshot(frame, event, arg):
+        heap, frames = {}, []
+        f = frame
+        chain = []
+        while f is not None:
+            if f.f_code.co_filename == "<ваш код>":
+                chain.append(f)
+            f = f.f_back
+        for fr in reversed(chain):
+            name = "Программа" if fr.f_code.co_name == "<module>" else fr.f_code.co_name + "()"
+            names = [(k, v) for k, v in fr.f_locals.items()
+                     if not k.startswith("__") and not isinstance(v, types.ModuleType)]
+            frames.append({"name": name, "vars": [[k, enc(v, heap)] for k, v in names]})
+        step = {"line": frame.f_lineno, "event": event, "frames": frames, "heap": heap, "out": out.getvalue()}
+        if event == "return":
+            step["ret"] = enc(arg, heap)
+        steps.append(step)
+        if len(steps) >= MAX_STEPS:
+            raise _TooLong()
+
+    def tracer(frame, event, arg):
+        if frame.f_code.co_filename != "<ваш код>":
+            return None
+        if event in ("line", "return"):
+            snapshot(frame, event, arg)
+        return tracer
+
+    ns = {"__name__": "__main__"}
+    sys.stdin = _Stdin(stdin or "")
+    builtins.input = _make_input(True, out)
+    err, truncated = None, False
+    try:
+        compiled = compile(code, "<ваш код>", "exec")
+        with contextlib.redirect_stdout(out):
+            sys.settrace(tracer)
+            try:
+                exec(compiled, ns)
+            finally:
+                sys.settrace(None)
+    except _TooLong:
+        truncated = True
+    except SystemExit:
+        pass
+    except SyntaxError as e:
+        err = {"type": type(e).__name__, "line": e.lineno, "msg": e.msg}
+    except BaseException as e:
+        frames = [f for f in traceback.extract_tb(e.__traceback__) if f.filename == "<ваш код>"]
+        err = {"type": type(e).__name__, "line": frames[-1].lineno if frames else None, "msg": str(e)}
+    return json.dumps({"steps": steps, "stdout": out.getvalue(), "error": err, "truncated": truncated}, ensure_ascii=False)
+
 def _forbidden(code, names):
     """Names from `tests.forbid` that the code uses (as a name, attribute or import) — for tasks
     «write it yourself without max/sum/sorted». Only real code counts, not comments or strings."""

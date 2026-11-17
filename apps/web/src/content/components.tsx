@@ -7,6 +7,7 @@ import { AlertTriangle, BookMarked, Check as CheckIcon, History, Lightbulb } fro
 import { useApp } from "../state";
 import { term as lookup } from "./glossary";
 import { Sandbox } from "../components/Sandbox";
+import { Trace } from "../components/TraceView";
 
 /** One page of a topic. The reader shows pages one at a time. */
 export function Page({ children }: { title: string; minutes?: number; children: ReactNode }) {
@@ -98,4 +99,4 @@ export function Wide({ children }: { children: ReactNode }) {
 // exporting named React components. They become available in every topic of that package.
 const packageComponents = Object.assign({}, ...Object.values(import.meta.glob<Record<string, unknown>>("@pkg/components/index.{ts,tsx}", { eager: true })));
 
-export const mdxComponents = { Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, Sandbox, ...packageComponents };
+export const mdxComponents = { Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, Sandbox, Trace, ...packageComponents };

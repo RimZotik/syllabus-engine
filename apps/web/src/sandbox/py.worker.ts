@@ -14,14 +14,14 @@ function boot(): Promise<PyodideInterface> {
 }
 void boot();
 
-export type WorkerRequest = { id: number; kind: "run"; code: string; stdin: string } | { id: number; kind: "check"; code: string; tests: unknown };
+export type WorkerRequest = { id: number; kind: "run" | "trace"; code: string; stdin: string } | { id: number; kind: "check"; code: string; tests: unknown };
 
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   const msg = e.data;
   try {
     const py = await boot();
     const fn = py.globals.get(msg.kind);
-    const raw: string = msg.kind === "run" ? fn(msg.code, msg.stdin) : fn(msg.code, JSON.stringify(msg.tests));
+    const raw: string = msg.kind === "check" ? fn(msg.code, JSON.stringify(msg.tests)) : fn(msg.code, msg.stdin);
     fn.destroy?.();
     self.postMessage({ id: msg.id, ok: true, data: JSON.parse(raw) });
   } catch (err) {

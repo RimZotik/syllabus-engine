@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, CircleAlert, CircleX, Lightbulb, LoaderCircle, Play, RotateCcw, ListChecks } from "lucide-react";
+import { CheckCircle2, CircleAlert, CircleX, Footprints, Lightbulb, LoaderCircle, Play, RotateCcw, ListChecks } from "lucide-react";
+import { TraceView } from "./TraceView";
 import { EditorView, basicSetup } from "codemirror";
 import { python } from "@codemirror/lang-python";
 import { keymap } from "@codemirror/view";
@@ -58,6 +59,7 @@ function TaskView({ task }: { task: Task }) {
   const [busy, setBusy] = useState<"run" | "check" | null>(null);
   const [run, setRun] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [traceCode, setTraceCode] = useState<string | null>(null);
   const [stdin, setStdin] = useDraft(`draft:stdin:${task.id}`, task.stdin ?? "");
 
   function update(patch: Partial<Saved>, immediate = false) {
@@ -136,6 +138,7 @@ function TaskView({ task }: { task: Task }) {
       <div className="sb-actions">
         <button className="btn soft sm" onClick={doRun} disabled={!!busy || !loaded}>{busy === "run" ? <LoaderCircle size={16} className="spin" /> : <Play size={16} />}Запустить</button>
         <button className="btn sm" onClick={doCheck} disabled={!!busy || !loaded}>{busy === "check" ? <LoaderCircle size={16} className="spin" /> : <ListChecks size={16} />}Проверить</button>
+        <button className="btn soft sm" onClick={() => setTraceCode(traceCode === null ? code() : null)} disabled={!!busy || !loaded}><Footprints size={16} />{traceCode === null ? "По шагам" : "Скрыть шаги"}</button>
         <button className="btn soft sm" onClick={reset} disabled={!!busy}><RotateCcw size={16} />Начать заново</button>
         {hints.length > 0 && st.hints < hints.length && (
           <button className="btn soft sm" onClick={() => update({ hints: st.hints + 1 }, true)}><Lightbulb size={16} />Подсказка {st.hints + 1} из {hints.length}</button>
@@ -144,6 +147,7 @@ function TaskView({ task }: { task: Task }) {
       {busy && <div className="grading"><LoaderCircle size={18} />{busy === "run" ? "Выполняю…" : "Проверяю на тестах…"} Первый запуск загружает Python — несколько секунд.</div>}
       {notice && <div className="verdict error"><CircleAlert size={22} /><div>{notice}</div></div>}
       {hints.slice(0, st.hints).map((h, i) => <div key={i} className="sb-hint"><Lightbulb size={16} /><div><b>Подсказка {i + 1}.</b> {h.text}</div></div>)}
+      {traceCode !== null && <TraceView code={traceCode} stdin={stdin} />}
       {run && (
         <div className="sb-out">
           <Block label="Вывод программы">{run.stdout || <span className="faint">(программа ничего не вывела)</span>}</Block>

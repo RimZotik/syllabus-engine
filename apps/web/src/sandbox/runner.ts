@@ -46,6 +46,18 @@ export async function runPython(code: string, stdin: string, timeoutMs = 5000): 
   return r;
 }
 
+/** Value in a trace: a plain value («p») or a reference to a numbered object («r»). */
+export type TraceVal = { p: string } | { r: number };
+export type TraceObj = { t: string; items: (TraceVal | [TraceVal, TraceVal])[]; more: boolean };
+export type TraceStep = { line: number; event: "line" | "return"; frames: { name: string; vars: [string, TraceVal][] }[]; heap: Record<string, TraceObj | null>; out: string; ret?: TraceVal };
+export type TraceResult = { steps: TraceStep[]; stdout: string; error: PyError | null; truncated: boolean };
+
+export async function tracePython(code: string, stdin = "", timeoutMs = 8000): Promise<TraceResult> {
+  const r = await call<TraceResult>({ kind: "trace", code, stdin }, budget(timeoutMs));
+  booted = true;
+  return r;
+}
+
 export async function checkPython(code: string, tests: unknown, timeoutMs = 8000): Promise<CheckResult> {
   const r = await call<CheckResult>({ kind: "check", code, tests }, budget(timeoutMs));
   booted = true;

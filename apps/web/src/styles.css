@@ -2,6 +2,7 @@
 :root{
   --bg:#f6f1e7; --paper:#fbf8f2; --card:#fffdf9; --fill:#efe8db; --line:#e4dccd; --line-2:#d6ccba;
   --ink:#27231d; --ink-2:#5c564c; --ink-3:#686154;
+  --o1:#2f7a57; --o2:#6a5a9e; --o3:#b0711f; --o4:#2f6e9e; --o5:#a8466b; --o6:#5f7a2a;   /* object colours of the trace visualiser */
   --green:#3d7c5e; --green-2:#4a8c6c; --green-soft:#e1ebdd; --green-ink:#2f6249;
   --lav:#6a5a9e; --lav-soft:#ebe5f2; --mark:#f5e3a3;
   --warn:#7d4a0c; --amber:#b9821c; --fb-mark:rgba(214,92,74,.30); --warn-soft:#f6ead2; --bad:#b4483a; --bad-soft:#f6e1dc; --code:#f2ece1;
@@ -11,6 +12,7 @@
   --r-s:8px; --r-m:12px; --r-l:18px; color-scheme:light;
 }
 :root[data-theme="dark"]{
+  --o1:#7fc4a0; --o2:#b3a6de; --o3:#e0b066; --o4:#86b8e0; --o5:#e08aa8; --o6:#a9c46e;
   --bg:#1d1b17; --paper:#22201b; --card:#28251f; --fill:#2e2b24; --line:#37332b; --line-2:#443f35;
   --ink:#ece6da; --ink-2:#bcb4a5; --ink-3:#a39b8c; --green:#7fbf9d; --green-2:#8fcaa9; --green-soft:#2b3a31; --green-ink:#9fd3b6;
   --lav:#b3a6de; --lav-soft:#332f42; --mark:#5a4d22; --warn:#e0a85a; --amber:#d9b25e; --fb-mark:rgba(232,128,112,.38); --warn-soft:#3a2f1e; --bad:#e28a7c; --bad-soft:#3d2622; --code:#2a2721;
@@ -342,3 +344,37 @@ input[type=range]{accent-color:var(--green)}
 .rec-score{width:52px;text-align:right;color:var(--green-ink);font-weight:600}
 .rec-time{width:110px;text-align:right;color:var(--ink-2);font-size:14px}
 @media (max-width:640px){.rec-cards{grid-template-columns:1fr}.rec-time{width:auto}.rec-days{gap:4px}}
+
+/* step-by-step trace: names → objects */
+.trace{margin:24px 0;padding:20px;border-radius:var(--r-l);background:var(--card);box-shadow:var(--sh-soft)}
+.tr-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px}
+@media (max-width:820px){.tr-grid{grid-template-columns:1fr}}
+.tr-code{margin:0;padding:10px 0;border-radius:var(--r-m);background:var(--paper);font:14px/1.6 var(--f-mono);overflow-x:auto}
+.tr-line{display:flex;gap:12px;padding:0 12px;border-left:3px solid transparent;white-space:pre}
+.tr-line.next{background:color-mix(in srgb,var(--green-soft) 80%,transparent);border-left-color:var(--green)}
+.tr-line.ret{background:color-mix(in srgb,var(--lav-soft) 80%,transparent);border-left-color:var(--lav)}
+.tr-no{width:22px;flex:none;text-align:right;color:var(--ink-3);user-select:none}
+.tr-caption{margin-top:10px;font-size:15px;line-height:1.5;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tr-controls{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tr-controls input[type=range]{order:9;flex:1 1 100%}
+.tr-controls svg{display:block}
+.tr-note{font-size:13px;margin:8px 0 0}
+.tr-left .sb-io,.tr-left .sb-error{margin-top:12px}
+.tr-h{font:600 12px/1 var(--f-text);text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin:4px 0 8px}
+.tr-h:not(:first-child){margin-top:16px}
+.tr-frame{padding:10px 12px;border-radius:var(--r-m);background:var(--paper);margin-bottom:8px;opacity:.75}
+.tr-frame.active{opacity:1;box-shadow:inset 3px 0 0 var(--green)}
+.tr-frame-h{font:600 14px/1.2 var(--f-mono);margin-bottom:6px}
+.tr-empty{font-size:13px}
+.tr-var{display:flex;align-items:center;gap:10px;padding:3px 6px;border-radius:8px;font-size:14px}
+.tr-var>code{font-family:var(--f-mono);min-width:44px}
+.tr-var.changed,.tr-obj.changed{background:color-mix(in srgb,var(--mark) 60%,transparent)}
+.tr-prim{font-family:var(--f-mono);font-size:13px;padding:1px 6px;border-radius:6px;background:var(--fill)}
+.tr-ref{display:inline-flex;align-items:center;font:600 12px/1 var(--f-text);padding:4px 8px;border-radius:999px;color:var(--ink);border:1.5px solid var(--oc);background:color-mix(in srgb,var(--oc) 14%,transparent);white-space:nowrap}
+.tr-obj{padding:10px 12px;border-radius:var(--r-m);background:var(--paper);margin-bottom:8px;border-left:3px solid var(--oc)}
+.tr-obj-h{margin-bottom:8px}
+.tr-items{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end}
+.tr-cell{display:flex;flex-direction:column;align-items:center;gap:2px}
+.tr-idx{font:11px/1 var(--f-mono);color:var(--ink-3)}
+.tr-kv{display:flex;align-items:center;gap:6px;width:100%}
+.tr-c1{--oc:var(--o1)} .tr-c2{--oc:var(--o2)} .tr-c3{--oc:var(--o3)} .tr-c4{--oc:var(--o4)} .tr-c5{--oc:var(--o5)} .tr-c6{--oc:var(--o6)}
