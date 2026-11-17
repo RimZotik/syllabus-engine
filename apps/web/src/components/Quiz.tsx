@@ -29,7 +29,9 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
   const started = useRef(Date.now());
   const pass = data.pass ?? 0.85;
   // New order of questions and options on every attempt: no position bias, no memorising «the second one».
-  const [view] = useState(() => shuffled(data.questions).map((q) => ({ q, perm: shuffled((q.options ?? []).map((_, i) => i)) })));
+  // Auto-graded questions are shuffled; questions with a written answer always go last.
+  const [view] = useState(() => [...shuffled(data.questions.filter((q) => q.type !== "open")), ...data.questions.filter((q) => q.type === "open")]
+    .map((q) => ({ q, perm: shuffled((q.options ?? []).map((_, i) => i)) })));
 
   const auto = data.questions.filter((q) => q.type !== "open");
   const score = useMemo(() => (auto.length ? auto.filter((q) => isRight(q, answers[q.id])).length / auto.length : 1), [answers, auto]);
