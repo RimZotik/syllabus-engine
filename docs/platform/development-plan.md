@@ -8,7 +8,7 @@
 - Документы `docs/`, кликабельный макет `design/mockup/index.html`
 
 ## Этап 0.5. Полная программа — готово
-- `content/program.yaml`: все курсы до уровня тем; скрипт `tools/program/build.py` проверяет порядок и генерирует `docs/content/curriculum.md`
+- `content/forge-ml/program.yaml`: все курсы до уровня тем; скрипт `tools/program/build.py` проверяет порядок и генерирует `content/forge-ml/docs/curriculum.md`
 - Документ о преподавателе Claude (`docs/07`)
 - Независимое ревью программы и макета (ученики, методист, работодатели, дизайнер)
 

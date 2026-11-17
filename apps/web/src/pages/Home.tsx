@@ -51,39 +51,51 @@ function Landscape() {
   return <canvas ref={ref} aria-hidden="true" />;
 }
 
+/** «текст *выделение* текст» → выделение цветом, как в заголовке главной. */
+function Emph({ text }: { text: string }) {
+  return <>{text.split(/(\*[^*]+\*)/).map((s, i) => (s.startsWith("*") && s.endsWith("*") ? <em key={i}>{s.slice(1, -1)}</em> : s))}</>;
+}
+
+const plural = (n: number, one: string, few: string, many: string) =>
+  n % 10 === 1 && n % 100 !== 11 ? one : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many;
+
+/** Landing of the active learning package: texts from its package.yaml, structure from its program.yaml. */
 export function Home() {
-  const { program } = useApp();
+  const { program, pkg } = useApp();
   const subjects = new Map<string, { title: string; cells: Record<string, number[]> }>();
   program?.courses.forEach((c) => c.disciplines.forEach((d) => {
     const s = subjects.get(d.subject) ?? { title: d.subjectTitle, cells: {} };
     (s.cells[c.id] ??= []).push(d.level); subjects.set(d.subject, s);
   }));
+  const courses = program?.courses.length ?? 0;
   const discCount = program?.courses.reduce((n, c) => n + c.disciplines.length, 0) ?? 0;
+  const stages = program?.levels ?? [];
+  const hl = pkg?.landing.highlight_subject;
+  if (!program || !pkg) return <div className="wrap stub faint">Загружаю…</div>;
 
   return (
     <main>
       <section className="hero"><Landscape /><div className="wrap">
-        <div className="eyebrow">Курс Forge ML · {program?.courses.length ?? 7} курсов · {subjects.size || 23} предмета · {discCount || 61} дисциплина</div>
-        <h1>От первой строки кода до <em>собственного GPT</em></h1>
-        <p className="lead">Строгий курс машинного обучения и работы с данными с нуля. Каждую библиотеку вы сначала пишете сами, каждый экзамен защищаете у преподавателя, а забытое возвращается тогда, когда начинает стираться.</p>
-        <div className="row" style={{ gap: 14, flexWrap: "wrap" }}><Link className="btn" to="/learn">Начать с введения <ArrowRight size={16} /></Link></div>
+        <div className="eyebrow">{pkg.title} · {courses} {plural(courses, "курс", "курса", "курсов")} · {subjects.size} {plural(subjects.size, "предмет", "предмета", "предметов")} · {discCount} {plural(discCount, "дисциплина", "дисциплины", "дисциплин")}</div>
+        <h1><Emph text={pkg.landing.headline} /></h1>
+        <p className="lead">{pkg.landing.lead}</p>
+        <div className="row" style={{ gap: 14, flexWrap: "wrap" }}><Link className="btn" to="/learn">{pkg.landing.cta} <ArrowRight size={16} /></Link></div>
       </div></section>
-      <section className="sec tint"><div className="wrap">
-        <div className="sec-head"><div><div className="eyebrow">Как устроено обучение</div><h2>Как в университете, только под одну цель</h2></div><p>Курс → дисциплина → раздел → тема. Пока ступень не сдана и не закреплена, следующая не откроется. Забытое возвращается в тренажёр ровно тогда, когда начинает стираться.</p></div>
-        <div className="steps">
-          <div className="step"><div className="n">01 · курс</div><h3>Большая ступень</h3><p>Заканчивается переводным экзаменом и курсовым проектом.</p></div>
-          <div className="step"><div className="n">02 · дисциплина</div><h3>Уровень предмета</h3><p>«Программирование III». Экзамен с устным опросом у преподавателя.</p></div>
-          <div className="step"><div className="n">03 · раздел</div><h3>Блок тем</h3><p>Заканчивается контрольной по всем темам раздела.</p></div>
-          <div className="step"><div className="n">04 · тема</div><h3>Одно занятие</h3><p>Листаете страницы теории, крутите визуализации, сдаёте проверку.</p></div>
-        </div>
-      </div></section>
+      {stages.length > 0 && (
+        <section className="sec tint"><div className="wrap">
+          <div className="sec-head"><div><div className="eyebrow">Как устроено обучение</div><h2>Как в университете, только под одну цель</h2></div><p>{stages.map((s) => s.title).join(" → ")}. Пока ступень не сдана и не закреплена, следующая не откроется. Забытое возвращается в тренажёр ровно тогда, когда начинает стираться.</p></div>
+          <div className="steps">
+            {stages.map((s, i) => <div className="step" key={s.id}><div className="n">{String(i + 1).padStart(2, "0")} · {s.title.toLowerCase()}</div><h3>{s.title}</h3><p>{s.gate}</p></div>)}
+          </div>
+        </div></section>
+      )}
       <section className="sec"><div className="wrap">
-        <div className="sec-head"><div><div className="eyebrow">Предметы</div><h2>Предметы растут вместе с вами</h2></div><p>У каждого предмета есть уровни. Алгоритмы и программирование идут через все курсы, остальные появляются, когда приходит их время.</p></div>
+        <div className="sec-head"><div><div className="eyebrow">Предметы</div><h2>Предметы растут вместе с вами</h2></div>{pkg.landing.subjects_lead && <p>{pkg.landing.subjects_lead}</p>}</div>
         <div className="matrix-wrap"><table className="matrix">
-          <thead><tr><th>Предмет</th>{program?.courses.map((c) => <th key={c.id}>{c.id}</th>)}</tr></thead>
+          <thead><tr><th>Предмет</th>{program.courses.map((c) => <th key={c.id}>{c.id}</th>)}</tr></thead>
           <tbody>{[...subjects.entries()].map(([id, s]) => {
             const single = Object.values(s.cells).flat().length === 1;
-            return <tr key={id}><td>{s.title}</td>{program?.courses.map((c) => <td key={c.id}>{(s.cells[c.id] ?? []).map((l) => <span key={l} className={`lv${id === "algo" ? " lavv" : ""}`}>{single ? "•" : ROMAN[l]}</span>)}</td>)}</tr>;
+            return <tr key={id}><td>{s.title}</td>{program.courses.map((c) => <td key={c.id}>{(s.cells[c.id] ?? []).map((l) => <span key={l} className={`lv${id === hl ? " lavv" : ""}`}>{single ? "•" : ROMAN[l]}</span>)}</td>)}</tr>;
           })}</tbody>
         </table></div>
       </div></section>

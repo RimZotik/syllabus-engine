@@ -1,18 +1,21 @@
-"""Validate content/program.yaml and generate the curriculum documents.
+"""Validate a learning package (content/<id>/) and generate its curriculum documents.
 
 Checks:
+  * package.yaml exists, its id matches the folder, title is set;
   * ids are unique; every discipline references a known subject;
   * subject levels go 1, 2, 3... in order of appearance (a level never repeats or skips);
-  * Algorithms (algo) has a level in every course I–VI;
+  * package rules from package.yaml, e.g. `every_course_has: {subject: algo, except: ["0"]}`;
   * every `requires` points to a section defined EARLIER (no forward dependencies);
   * every `used_by` points to a section defined LATER;
   * every section of a math subject declares `used_by` — no math "just because".
 
-Outputs:
-  docs/content/curriculum.md      — the full plan for people
-  docs/dev/prerequisite-trees.md  — what each key topic transitively rests on (for authors and reviewers)
+Outputs (inside the package):
+  docs/curriculum.md          — the full plan for people
+  docs/prerequisite-trees.md  — what each key topic transitively rests on (for authors and reviewers)
+and the progress block of the root README for the active package.
 
-Run: uv run --with pyyaml tools/program/build.py [--check]
+Run: uv run --with pyyaml tools/program/build.py [--check] [--package <id> | --all]
+  default package — `active:` in syllabus.yaml (or $SYLLABUS_PACKAGE)
 """
 from __future__ import annotations
 
@@ -26,12 +29,45 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "content" / "program.yaml"
-OUT = ROOT / "docs" / "content" / "curriculum.md"
-TREES = ROOT / "docs" / "dev" / "prerequisite-trees.md"
+CONTENT_ROOT = ROOT / "content"
 README = ROOT / "README.md"
-COURSES = ROOT / "content" / "courses"
-GLOSSARY = ROOT / "content" / "glossary.yaml"
+# Paths of the package being checked — set by use_package().
+PKG = PKG_DIR = SRC = OUT = TREES = COURSES = GLOSSARY = None  # type: ignore[assignment]
+META: dict = {}
+
+
+def active_package() -> str:
+    import os
+    if os.environ.get("SYLLABUS_PACKAGE"):
+        return os.environ["SYLLABUS_PACKAGE"]
+    m = re.search(r"^active:\s*([\w.-]+)", (ROOT / "syllabus.yaml").read_text(encoding="utf-8"), re.M)
+    if not m:
+        raise SystemExit("syllabus.yaml: не указано active: <папка пакета>")
+    return m.group(1)
+
+
+def all_packages() -> list[str]:
+    return sorted(p.parent.name for p in CONTENT_ROOT.glob("*/package.yaml"))
+
+
+def use_package(pkg: str) -> list[str]:
+    """Point every path at content/<pkg>/ and read its passport. Returns passport errors."""
+    global PKG, PKG_DIR, SRC, OUT, TREES, COURSES, GLOSSARY, META
+    PKG, PKG_DIR = pkg, CONTENT_ROOT / pkg
+    SRC, COURSES, GLOSSARY = PKG_DIR / "program.yaml", PKG_DIR / "courses", PKG_DIR / "glossary.yaml"
+    OUT, TREES = PKG_DIR / "docs" / "curriculum.md", PKG_DIR / "docs" / "prerequisite-trees.md"
+    errors: list[str] = []
+    meta_file = PKG_DIR / "package.yaml"
+    if not meta_file.is_file():
+        return [f"content/{pkg}: нет package.yaml"]
+    META = yaml.safe_load(meta_file.read_text(encoding="utf-8")) or {}
+    if META.get("id") != pkg:
+        errors.append(f"content/{pkg}/package.yaml: id '{META.get('id')}' must equal the folder name '{pkg}'")
+    if not META.get("title"):
+        errors.append(f"content/{pkg}/package.yaml: missing title")
+    if not SRC.is_file():
+        errors.append(f"content/{pkg}: нет program.yaml")
+    return errors
 ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 
@@ -83,9 +119,11 @@ def validate(data: dict) -> list[str]:
             last_level[disc["subject"]] = lvl or 0
             if not disc.get("summary"):
                 errors.append(f"{disc['id']}: missing summary")
-    for course in data["courses"]:
-        if course["id"] != "0" and not any(d["subject"] == "algo" for d in course["disciplines"]):
-            errors.append(f"course {course['id']}: no Algorithms level")
+    every = (META.get("rules") or {}).get("every_course_has")
+    if every:
+        for course in data["courses"]:
+            if str(course["id"]) not in [str(x) for x in every.get("except", [])] and not any(d["subject"] == every["subject"] for d in course["disciplines"]):
+                errors.append(f"course {course['id']}: no level of {every['subject']} (package rule every_course_has)")
 
     for s in sections:
         sid = s["id"]
@@ -129,6 +167,12 @@ def plural(n: int, one: str, few: str, many: str) -> str:
     return many
 
 
+def example_discipline(data: dict) -> str:
+    """«Программирование II»-style example: the first subject that has a second level, or a plain description."""
+    multi = [d for c in data["courses"] for d in c["disciplines"] if d["level"] == 2]
+    return f"например, «{disc_name(data, multi[0])}»" if multi else "уровень и предмет вместе"
+
+
 def render_curriculum(data: dict) -> str:
     sections, disc_of, course_of, order = index(data)
     titles = {s["id"]: s["title"] for s in sections}
@@ -138,7 +182,7 @@ def render_curriculum(data: dict) -> str:
     L = [
         "# Учебный план",
         "",
-        "> **Файл сгенерирован** из `content/program.yaml` скриптом `tools/program/build.py` — правьте YAML, не этот файл.",
+        f"> **Файл сгенерирован** из `content/{PKG}/program.yaml` скриптом `tools/program/build.py` — правьте YAML, не этот файл.",
         "> " + ", ".join(f"{n} {plural(n, *w)}" for n, w in [
             (len(data['courses']), ("курс", "курса", "курсов")), (len(data['subjects']), ("предмет", "предмета", "предметов")),
             (len(discs), ("дисциплина", "дисциплины", "дисциплин")), (len(sections), ("раздел", "раздела", "разделов")),
@@ -146,12 +190,17 @@ def render_curriculum(data: dict) -> str:
         "",
         "## Как устроено",
         "",
-        "- **Предмет** — сквозная линия (Программирование, Алгоритмы, Линейная алгебра…). У предмета есть уровни: I, II, III…",
-        "- **Дисциплина** — один уровень предмета на конкретном курсе («Программирование III»). Уровень растёт, когда в предмете появляются новые темы; повторение уровень не повышает.",
+        f"- **Предмет** — сквозная линия ({', '.join(s['title'] for s in data['subjects'][:3])}…). У предмета есть уровни: I, II, III…",
+        f"- **Дисциплина** — один уровень предмета на конкретном курсе ({example_discipline(data)}). Уровень растёт, когда в предмете появляются новые темы; повторение уровень не повышает.",
         "- Внутри курса дисциплины идут строго друг за другом, без чередования.",
-        f"- Рубежи: " + "; ".join(f"{l['title'].lower()} — {l['gate'][0].lower()}{l['gate'][1:]}" for l in data["program"]["levels"]) + ".",
-        f"- Дополнительно: {data['program']['residual_check']}.",
-        "- Библиотека «открывается» только после того, как её идея реализована своими руками.",
+    ]
+    gates = [l for l in data["program"].get("levels") or [] if l.get("gate")]
+    if gates:
+        L.append("- Рубежи: " + "; ".join(f"{l['title'].lower()} — {l['gate'][0].lower()}{l['gate'][1:]}" for l in gates) + ".")
+    if data["program"].get("residual_check"):
+        L.append(f"- Дополнительно: {data['program']['residual_check']}.")
+    L += [f"- {x}" for x in data["program"].get("principles") or []]
+    L += [
         "",
         "## Предметы по курсам",
         "",
@@ -195,7 +244,8 @@ def render_curriculum(data: dict) -> str:
                 L.append("")
         if c.get("project"):
             L += [f"**Курсовой проект.** {c['project']}", ""]
-    L += ["---", "", f"## {data['graduation']['title']}", ""] + [f"- {p}" for p in data["graduation"]["parts"]]
+    if data.get("graduation"):
+        L += ["---", "", f"## {data['graduation']['title']}", ""] + [f"- {p}" for p in data["graduation"].get("parts", [])]
     return "\n".join(L) + "\n"
 
 
@@ -354,33 +404,52 @@ def render_progress(data: dict, authored: set[str]) -> str:
     ])
 
 
-def main() -> int:
+def check_package(pkg: str, check: bool, readme: bool) -> int:
+    errors = use_package(pkg)
+    if errors:
+        print(f"{pkg}: FAILED", file=sys.stderr)
+        for e in errors:
+            print("  -", e, file=sys.stderr)
+        return 1
     data = load()
     errors = validate(data)
     content_errors, authored = check_content(data)
     errors += content_errors
     if errors:
-        print("program.yaml: FAILED", file=sys.stderr)
+        print(f"{pkg}: FAILED", file=sys.stderr)
         for e in errors:
             print("  -", e, file=sys.stderr)
         return 1
     outputs = {OUT: render_curriculum(data), TREES: render_trees(data)}
-    readme = README.read_text(encoding="utf-8")
-    if "<!-- progress:start -->" in readme:
-        head, rest = readme.split("<!-- progress:start -->", 1)
-        tail = rest.split("<!-- progress:end -->", 1)[1]
-        outputs[README] = head + render_progress(data, authored) + tail
-    if "--check" in sys.argv:
+    if readme:
+        text = README.read_text(encoding="utf-8")
+        if "<!-- progress:start -->" in text:
+            head, rest = text.split("<!-- progress:start -->", 1)
+            tail = rest.split("<!-- progress:end -->", 1)[1]
+            outputs[README] = head + render_progress(data, authored) + tail
+    if check:
         stale = [str(p.relative_to(ROOT)) for p, text in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
         if stale:
-            print("stale generated files: " + ", ".join(stale), file=sys.stderr)
+            print(f"{pkg}: stale generated files: " + ", ".join(stale) + " — run without --check", file=sys.stderr)
             return 1
     else:
         for p, text in outputs.items():
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(text, encoding="utf-8", newline="\n")
-    print("program.yaml: OK")
+    print(f"{pkg}: OK")
     return 0
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    active = active_package()
+    if "--all" in args:
+        pkgs = all_packages()
+    elif "--package" in args:
+        pkgs = [args[args.index("--package") + 1]]
+    else:
+        pkgs = [active]
+    return max(check_package(p, "--check" in args, readme=p == active) for p in pkgs)
 
 
 if __name__ == "__main__":

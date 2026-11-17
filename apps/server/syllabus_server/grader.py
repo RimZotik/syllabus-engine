@@ -1,7 +1,7 @@
 """Teacher check of written answers via the locally installed Claude Code (`claude -p`).
 
 The learner's own `claude` login is used; the platform never reads credentials.
-Model: $FORGE_GRADER_MODEL (default "sonnet").
+Model: $SYLLABUS_GRADER_MODEL (or $FORGE_GRADER_MODEL), default "sonnet".
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import subprocess
 
 from .claude import find_exe, run_stream
 
-SYSTEM = """Ты — строгий, но справедливый преподаватель курса машинного обучения. Ты проверяешь развёрнутый ответ ученика по рубрике.
+SYSTEM = """Ты — строгий, но справедливый преподаватель курса {course}. Ты проверяешь развёрнутый ответ ученика по рубрике.
 Правила:
 - Оценивай только по критериям рубрики. Критерий выполнен, если мысль выражена по сути, пусть своими словами. Не требуй дословных формулировок.
 - Для каждого критерия процитируй часть ответа, которая его подтверждает, или оставь цитату пустой.
@@ -46,12 +46,12 @@ def build_prompt(question: str, rubric: list[str], wrong_answers: list[str], ans
             f"Это попытка номер {attempt}.\n\n<answer>\n{answer}\n</answer>")
 
 
-def grade(question: str, rubric: list[str], wrong_answers: list[str], answer: str, attempt: int = 1, timeout: int = 150) -> dict:
+def grade(question: str, rubric: list[str], wrong_answers: list[str], answer: str, attempt: int = 1, timeout: int = 150, course: str = "") -> dict:
     if not find_exe():
         raise GraderUnavailable("Claude Code не найден")
     # stream-json so that every check also refreshes the subscription limits shown in the top bar
-    args = ["--json-schema", json.dumps(SCHEMA, ensure_ascii=False), "--tools", "", "--model", os.environ.get("FORGE_GRADER_MODEL", "sonnet"),
-            "--no-session-persistence", "--strict-mcp-config", "--system-prompt", SYSTEM]
+    args = ["--json-schema", json.dumps(SCHEMA, ensure_ascii=False), "--tools", "", "--model", os.environ.get("SYLLABUS_GRADER_MODEL") or os.environ.get("FORGE_GRADER_MODEL") or "sonnet",
+            "--no-session-persistence", "--strict-mcp-config", "--system-prompt", SYSTEM.replace("{course}", course or "по этой теме")]
     try:
         out = run_stream(args, build_prompt(question, rubric, wrong_answers, answer, attempt), timeout)
     except subprocess.TimeoutExpired as e:

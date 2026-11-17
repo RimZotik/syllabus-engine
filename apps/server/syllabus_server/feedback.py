@@ -1,6 +1,6 @@
 """Print open course feedback as Markdown — the inbox the course author (Claude) works through.
 
-Usage: uv run --project apps/server python -m forge_server.feedback [--status open]
+Usage: uv run --project apps/server python -m syllabus_server.feedback [--status open]
 """
 from __future__ import annotations
 

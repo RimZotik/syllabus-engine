@@ -6,8 +6,6 @@ import { useState, type ReactNode } from "react";
 import { AlertTriangle, BookMarked, Check as CheckIcon, History, Lightbulb } from "lucide-react";
 import { useApp } from "../state";
 import { term as lookup } from "./glossary";
-import { KnnDemo } from "../viz/KnnDemo";
-import { LineFitDemo } from "../viz/LineFitDemo";
 import { Sandbox } from "../components/Sandbox";
 
 /** One page of a topic. The reader shows pages one at a time. */
@@ -96,4 +94,8 @@ export function Wide({ children }: { children: ReactNode }) {
   return <div className="wide">{children}</div>;
 }
 
-export const mdxComponents = { Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, KnnDemo, LineFitDemo, Sandbox };
+// A package may add its own components (interactive demos of its subject): content/<id>/components/index.ts(x)
+// exporting named React components. They become available in every topic of that package.
+const packageComponents = Object.values(import.meta.glob<Record<string, unknown>>("@pkg/components/index.{ts,tsx}", { eager: true }))[0] ?? {};
+
+export const mdxComponents = { Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, Sandbox, ...packageComponents };

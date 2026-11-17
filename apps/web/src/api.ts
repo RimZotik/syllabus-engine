@@ -8,7 +8,13 @@ export type Discipline = {
   hours: number; summary: string; unlocks: string[]; levels: Level[]; sections: Section[];
 };
 export type Course = { id: string; title: string; tagline: string; project: string | null; hours: number; disciplines: Discipline[] };
-export type Program = { title: string; courses: Course[] };
+export type Stage = { id: string; title: string; gate: string };
+export type Program = { title: string; levels: Stage[]; courses: Course[] };
+/** Passport of the active learning package (content/<id>/package.yaml). */
+export type Package = {
+  id: string; title: string; language: string; summary: string;
+  landing: { headline: string; lead: string; cta: string; subjects_lead: string; highlight_subject: string | null };
+};
 export type Progress = Record<string, { status: "started" | "done"; page: number; seconds: number }>;
 export type LimitWindow = { used: number; resets_at: number | null; status: string | null };
 export type ClaudeLimits = { five_hour: LimitWindow | null; seven_day: LimitWindow | null; updated_at: number };
@@ -36,6 +42,7 @@ async function call<T>(method: string, url: string, body?: unknown): Promise<T> 
 
 export const api = {
   program: () => call<Program>("GET", "/api/program"),
+  package: () => call<Package>("GET", "/api/package"),
   progress: () => call<Progress>("GET", "/api/progress"),
   setProgress: (topicId: string, status: "started" | "done", page: number, seconds: number) =>
     call("PUT", `/api/progress/${encodeURIComponent(topicId)}`, { status, page, seconds }),

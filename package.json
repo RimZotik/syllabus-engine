@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "npm run build -w apps/web",
-    "check": "uv run --with pyyaml tools/program/build.py --check && npm run typecheck -w apps/web && uv run --project apps/server pytest -q",
-    "feedback": "uv run --project apps/server python -m forge_server.feedback"
+    "build:docs": "uv run --with pyyaml tools/program/build.py",
+    "check": "uv run --with pyyaml tools/program/build.py --check --all && npm run typecheck -w apps/web && npm run test -w apps/web && uv run --project apps/server pytest -q",
+    "feedback": "uv run --project apps/server python -m syllabus_server.feedback"
   }
 }

@@ -14,12 +14,12 @@ from pydantic import BaseModel, Field
 
 from . import claude, grader
 from .db import PerThread, connect, db_file, migrate, transaction
-from .program import load_program, topic_ids
+from .program import load_package, load_program, topic_ids
 from .settings import data_dir
 
 
 def _logger() -> logging.Logger:
-    log = logging.getLogger("forge")
+    log = logging.getLogger("syllabus")
     if not log.handlers:
         handler = logging.handlers.RotatingFileHandler(data_dir() / "logs" / "server.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8")
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
@@ -51,6 +51,10 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     def health() -> dict:
         return {"ok": True}
 
+    @app.get("/api/package")
+    def package() -> dict:
+        return load_package()
+
     @app.get("/api/program")
     def program() -> dict:
         return load_program()
@@ -58,7 +62,7 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     # Warm the Claude check (and read the subscription limits) in the background,
     # so the first page load does not wait for `claude --version`.
     def warm() -> None:
-        if claude.status()["installed"] and os.environ.get("FORGE_NO_LIMITS_PROBE") != "1":
+        if claude.status()["installed"] and (os.environ.get("SYLLABUS_NO_LIMITS_PROBE") or os.environ.get("FORGE_NO_LIMITS_PROBE")) != "1":
             claude.refresh_limits()
     threading.Thread(target=warm, daemon=True).start()
 
@@ -138,7 +142,7 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     def grade(body: GradeIn) -> dict:
         n = db.execute("SELECT COUNT(*) FROM attempt WHERE scope = ? AND item_id = ?", (body.scope, body.item_id)).fetchone()[0] + 1
         try:
-            result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n)
+            result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n, course=load_package()["teacher"]["course"])
         except grader.GraderUnavailable as e:
             record_event("warn", "server", f"grader unavailable: {e}", {"scope": body.scope, "item": body.item_id})
             raise HTTPException(503, str(e))

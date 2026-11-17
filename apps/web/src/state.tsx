@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, type ClaudeStatus, type Course, type Discipline, type Program, type Progress, type Section, type Topic } from "./api";
+import { api, type Package, type ClaudeStatus, type Course, type Discipline, type Program, type Progress, type Section, type Topic } from "./api";
 
 export type TopicPlace = { course: Course; discipline: Discipline; section: Section; topic: Topic; index: number };
 
 type Ctx = {
   program: Program | null;
+  pkg: Package | null;
   progress: Progress;
   claude: ClaudeStatus | null;
   refreshClaude: () => void;
@@ -24,12 +25,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [program, setProgram] = useState<Program | null>(null);
   const [progress, setProgress] = useState<Progress>({});
   const [claude, setClaude] = useState<ClaudeStatus | null>(null);
+  const [pkg, setPkg] = useState<Package | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [termId, setTermId] = useState<string | null>(null);
 
   const refreshProgress = useCallback(async () => setProgress(await api.progress()), []);
 
   useEffect(() => {
+    api.package().then((p) => { setPkg(p); document.title = `${p.title} · Syllabus Engine`; }).catch(() => {});
     api.program().then(setProgram).catch(() => setError("Сервер платформы не отвечает. Запустите его командой npm run dev."));
     refreshProgress().catch(() => {});
   }, [refreshProgress]);
@@ -57,7 +60,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [program]);
 
   const value: Ctx = {
-    program, progress, claude, refreshClaude, setClaude, error, refreshProgress,
+    program, pkg, progress, claude, refreshClaude, setClaude, error, refreshProgress,
     place: (id) => index.m.get(id) ?? null,
     allTopics: index.all,
     openTerm: setTermId, termId, closeTerm: () => setTermId(null),

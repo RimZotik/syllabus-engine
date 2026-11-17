@@ -1,11 +1,13 @@
 /**
- * Finds course content on disk. Folder layout (see docs/content/authoring.md):
- *   content/courses/<course>/<discipline>/<section>/<NN-slug>/topic.mdx   → topic id  <discipline>.<section>.<NN>
- *   content/courses/<course>/<discipline>/<section>/<NN-slug>/quiz.yaml   → topic test
- *   content/courses/<course>/<discipline>/<section>/test.yaml             → section test (контрольная)
- *   content/courses/<course>/<discipline>/<section>/<NN-slug>/tasks/<id>/task.yaml → coding task, <Sandbox task="<id>" />
+ * Finds the content of the ACTIVE learning package (`@pkg` = content/<id>/, set in vite.config.ts).
+ * Layout inside the package (docs/template/course-package.md):
+ *   courses/<course>/<discipline>/<section>/<NN-slug>/topic.mdx   → topic id  <discipline>.<section>.<NN>
+ *   courses/<course>/<discipline>/<section>/<NN-slug>/quiz.yaml   → topic test
+ *   courses/<course>/<discipline>/<section>/test.yaml             → section test (контрольная)
+ *   courses/<course>/<discipline>/<section>/<NN-slug>/tasks/<id>/task.yaml → coding task, <Sandbox task="<id>" />
  */
 import type { ComponentType } from "react";
+import { sectionIdOf, topicIdOf } from "./paths";
 
 export type TopicMeta = { minutes?: number; lead?: string };
 export type TopicModule = { default: ComponentType<{ components?: Record<string, unknown> }>; meta?: TopicMeta };
@@ -31,19 +33,11 @@ export type Task = {
   timeout_ms?: number;
 };
 
-const topicFiles = import.meta.glob<TopicModule>("../../../../content/courses/**/topic.mdx");
-const quizFiles = import.meta.glob<{ default: QuizData }>("../../../../content/courses/**/quiz.yaml", { eager: true });
-const testFiles = import.meta.glob<{ default: QuizData }>("../../../../content/courses/*/*/*/test.yaml", { eager: true });
+const topicFiles = import.meta.glob<TopicModule>("@pkg/courses/**/topic.mdx");
+const quizFiles = import.meta.glob<{ default: QuizData }>("@pkg/courses/**/quiz.yaml", { eager: true });
+const testFiles = import.meta.glob<{ default: QuizData }>("@pkg/courses/*/*/*/test.yaml", { eager: true });
 
-function parts(path: string): string[] {
-  return path.split("/content/courses/")[1].split("/");
-}
-function topicIdOf(path: string): string {
-  const [, disc, section, folder] = parts(path);
-  return `${disc}.${section}.${parseInt(folder, 10)}`;
-}
-
-const taskFiles = import.meta.glob<{ default: Task }>("../../../../content/courses/**/tasks/*/task.yaml", { eager: true });
+const taskFiles = import.meta.glob<{ default: Task }>("@pkg/courses/**/tasks/*/task.yaml", { eager: true });
 const tasks = new Map<string, Task>();
 for (const mod of Object.values(taskFiles)) tasks.set(mod.default.id, mod.default);
 
@@ -54,10 +48,7 @@ const quizzes = new Map<string, QuizData>();
 for (const [path, mod] of Object.entries(quizFiles)) quizzes.set(topicIdOf(path), mod.default);
 
 const sectionTests = new Map<string, QuizData>();
-for (const [path, mod] of Object.entries(testFiles)) {
-  const [, disc, section] = parts(path);
-  sectionTests.set(`${disc}.${section}`, mod.default);
-}
+for (const [path, mod] of Object.entries(testFiles)) sectionTests.set(sectionIdOf(path), mod.default);
 
 export const content = {
   hasTopic: (id: string) => topics.has(id),

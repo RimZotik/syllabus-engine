@@ -1,4 +1,4 @@
-import raw from "../../../../content/glossary.yaml";
+import raw from "@pkg/glossary.yaml";
 
 export type Term = { id: string; term: string; en?: string; decode?: string; short: string; example?: string; introduced_in?: string };
 
