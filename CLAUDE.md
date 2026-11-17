@@ -3,7 +3,7 @@
 Проект одновременно: (1) платформа обучения Syllabus Engine, (2) её основной пакет обучения Forge ML по ML/DS (`courses/ml-bigdata-ai/`), (3) личный учебный трекер владельца репозитория. Владелец — ученик курса, поэтому не решай за него задачи курса и не подсказывай ответы вне механики подсказок платформы.
 
 ## Пакеты обучения
-- Каждое обучение — пакет `courses/<id>/` (`package.yaml`, `program.yaml`, `glossary.yaml`, `courses/`, `components/`). Формат — `docs/template/course-package.md`. Активный — `active:` в `courses/active.yaml`.
+- Каждое обучение — пакет `courses/<id>/` (`package.yaml`, `program.yaml`, `glossary.yaml`, `lessons/`, `components/`). Формат — `docs/template/course-package.md`. Активный — `active:` в `courses/active.yaml`.
 - Движок (`apps/`) не должен знать о предмете: ничего про ML в коде платформы, всё предметное — в пакете.
 - Новый курс по просьбе пользователя — по промпту `docs/template/course-generator-prompt.md`.
 - Прогресс ученика — `~/.syllabus-engine/<id>.sqlite3`, у каждого пакета свой. Не сбрасывать и не трогать без прямой просьбы; перед изменениями схемы — резервная копия.
