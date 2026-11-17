@@ -13,6 +13,8 @@ export type Progress = Record<string, { status: "started" | "done"; page: number
 export type ClaudeStatus = { installed: boolean; version: string | null; limits: null | { session: number; week: number } };
 export type Attempt = { scope: string; item_id: string; kind: "single" | "multi" | "open"; answer: unknown; correct?: boolean | null; confidence?: number | null; seconds?: number | null };
 export type Note = { id: number; topic_id: string | null; term_id: string | null; text: string; created_at: string };
+export type Grade = { verdict: "pass" | "revise"; feedback: string; misconception?: string | null; attempt: number };
+export type GradeRequest = { scope: string; item_id: string; question: string; rubric: string[]; wrong_answers: string[]; answer: string; confidence: number | null };
 export type FeedbackKind = "content_issue" | "bug" | "idea" | "question";
 
 async function call<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -21,7 +23,10 @@ async function call<T>(method: string, url: string, body?: unknown): Promise<T> 
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${method} ${url}: ${res.status}`);
+  if (!res.ok) {
+    const detail = await res.json().then((j) => (typeof j?.detail === "string" ? j.detail : null)).catch(() => null);
+    throw new Error(detail ?? `${method} ${url}: ${res.status}`);
+  }
   return res.json() as Promise<T>;
 }
 
@@ -32,6 +37,9 @@ export const api = {
     call("PUT", `/api/progress/${encodeURIComponent(topicId)}`, { status, page, seconds }),
   claude: () => call<ClaudeStatus>("GET", "/api/claude/status"),
   saveAttempts: (items: Attempt[]) => call("POST", "/api/attempts", items),
+  grade: (g: GradeRequest) => call<Grade>("POST", "/api/grade", g),
+  quizState: <T,>(scope: string) => call<{ state: T | null; passed: boolean }>("GET", `/api/quiz-state/${encodeURIComponent(scope)}`),
+  saveQuizState: (scope: string, state: unknown, passed: boolean) => call("PUT", `/api/quiz-state/${encodeURIComponent(scope)}`, { state, passed }),
   notes: (q: { topic_id?: string; term_id?: string }) =>
     call<Note[]>("GET", "/api/notes?" + new URLSearchParams(q as Record<string, string>)),
   addNote: (n: { topic_id?: string; term_id?: string; text: string }) => call("POST", "/api/notes", n),

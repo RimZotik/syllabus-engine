@@ -22,7 +22,7 @@ body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-text);-webkit-f
 h1,h2,h3{font-family:var(--f-head);font-weight:500;letter-spacing:-.015em;text-wrap:balance;margin:0}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
-textarea{font:inherit;color:var(--ink);background:var(--paper);border:0;border-radius:var(--r-m);padding:12px 14px;width:100%;min-height:96px;resize:vertical}
+textarea{font:inherit;color:var(--ink);background:var(--paper);border:0;border-radius:var(--r-m);padding:12px 14px;width:100%;min-height:96px;resize:none;max-height:75vh;overflow-y:auto;line-height:1.55;display:block}
 :focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:4px}
 .wrap{max-width:1200px;margin:0 auto;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
 .eyebrow{font:600 12px/1 var(--f-text);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
@@ -242,3 +242,20 @@ input[type=range]{accent-color:var(--green)}
 .toc-topics a.test{color:var(--lav);font-weight:600} .toc-topics a.test .lucide{color:var(--lav)}
 .toc-num{min-width:26px;font:500 12px/1 var(--f-mono);color:var(--ink-3)}
 .explain.trap{color:var(--warn);font-weight:600}
+
+/* teacher check of written answers */
+.grading{margin-top:12px;display:flex;align-items:center;gap:10px;color:var(--lav);font-size:15px;line-height:1.3}
+.grading svg{display:block;flex:none;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.verdict{margin-top:12px;padding:14px 16px;border-radius:var(--r-m);font-size:15px;line-height:1.55;display:flex;gap:12px;align-items:center}
+.verdict svg{display:block;flex:none}
+.verdict.pass{background:var(--green-soft);color:var(--green-ink)}
+.verdict.revise{background:var(--lav-soft);color:var(--ink)}
+.verdict.revise b{color:var(--lav)}
+.verdict.error{background:var(--warn-soft);color:var(--warn)}
+.verdict .meta{display:block;margin-top:4px;font-size:13px;opacity:.8}
+.qactions{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.quiz-foot{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.result.wait{background:var(--lav-soft);color:var(--lav)}
+.result svg{display:block;flex:none}
+.spin{animation:spin 1s linear infinite}

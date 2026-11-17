@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import claude
+from . import claude, grader
 from .db import connect, migrate, transaction
 from .program import load_program, topic_ids
 from .settings import data_dir
@@ -106,6 +106,48 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     def attempts(scope: str) -> list[dict]:
         rows = db.execute("SELECT item_id, kind, answer, correct, confidence, created_at FROM attempt WHERE scope = ? ORDER BY id", (scope,)).fetchall()
         return [dict(r) | {"answer": json.loads(r["answer"])} for r in rows]
+
+    # ── teacher check of written answers ────────────────────
+    class GradeIn(BaseModel):
+        scope: str
+        item_id: str
+        question: str
+        rubric: list[str]
+        wrong_answers: list[str] = []
+        answer: str = Field(min_length=1, max_length=20000)
+        confidence: int | None = Field(None, ge=1, le=5)
+
+    @app.post("/api/grade")
+    def grade(body: GradeIn) -> dict:
+        n = db.execute("SELECT COUNT(*) FROM attempt WHERE scope = ? AND item_id = ?", (body.scope, body.item_id)).fetchone()[0] + 1
+        try:
+            result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n)
+        except grader.GraderUnavailable as e:
+            record_event("warn", "server", f"grader unavailable: {e}", {"scope": body.scope, "item": body.item_id})
+            raise HTTPException(503, str(e))
+        with transaction(db):
+            db.execute("INSERT INTO attempt (scope, item_id, kind, answer, correct, confidence, feedback) VALUES (?, ?, 'open', ?, ?, ?, ?)",
+                       (body.scope, body.item_id, json.dumps(body.answer, ensure_ascii=False), int(result["verdict"] == "pass"),
+                        body.confidence, json.dumps(result, ensure_ascii=False)))
+        return result | {"attempt": n}
+
+    # ── saved test state (so a finished test stays finished after reload) ──
+    class QuizStateIn(BaseModel):
+        state: dict
+        passed: bool = False
+
+    @app.get("/api/quiz-state/{scope}")
+    def quiz_state(scope: str) -> dict:
+        row = db.execute("SELECT state, passed FROM quiz_state WHERE scope = ?", (scope,)).fetchone()
+        return {"state": json.loads(row["state"]), "passed": bool(row["passed"])} if row else {"state": None, "passed": False}
+
+    @app.put("/api/quiz-state/{scope}")
+    def save_quiz_state(scope: str, body: QuizStateIn) -> dict:
+        with transaction(db):
+            db.execute("INSERT INTO quiz_state (scope, state, passed) VALUES (?, ?, ?) ON CONFLICT(scope) DO UPDATE SET "
+                       "state = excluded.state, passed = MAX(quiz_state.passed, excluded.passed), updated_at = datetime('now')",
+                       (scope, json.dumps(body.state, ensure_ascii=False), int(body.passed)))
+        return {"ok": True}
 
     # ── notes ───────────────────────────────────────────────
     class NoteIn(BaseModel):

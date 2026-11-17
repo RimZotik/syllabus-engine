@@ -7,6 +7,7 @@ type Ctx = {
   program: Program | null;
   progress: Progress;
   claude: ClaudeStatus | null;
+  refreshClaude: () => void;
   error: string | null;
   refreshProgress: () => Promise<void>;
   place: (topicId: string) => TopicPlace | null;
@@ -30,8 +31,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     api.program().then(setProgram).catch(() => setError("Сервер платформы не отвечает. Запустите его командой npm run dev."));
     refreshProgress().catch(() => {});
-    api.claude().then(setClaude).catch(() => {});
   }, [refreshProgress]);
+
+  // Claude may be installed or logged in while the platform is open: re-check every 30 s while it is
+  // missing and whenever the window regains focus — no restart needed.
+  const refreshClaude = useCallback(() => { api.claude().then(setClaude).catch(() => {}); }, []);
+  useEffect(() => {
+    refreshClaude();
+    window.addEventListener("focus", refreshClaude);
+    return () => window.removeEventListener("focus", refreshClaude);
+  }, [refreshClaude]);
+  useEffect(() => {
+    if (claude?.installed) return;
+    const t = window.setInterval(refreshClaude, 30_000);
+    return () => window.clearInterval(t);
+  }, [claude?.installed, refreshClaude]);
 
   const index = useMemo(() => {
     const m = new Map<string, TopicPlace>();
@@ -42,7 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [program]);
 
   const value: Ctx = {
-    program, progress, claude, error, refreshProgress,
+    program, progress, claude, refreshClaude, error, refreshProgress,
     place: (id) => index.m.get(id) ?? null,
     allTopics: index.all,
     openTerm: setTermId, termId, closeTerm: () => setTermId(null),

@@ -59,6 +59,16 @@ MIGRATIONS: list[str] = [
         created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
     """,
+    # 2 — saved test state and teacher feedback on attempts
+    """
+    ALTER TABLE attempt ADD COLUMN feedback TEXT;
+    CREATE TABLE quiz_state (
+        scope       TEXT PRIMARY KEY,
+        state       TEXT NOT NULL,              -- JSON: answers, grades, done
+        passed      INTEGER NOT NULL DEFAULT 0,
+        updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    """,
 ]
 
 
