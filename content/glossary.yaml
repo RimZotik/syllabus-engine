@@ -201,3 +201,202 @@
   short: Задача упорядочить объекты по тому, насколько они подходят запросу или конкретному человеку, — как выдача поисковика.
   introduced_in: intro1.what.3
 
+# ── intro1.history
+
+- id: turing-machine
+  term: машина Тьюринга
+  en: Turing machine
+  decode: по имени Алана Тьюринга, описавшего её в 1936 году
+  short: Мысленная модель вычисления по инструкции — лента с символами, головка, которая читает, пишет и сдвигается, и таблица
+    правил. Принято считать, что на ней можно выполнить любой алгоритм.
+  introduced_in: intro1.history.1
+
+- id: turing-test
+  term: тест Тьюринга
+  en: Turing test, imitation game («игра в имитацию»)
+  short: Проверка, в которой судья переписывается с человеком и машиной и пытается понять, кто из них машина. Проверяет только
+    поведение в разговоре, а не понимание.
+  introduced_in: intro1.history.1
+
+- id: perceptron
+  term: перцептрон
+  en: perceptron
+  decode: от лат. perceptio — «восприятие»; Фрэнк Розенблатт, 1958
+  short: Простейшая обучаемая модель — складывает признаки с весами и сравнивает сумму с порогом; при ошибке веса сдвигаются
+    к правильному ответу. Проводит между классами только прямую границу.
+  introduced_in: intro1.history.2
+
+- id: ai-winter
+  term: зима искусственного интеллекта
+  en: AI winter
+  short: Период резкого спада денег и интереса к ИИ после завышенных ожиданий. Первая — в 1970-х, вторая — с конца 1980-х
+    до середины 1990-х.
+  introduced_in: intro1.history.2
+
+- id: expert-system
+  term: экспертная система
+  en: expert system
+  short: Программа, в которую записали знания специалистов в виде правил «если — то». Работала в узких задачах, но не училась
+    и плохо масштабировалась.
+  introduced_in: intro1.history.3
+
+- id: boosting
+  term: бустинг
+  en: boosting, от boost — «усиливать»
+  short: Способ собрать сильную модель из цепочки простых, где каждая следующая исправляет ошибки предыдущих. Один из главных
+    методов для табличных данных.
+  introduced_in: intro1.history.3
+
+- id: neural-network
+  term: нейронная сеть
+  en: neural network, «нейросеть»
+  short: Модель из многих простых «нейронов», собранных в слои, — выходы одного слоя идут на входы следующего. Обучается подбором
+    весов по примерам.
+  introduced_in: intro1.history.4
+
+- id: deep-learning
+  term: глубокое обучение
+  en: deep learning
+  short: Обучение нейросетей из многих слоёв, которые сами находят признаки — от простых (края на картинке) до сложных (целые
+    объекты).
+  introduced_in: intro1.history.4
+
+- id: transformer
+  term: трансформер
+  en: transformer
+  short: Архитектура нейросети на механизме внимания — каждый элемент (например, слово) учитывает все остальные сразу. Основа
+    современных языковых моделей.
+  introduced_in: intro1.history.4
+
+- id: language-model
+  term: языковая модель
+  en: language model; large language model, LLM
+  decode: LLM — large language model, «большая языковая модель»
+  short: Модель, которая по началу текста предсказывает следующее слово. Большие языковые модели с миллиардами параметров
+    лежат в основе чат-ассистентов.
+  introduced_in: intro1.history.4
+
+- id: gpu
+  term: видеокарта (GPU)
+  en: graphics processing unit, GPU
+  decode: GPU — graphics processing unit, «графический процессор»
+  short: Чип, который выполняет тысячи простых вычислений одновременно. Создан для игровой графики, стал главным инструментом
+    для обучения нейросетей.
+  introduced_in: intro1.history.5
+
+# ── intro1.professions
+
+- id: data-analyst
+  term: аналитик данных
+  en: data analyst
+  short: Специалист, который отвечает на вопросы бизнеса цифрами — запросами к данным, отчётами и выводами о том, что произошло
+    и почему.
+  introduced_in: intro1.professions.1
+
+- id: data-scientist
+  term: дата-сайентист
+  en: data scientist, DS
+  synonyms:
+  - специалист по данным
+  short: Специалист, который превращает данные в выводы и модели — формулирует задачу, строит и проверяет модель, объясняет
+    бизнесу, стоит ли её внедрять.
+  introduced_in: intro1.professions.1
+
+- id: ml-engineer
+  term: ML-инженер
+  en: machine learning engineer, MLE
+  synonyms:
+  - ML-разработчик
+  short: Программист, который доводит модели до работы внутри продукта — надёжно, быстро и под нагрузкой.
+  introduced_in: intro1.professions.1
+
+- id: ai-engineer
+  term: AI-инженер
+  en: AI engineer
+  synonyms:
+  - LLM-инженер
+  short: Инженер, который строит продукты на основе готовых больших языковых моделей — например, чат-ассистентов — и измеряет
+    их качество.
+  introduced_in: intro1.professions.1
+
+- id: data-engineer
+  term: инженер данных
+  en: data engineer, DE
+  synonyms:
+  - дата-инженер
+  short: Специалист, который строит и поддерживает регулярную доставку данных в хранилище, чтобы у всех остальных были свежие,
+    правильные и удобные данные.
+  introduced_in: intro1.professions.1
+
+- id: mlops
+  term: MLOps
+  en: machine learning operations
+  decode: ML + Ops (operations — «эксплуатация»), по аналогии с DevOps
+  short: Практики и роль, которые автоматизируют жизнь моделей — обучение, выкатку, хранение версий и мониторинг.
+  introduced_in: intro1.professions.1
+
+- id: production
+  term: продакшен
+  en: production, prod
+  synonyms:
+  - прод
+  - промышленная эксплуатация
+  short: Рабочая среда, где программа или модель обслуживает настоящих пользователей, — в отличие от экспериментов на компьютере
+    разработчика.
+  introduced_in: intro1.professions.1
+
+- id: baseline
+  term: базовое решение
+  en: baseline
+  synonyms:
+  - бейзлайн
+  short: Самое простое разумное решение задачи — правило или тривиальная модель. С ним сравнивают все более сложные модели.
+  example: «Завтра продадим столько же, сколько в этот же день неделю назад».
+  introduced_in: intro1.professions.2
+
+- id: metric
+  term: метрика
+  en: metric
+  short: Число, по которому оценивают и сравнивают решения — долю верных ответов модели, выручку, число ушедших клиентов.
+  introduced_in: intro1.professions.2
+
+- id: monitoring
+  term: мониторинг
+  en: monitoring
+  short: Постоянное наблюдение за работающей системой или моделью, чтобы вовремя заметить сбой или падение качества.
+  introduced_in: intro1.professions.2
+
+- id: code-review
+  term: код-ревью
+  en: code review
+  synonyms:
+  - ревью кода
+  short: Чтение и проверка изменений кода коллегой перед тем, как они попадут в общий код.
+  introduced_in: intro1.professions.3
+
+# ── intro1.map
+
+- id: prerequisite
+  term: предпосылка
+  en: prerequisite
+  short: Тема или навык, без которых новую тему не понять. В учебном плане предпосылки раздела всегда стоят раньше него.
+  introduced_in: intro1.map.2
+
+- id: subject
+  term: предмет
+  en: subject
+  short: Сквозная линия обучения, которая тянется через несколько курсов уровнями, — например, Программирование I–VI.
+  introduced_in: intro1.map.3
+
+- id: discipline
+  term: дисциплина
+  en: discipline
+  short: Один уровень предмета на конкретном курсе — например, «Программирование III». Заканчивается экзаменом.
+  introduced_in: intro1.map.3
+
+- id: spaced-repetition
+  term: интервальное повторение
+  en: spaced repetition
+  short: Повторение пройденного через растущие промежутки времени — сначала часто, потом всё реже. Так знания держатся в памяти
+    при небольшой ежедневной нагрузке.
+  introduced_in: intro1.map.3
