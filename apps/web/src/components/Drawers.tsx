@@ -3,6 +3,7 @@ import { Highlighter, X } from "lucide-react";
 import { api, type FeedbackKind, type Note } from "../api";
 import { useApp } from "../state";
 import { term } from "../content/glossary";
+import { useDraft } from "../persist";
 
 /** `open` = no dimming backdrop, so the page under the drawer stays usable (e.g. to select text). */
 export function Drawer({ side = "right", label, onClose, children, open = false }: { side?: "right" | "left"; label: string; onClose: () => void; children: ReactNode; open?: boolean }) {
@@ -23,11 +24,11 @@ export function Drawer({ side = "right", label, onClose, children, open = false 
 }
 
 function NoteBox({ q, onSaved }: { q: { topic_id?: string; term_id?: string }; onSaved?: () => void }) {
-  const [text, setText] = useState("");
+  const [text, setText, clearText] = useDraft(`draft:note:${q.term_id ?? q.topic_id ?? "-"}`, "");
   return (
     <div>
       <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Своими словами, чтобы потом быстро вспомнить" />
-      <button className="btn sm" style={{ marginTop: 10 }} disabled={!text.trim()} onClick={async () => { await api.addNote({ ...q, text }); setText(""); onSaved?.(); }}>Сохранить заметку</button>
+      <button className="btn sm" style={{ marginTop: 10 }} disabled={!text.trim()} onClick={async () => { await api.addNote({ ...q, text }); clearText(); onSaved?.(); }}>Сохранить заметку</button>
     </div>
   );
 }
@@ -84,8 +85,8 @@ function paint(ranges: Range[]) {
 }
 
 export function FeedbackDrawer({ topicId, page, onClose }: { topicId?: string; page?: number; onClose: () => void }) {
-  const [kind, setKind] = useState<FeedbackKind>("content_issue");
-  const [text, setText] = useState("");
+  const [kind, setKind] = useDraft<FeedbackKind>(`draft:feedback-kind:${topicId ?? "-"}`, "content_issue");
+  const [text, setText, clearText] = useDraft(`draft:feedback:${topicId ?? "-"}`, "");
   const [sent, setSent] = useState(false);
   const [picking, setPicking] = useState(false);
   const [marks, setMarks] = useState<{ range: Range; text: string }[]>([]);
@@ -123,6 +124,7 @@ export function FeedbackDrawer({ topicId, page, onClose }: { topicId?: string; p
   async function send() {
     await api.feedback(kind, text, topicId, marks.map((m) => m.text).join("\n\n"), page);
     setMarks([]);
+    clearText();
     setSent(true);
   }
 

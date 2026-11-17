@@ -2,6 +2,7 @@ import { Children, isValidElement, useEffect, useMemo, useRef, useState, type Re
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, Check, CircleDashed, Flag, List, NotebookPen, Target } from "lucide-react";
 import { api } from "../api";
+import { load, store } from "../persist";
 import { useApp } from "../state";
 import { content, type TopicModule } from "../content/registry";
 import { mdxComponents, Page } from "../content/components";
@@ -58,6 +59,22 @@ export function Reader() {
 
   // a saved or linked page number can be past the end if the topic got shorter
   const cur = Math.min(rawCur, Math.max(0, pages.length - 1));
+
+  // Scroll position inside the page is remembered and restored when the topic is opened again.
+  const restored = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pages.length) return;
+    const key = `scroll:${topicId}:${cur}`;
+    if (restored.current !== topicId) {
+      restored.current = topicId;
+      const y = load<number>(key, 0);
+      if (y > 0) requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+    }
+    let t = 0;
+    const onScroll = () => { window.clearTimeout(t); t = window.setTimeout(() => store(key, Math.round(window.scrollY) || null), 250); };
+    addEventListener("scroll", onScroll, { passive: true });
+    return () => { removeEventListener("scroll", onScroll); window.clearTimeout(t); };
+  }, [topicId, cur, pages.length]);
 
   function go(i: number) {
     const next = Math.max(0, Math.min(pages.length - 1, i));

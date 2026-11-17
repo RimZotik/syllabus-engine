@@ -1,7 +1,8 @@
 import { NavLink, Route, Routes, Link } from "react-router-dom";
 import { LoaderCircle, Moon, RefreshCw, Sun } from "lucide-react";
-import { Component, useState, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { Component, useEffect, useState, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { load, store } from "./persist";
 import { useApp } from "./state";
 import { api, type LimitWindow } from "./api";
 import { Home } from "./pages/Home";
@@ -104,6 +105,22 @@ function Guard({ children }: { children: ReactNode }) {
   return <Boundary key={loc.pathname}>{children}</Boundary>;
 }
 
+/** Opening the platform at its address returns to the last place in the course (later visits to «/» stay on the home page). */
+let firstLoad = true;
+function RememberPlace() {
+  const loc = useLocation();
+  const nav = useNavigate();
+  useEffect(() => {
+    if (firstLoad) {
+      firstLoad = false;
+      const last = load<string | null>("last-place", null);
+      if (loc.pathname === "/" && last && last !== "/") { nav(last, { replace: true }); return; }
+    }
+    if (loc.pathname !== "/") store("last-place", loc.pathname + loc.search);
+  }, [loc.pathname, loc.search]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
 function Stub({ title, text }: { title: string; text: string }) {
   return <div className="wrap stub"><div className="eyebrow">Скоро</div><h1>{title}</h1><p>{text}</p><Link className="btn" to="/learn">К обучению</Link></div>;
 }
@@ -111,6 +128,7 @@ function Stub({ title, text }: { title: string; text: string }) {
 export function App() {
   return (
     <>
+      <RememberPlace />
       <TopBar />
       <Guard><Routes>
         <Route path="/" element={<Home />} />

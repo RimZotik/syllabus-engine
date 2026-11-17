@@ -6,6 +6,7 @@ import { keymap } from "@codemirror/view";
 import { indentWithTab } from "@codemirror/commands";
 import { api } from "../api";
 import { content, type Task } from "../content/registry";
+import { useDraft } from "../persist";
 import { checkPython, explainError, runPython, Timeout, warmUp, type PyError, type RunResult, type TestResult } from "../sandbox/runner";
 
 /** What is stored per task, so the code and the result are there when the learner comes back. */
@@ -57,7 +58,7 @@ function TaskView({ task }: { task: Task }) {
   const [busy, setBusy] = useState<"run" | "check" | null>(null);
   const [run, setRun] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [stdin, setStdin] = useState(task.stdin ?? "");
+  const [stdin, setStdin] = useDraft(`draft:stdin:${task.id}`, task.stdin ?? "");
 
   function update(patch: Partial<Saved>, immediate = false) {
     const next = { ...stRef.current, ...patch };

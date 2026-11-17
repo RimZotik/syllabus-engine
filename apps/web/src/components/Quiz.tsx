@@ -109,7 +109,15 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
     api.saveQuizState(scope, next, isPassed).catch(() => {});
   }
 
-  function edit(patch: Partial<Saved>) { const next = { ...stRef.current, ...patch }; stRef.current = next; setSt(next); }
+  // Answers in progress are saved too (debounced), so an unfinished test survives a reload or restart.
+  const draftTimer = useRef(0);
+  function edit(patch: Partial<Saved>) {
+    const next = { ...stRef.current, ...patch };
+    stRef.current = next;
+    setSt(next);
+    window.clearTimeout(draftTimer.current);
+    draftTimer.current = window.setTimeout(() => api.saveQuizState(scope, stRef.current, false).catch(() => {}), 700);
+  }
 
   async function grade(q: Question) {
     setGrading((g) => ({ ...g, [q.id]: true }));
