@@ -2,322 +2,1063 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Forge ML — макет</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Forge ML</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
+/* Layout: full-width top bar, centered column; study = outline | reading column | sandbox, modes switch in place.
+   Palette: white paper, ink with a green bias; jade (actions) + violet (knowledge: terms, review, glow) — "aurora" pair */
 :root{
-  --bg:#0e1116;--panel:#161b22;--panel2:#1c222b;--line:#2a313c;--text:#e6edf3;--muted:#8b96a5;
-  --accent:#7c9cff;--accent2:#5eead4;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--violet:#b392f0;
-  --r:12px;--mono:ui-monospace,"JetBrains Mono","Cascadia Code",Consolas,monospace;
+  --bg:#ffffff; --surface:#ffffff; --tint:#f5f8f6; --ink:#12201b; --ink-2:#415049; --ink-3:#66756f;
+  --line:#e7edea; --line-2:#d6dfdb; --fill:#f1f5f3;
+  --accent:#0a7a5b; --accent-2:#0f9a74; --accent-soft:#e3f5ee;
+  --violet:#6144d6; --violet-soft:#efebfd;
+  --ok:#14915f; --ok-soft:#e5f5ed; --warn:#b5730b; --warn-soft:#fbf3e3; --bad:#cc4637; --bad-soft:#fcecea;
+  --code-bg:#f4f7f6; --contour:13,143,108; --mark:#fff0a8; --mark-ink:#12201b;
+  --sh1:0 1px 0 rgba(255,255,255,.25) inset,0 10px 22px -10px rgba(10,122,91,.45),0 2px 5px -2px rgba(18,32,27,.25);
+  --sh2:0 1px 2px rgba(18,32,27,.05),0 8px 22px -12px rgba(18,32,27,.22);
+  --sh3:0 18px 40px -18px rgba(18,32,27,.25),0 2px 6px rgba(18,32,27,.04);
+  --f-display:"Rubik","Nunito",system-ui,sans-serif; --f-text:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-read:"Nunito",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --r:8px; --r-btn:12px; --r-panel:16px; --wrap:1200px;
 }
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a1311; --surface:#101b18; --tint:#0d1715; --ink:#e6efeb; --ink-2:#a2b3ac; --ink-3:#869790;
+  --line:#1b2a26; --line-2:#26372f; --fill:#14211d;
+  --accent:#2fd19f; --accent-2:#5fe3b9; --accent-soft:#0f2b23; --violet:#a28bff; --violet-soft:#1d1a35;
+  --ok:#43cf8d; --ok-soft:#10261c; --warn:#e2a646; --warn-soft:#2a2112; --bad:#f07466; --bad-soft:#2c1714;
+  --code-bg:#0e1916; --contour:47,209,159; --mark:#4d4413; --mark-ink:#f5ecc4;
+  --sh1:0 1px 0 rgba(255,255,255,.08) inset,0 10px 24px -10px rgba(47,209,159,.45),0 2px 5px -2px rgba(0,0,0,.6);
+  --sh2:0 1px 2px rgba(0,0,0,.4),0 10px 24px -12px rgba(0,0,0,.7); --sh3:0 18px 40px -18px rgba(0,0,0,.8);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a1311; --surface:#101b18; --tint:#0d1715; --ink:#e6efeb; --ink-2:#a2b3ac; --ink-3:#869790;
+  --line:#1b2a26; --line-2:#26372f; --fill:#14211d;
+  --accent:#2fd19f; --accent-2:#5fe3b9; --accent-soft:#0f2b23; --violet:#a28bff; --violet-soft:#1d1a35;
+  --ok:#43cf8d; --ok-soft:#10261c; --warn:#e2a646; --warn-soft:#2a2112; --bad:#f07466; --bad-soft:#2c1714;
+  --code-bg:#0e1916; --contour:47,209,159; --mark:#4d4413; --mark-ink:#f5ecc4;
+  --sh1:0 1px 0 rgba(255,255,255,.08) inset,0 10px 24px -10px rgba(47,209,159,.45),0 2px 5px -2px rgba(0,0,0,.6);
+  --sh2:0 1px 2px rgba(0,0,0,.4),0 10px 24px -12px rgba(0,0,0,.7); --sh3:0 18px 40px -18px rgba(0,0,0,.8);
+  color-scheme:dark}
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
-aside{background:var(--panel);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:4px}
-.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;padding:4px 8px 16px}
-.logo .mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#0e1116}
-.nav{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--muted);cursor:pointer;line-height:1}
-.nav svg{display:block;flex:none}
-.nav:hover{background:var(--panel2);color:var(--text)}
-.nav.active{background:#232b38;color:var(--text)}
-.nav .badge{margin-left:auto;font-size:11px;background:var(--accent);color:#0e1116;border-radius:10px;padding:2px 7px;font-weight:600}
-.side-bottom{margin-top:auto;border-top:1px solid var(--line);padding-top:12px}
-main{padding:24px 28px;min-width:0}
-h1{font-size:22px;margin:0 0 4px}
-h2{font-size:16px;margin:0 0 12px}
-.sub{color:var(--muted);margin:0 0 20px}
-.grid{display:grid;gap:16px}
-.g3{grid-template-columns:repeat(3,1fr)}
-.g2{grid-template-columns:2fr 1fr}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-text);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--f-display);font-weight:500;letter-spacing:-.015em;text-wrap:balance;margin:0}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.wrap.wide{max-width:1440px}
+.wrap{max-width:var(--wrap);margin:0 auto;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.ico{width:18px;height:18px;display:block;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ico.sm{width:15px;height:15px}
+.mono{font-family:var(--f-mono);font-size:.86em}
+.eyebrow{font:500 12px/1 var(--f-text);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.muted{color:var(--ink-2)}
+.faint{color:var(--ink-3)}
 .row{display:flex;align-items:center;gap:10px}
-.row svg{display:block;flex:none}
-.muted{color:var(--muted)}
-.small{font-size:12px}
-.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;line-height:1}
-.pill svg{display:block}
-.bar{height:6px;background:var(--panel2);border-radius:4px;overflow:hidden}
-.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#0e1116;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;line-height:1;font-size:13px}
-.btn svg{display:block}
-.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
-.kpi{font-size:26px;font-weight:700}
-.screen{display:none}.screen.active{display:block}
-/* roadmap */
-.track{display:flex;flex-direction:column;gap:6px}
-.mod{display:grid;grid-template-columns:28px 1fr 120px 70px;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2)}
-.mod .n{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;background:#232b38}
-.mod.done .n{background:var(--ok);color:#0e1116}
-.mod.cur{border-color:var(--accent)}
-.mod.cur .n{background:var(--accent);color:#0e1116}
-.mod.lock{opacity:.5}
-.branch{font-size:11px;color:var(--violet)}
-/* queue */
-.q{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-.q:last-child{border:0}
-.q .ic{width:32px;height:32px;border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;flex:none}
-.q .ic svg{display:block}
-.q .t{flex:1;min-width:0}
-/* lesson */
-.lesson{display:grid;grid-template-columns:1fr 280px;gap:16px}
-.prose p{margin:0 0 12px;max-width:72ch}
-.callout{display:flex;align-items:center;gap:12px;border:1px solid #3b4a6b;background:#1a2233;border-radius:10px;padding:12px 14px;margin:12px 0}
-.callout svg{display:block;flex:none}
-.viz{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0}
-input[type=range]{width:100%}
-/* task */
-.task{display:grid;grid-template-columns:minmax(260px,1fr) 1.6fr;gap:16px}
-.editor{background:#0b0e13;border:1px solid var(--line);border-radius:10px;font:13px/1.6 var(--mono);overflow:hidden}
-.ed-head{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
-.ed-head svg{display:block}
-.code{padding:12px 0;white-space:pre;overflow:auto}
-.code .ln{display:inline-block;width:36px;text-align:right;color:#4b5563;padding-right:12px;user-select:none}
-.k{color:#ff7b72}.f{color:#d2a8ff}.s{color:#a5d6ff}.c{color:#6e7681}.num{color:#79c0ff}
-.tests .t{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-family:var(--mono);font-size:12px}
-.tests .t svg{display:block;flex:none}
-.hint{display:flex;align-items:center;gap:12px;border:1px solid #5a4a1e;background:#2a2312;border-radius:10px;padding:10px 12px;margin-top:12px}
-.hint svg{display:block;flex:none}
-textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;resize:vertical}
-/* exam */
-.qcard{margin-bottom:14px}
-.opt{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin:6px 0;cursor:pointer}
-.opt input{margin:0}
-.tag{font-size:11px;padding:2px 8px;border-radius:6px;background:#232b38;color:var(--muted)}
-.tag.review{background:#2d2440;color:var(--violet)}
-/* claude */
-.claude-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
-.heat{display:grid;grid-template-columns:repeat(26,1fr);gap:3px}
-.heat i{aspect-ratio:1;border-radius:2px;background:#1f2630}
-@media (max-width:900px){.app{grid-template-columns:1fr}aside{display:none}.g3,.g2,.lesson,.task{grid-template-columns:1fr}main{padding:16px}}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ── Top bar ── */
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:36px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font:600 16px/1 var(--f-display);letter-spacing:-.01em}
+.brand svg{display:block}
+.nav{display:flex;gap:28px;height:100%}
+.nav a{position:relative;display:flex;align-items:center;gap:8px;color:var(--ink-2);font-weight:500;font-size:14px;line-height:1}
+.nav a:hover{color:var(--ink)}
+.nav a.on{color:var(--ink)}
+.nav a.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);border-radius:2px 2px 0 0}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:22px}
+.limits{display:flex;align-items:center;gap:16px;font-size:12px;color:var(--ink-3);line-height:1}
+.limits .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--ok-soft)}
+.meter{display:flex;align-items:center;gap:7px}
+.meter i{display:block;width:44px;height:3px;background:var(--line-2);border-radius:2px;overflow:hidden;position:relative}
+.meter i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--v);background:var(--ink-2)}
+.icon-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--r);color:var(--ink-2)}
+.icon-btn:hover{background:var(--line);color:var(--ink)}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font:600 12px/1 var(--f-display)}
+
+.view{display:none}.view.on{display:block}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 20px;border-radius:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-weight:600;font-size:14px;line-height:1;box-shadow:var(--sh1);transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+.btn:hover{filter:brightness(1.05) saturate(1.1);color:#fff;transform:translateY(-1px)}
+.btn:active{transform:translateY(1px);box-shadow:0 2px 6px -3px rgba(13,143,108,.6)}
+.btn.ghost{background:var(--surface);color:var(--ink);box-shadow:var(--sh2)}
+.btn.ghost:hover{background:var(--surface);color:var(--ink);transform:translateY(-1px)}
+.btn.sm{height:34px;padding:0 13px;font-size:13px}
+.link{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:500;line-height:1}
+
+/* ── Landing ── */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:radial-gradient(60% 70% at 82% 18%,color-mix(in srgb,var(--violet) 9%,transparent),transparent 70%),radial-gradient(50% 60% at 62% 88%,color-mix(in srgb,var(--accent) 8%,transparent),transparent 70%),var(--bg)}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;-webkit-mask-image:linear-gradient(180deg,#000 30%,transparent 100%);mask-image:linear-gradient(180deg,#000 30%,transparent 100%)}
+.hero .wrap{position:relative;padding-block:120px 96px}
+.hero h1{font-size:clamp(40px,6.2vw,76px);line-height:1.04;font-weight:500;max-width:15ch;letter-spacing:-.03em}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--accent),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{font-size:18px;max-width:56ch;color:var(--ink-2);margin:28px 0 36px}
+.hero .meta{display:flex;flex-wrap:wrap;gap:28px;margin-top:64px;font-size:13px;color:var(--ink-3)}
+.hero .meta b{display:block;font:500 22px/1.2 var(--f-display);color:var(--ink);letter-spacing:-.01em}
+.reveal{animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+.reveal.d1{animation-delay:.08s}.reveal.d2{animation-delay:.16s}.reveal.d3{animation-delay:.24s}
+@keyframes rise{from{transform:translateY(12px)}to{transform:none}}
+
+.sec{padding-block:80px}
+.sec.alt{background:var(--tint)}
+.sec-head{display:grid;grid-template-columns:280px 1fr;gap:48px;margin-bottom:48px}
+.sec-head h2{font-size:34px;line-height:1.1}
+.sec-head p{margin:0;max-width:60ch;color:var(--ink-2);font-size:17px}
+
+.ladder{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.ladder > div{padding:24px 24px 0 0}
+.ladder > div + div{padding-left:24px;border-left:1px solid var(--line)}
+.ladder .lv{font:400 30px/1 var(--f-display);letter-spacing:-.02em}
+.ladder .lv small{font-size:13px;color:var(--ink-3);margin-left:6px;letter-spacing:0}
+.ladder p{margin:14px 0 8px;color:var(--ink-2);font-size:14px}
+.ladder .gate{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);line-height:1.3}
+.ladder .gate svg{color:var(--accent)}
+
+.unlocks{display:grid;grid-template-columns:repeat(3,1fr);column-gap:32px}
+.unlock{display:grid;grid-template-columns:auto 18px 1fr;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line);font-size:15px}
+.unlock .lib{font-family:var(--f-mono);font-size:13px;color:var(--violet)}
+.unlock svg{color:var(--ink-3)}
+
+.courses{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--ink)}
+.course{padding:20px 18px 6px 0}
+.course + .course{padding-left:18px}
+.course .num{font:300 44px/1 var(--f-display);color:var(--ink-3)}
+.course h3{font-size:17px;margin:18px 0 8px;line-height:1.25}
+.course p{margin:0;font-size:13px;color:var(--ink-2)}
+.course .h{margin-top:14px;font-size:12px;color:var(--ink-3)}
+
+.teacher{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+.teacher ul{list-style:none;margin:0;padding:0}
+.teacher li{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);color:var(--ink-2)}
+.teacher li svg{margin-top:3px;color:var(--violet)}
+.teacher li b{color:var(--ink);font-weight:500}
+
+.personas{display:grid;grid-template-columns:repeat(3,1fr);gap:48px}
+.personas svg{color:var(--violet);margin-bottom:16px}
+.personas h3{font-size:19px;margin-bottom:8px}
+.personas p{margin:0;color:var(--ink-2);font-size:15px}
+.skills{display:grid;grid-template-columns:1fr 1fr;column-gap:48px}
+.skills div{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);font-size:15px;line-height:1.35}
+.skills svg{color:var(--ok)}
+.flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:28px;counter-reset:f}
+.flow li{display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--ink-2)}
+.flow b{font:500 18px/1.2 var(--f-display);color:var(--ink)}
+.flow .fn{font:300 13px/1 var(--f-mono);color:var(--violet);padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.projects{display:grid;grid-template-columns:1fr 1fr;column-gap:48px}
+.projects div{display:grid;grid-template-columns:44px 1fr;column-gap:16px;row-gap:4px;padding:20px 0;border-bottom:1px solid var(--line)}
+.projects .pn{grid-row:span 3;font:300 30px/1 var(--f-display);color:var(--ink-3)}
+.projects b{font:500 17px/1.3 var(--f-display)}
+.projects span:not(.pn){color:var(--ink-2);font-size:14px}
+.projects code{font:12px/1.4 var(--f-mono);color:var(--violet)}
+.faq details{border-bottom:1px solid var(--line);padding:18px 0}
+.faq summary{cursor:pointer;font:500 17px/1.35 var(--f-display);list-style:none;display:flex;justify-content:space-between;gap:16px}
+.faq summary::after{content:"+";color:var(--ink-3);font-weight:300}
+.faq details[open] summary::after{content:"–"}
+.faq p{margin:10px 0 0;color:var(--ink-2);max-width:62ch}
+.cta{padding-block:120px;text-align:left}
+.cta h2{font-size:clamp(30px,4vw,48px);line-height:1.1;max-width:22ch;margin-bottom:32px;font-weight:400}
+.continue-chip{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:600;line-height:1}
+.nav .badge{font:600 11px/1 var(--f-text);color:#fff;background:var(--violet);border-radius:999px;padding:3px 6px;margin-left:2px}
+.tools{display:flex;gap:2px;margin-left:8px}
+.tools button{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--ink-2)}
+.tools button:hover{background:var(--fill);color:var(--ink)}
+.modes button[title] svg{color:var(--ink-3)}
+.topic-progress{height:3px;background:var(--line)}
+.topic-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--violet))}
+.outline .ol-group{margin:6px 0}
+.outline .ol-title{padding:10px 0 6px 14px;border-left:1px solid var(--line);font-weight:600;color:var(--ink)}
+.outline a.lock{color:var(--ink-3)}
+.outline a.lock svg,.outline a.done svg{color:var(--ink-3)}
+.outline a.done svg{color:var(--accent)}
+.steps{list-style:none;margin:0 0 6px;padding:2px 0 8px 28px;border-left:2px solid var(--accent);font-size:12px;color:var(--ink-3)}
+.steps li{position:relative;padding:3px 0 3px 14px;line-height:1.3}
+.steps li::before{content:"";position:absolute;left:0;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--line-2)}
+.steps li.d{color:var(--ink-2)}.steps li.d::before{background:var(--accent);box-shadow:none}
+.steps li.c{color:var(--ink);font-weight:600}.steps li.c::before{box-shadow:inset 0 0 0 2px var(--accent)}
+.next-card{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:40px;padding:24px 28px;border-radius:14px;background:var(--tint)}
+.next-card p{margin:6px 0 0;font-size:16px;max-width:52ch;font-family:var(--f-text)}
+.txt-btn{font-size:13px;color:var(--ink-2)}.txt-btn:hover{color:var(--ink)}
+.daily{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:28px;border-radius:16px;background:linear-gradient(120deg,var(--accent-soft),var(--violet-soft));margin-bottom:12px}
+.daily h2{font-size:24px;margin:6px 0}.daily p{margin:0;color:var(--ink-2);font-size:14px;max-width:46ch}
+.group-h{margin:28px 0 4px}
+.mode.locked{opacity:.55}
+.weak{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.weak:hover span:first-child{color:var(--accent)}
+.foot{padding-block:48px;color:var(--ink-3);font-size:13px}
+.foot .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* ── Chat (shared) ── */
+.chat{display:flex;flex-direction:column;gap:18px}
+.msg{max-width:62ch;font-size:14px}
+.msg .who{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-3);margin-bottom:6px;line-height:1}
+.msg .who .mk{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--accent),var(--violet));color:#fff;display:flex;align-items:center;justify-content:center;font:600 10px/1 var(--f-display)}
+.msg.me{align-self:flex-end;text-align:left}
+.msg.me .bubble{background:var(--code-bg);padding:12px 14px;border-radius:var(--r)}
+.verdict{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:1;padding:5px 9px;border-radius:999px}
+.verdict.ok{background:var(--ok-soft);color:var(--ok)}
+.verdict.part{background:var(--warn-soft);color:var(--warn)}
+
+/* ── Learn: plan ── */
+.page-head{padding-block:48px 32px;display:flex;align-items:end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.page-head h1{font-size:40px;line-height:1.1}
+.page-head p{margin:10px 0 0;color:var(--ink-2)}
+.continue{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:28px 0;border-block:1px solid var(--line)}
+.continue h2{font-size:24px;margin:8px 0 6px}
+.prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:14px;max-width:420px}
+.prog i{display:block;height:100%;background:var(--accent)}
+.plan{margin-top:40px}
+.plan-course{max-width:980px;display:grid;grid-template-columns:200px 1fr;gap:40px;padding:28px 0;border-bottom:1px solid var(--line)}
+.plan-course .cn{font:300 15px/1.4 var(--f-display);color:var(--ink-3)}
+.plan-course .cn b{display:block;font:400 26px/1.15 var(--f-display);color:var(--ink);letter-spacing:-.02em}
+.plan-course.locked .cn b{color:var(--ink-2)}
+.disc{display:grid;grid-template-columns:22px minmax(0,1fr) 96px 80px;gap:14px;align-items:center;padding:12px 10px;margin:0 -10px;border-radius:10px;font-size:15px}
+.disc:hover{background:var(--fill)}
+.disc .st{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.disc .st.done{background:var(--accent);color:#fff}
+.disc .st.cur{box-shadow:inset 0 0 0 2px var(--accent)}
+.disc .st.cur::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.disc .st.todo{box-shadow:inset 0 0 0 1px var(--line-2)}
+.disc .grade{font-size:13px;text-align:right}
+.disc .bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.disc .bar i{display:block;height:100%;background:var(--accent)}
+.disc.cur .bar i{background:var(--accent)}
+.tag{font-size:11px;font-family:var(--f-mono);color:var(--violet);margin-left:8px}
+
+/* ── Study ── */
+.study-head{border-bottom:1px solid var(--line);background:var(--tint)}
+.study-head .wrap{display:flex;align-items:center;gap:24px;min-height:56px;flex-wrap:wrap}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink-3);line-height:1}
+.crumbs b{color:var(--ink);font-weight:500}
+.modes{margin-left:auto;display:flex;gap:4px;background:var(--bg);padding:3px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--line)}
+.modes button{height:30px;padding:0 13px;border-radius:6px;font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:7px;line-height:1}
+.modes button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--line)}
+.study{display:grid;grid-template-columns:200px minmax(0,1fr) minmax(0,440px);gap:48px;padding-block:36px 80px}
+.outline{position:sticky;top:96px;align-self:start;font-size:13px}
+.outline .eyebrow{margin-bottom:14px}
+.outline a{display:flex;align-items:center;gap:10px;padding:8px 0 8px 14px;border-left:1px solid var(--line);color:var(--ink-2);line-height:1.3}
+.outline a:hover{color:var(--ink)}
+.outline a.on{border-left:2px solid var(--accent);padding-left:13px;color:var(--ink);font-weight:500}
+.outline a.done{color:var(--ink-3)}
+.outline a svg{color:var(--ok)}
+.outline .gate{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);color:var(--ink-3);display:flex;align-items:center;gap:8px;line-height:1.3}
+
+.prose{min-width:0}
+.prose h1{font-size:clamp(30px,3.4vw,40px);line-height:1.15;font-weight:500;margin:10px 0 20px}
+.prose p{max-width:68ch;margin:0 0 1.1em;color:var(--ink);font:17.5px/1.7 var(--f-read)}
+.prose p.lead{font-size:20px;line-height:1.55;color:var(--ink-2)}
+.prose p b{font-weight:700}
+mark{background:linear-gradient(transparent 12%,var(--mark) 12%,var(--mark) 88%,transparent 88%);color:var(--mark-ink);padding:0 2px;border-radius:2px}
+.term{position:relative;border-bottom:1.5px dotted var(--violet);cursor:help;background:var(--violet-soft);border-radius:3px;padding:0 2px}
+.term .card{position:absolute;left:0;bottom:calc(100% + 10px);width:min(300px,calc(100vw - 48px));padding:14px 16px;border-radius:12px;background:var(--surface);box-shadow:var(--sh3),0 0 0 1px var(--line);font:13px/1.5 var(--f-text);color:var(--ink);display:none;pointer-events:none;z-index:5}
+@keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.term:hover .card,.term:focus .card{display:block;animation:pop .15s ease}
+.term .card b{display:block;font:600 14px/1.3 var(--f-display);margin-bottom:6px}
+.term .card .meta{display:flex;justify-content:space-between;margin-top:10px;color:var(--ink-3);font-size:12px}
+.withaside{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:28px;align-items:start}
+.aside{font:13px/1.55 var(--f-text);color:var(--ink-2);padding-top:6px}
+.aside .eyebrow{margin-bottom:6px}
+.venn{display:block;max-width:360px;margin:6px 0 4px}
+.figcap{font:13px/1.5 var(--f-text);color:var(--ink-3);max-width:60ch}
+@media (max-width:1300px){.withaside{grid-template-columns:1fr}.aside{border-left:2px solid var(--violet);padding-left:14px;margin:0 0 18px}}
+.prose code{font-family:var(--f-mono);font-size:.86em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+.note{display:flex;align-items:center;gap:14px;padding:14px 0 14px 18px;border-left:2px solid var(--warn);margin:24px 0;color:var(--ink);max-width:68ch;font:16px/1.65 var(--f-read)}
+.note svg{color:var(--warn)}
+.figure{margin:26px 0;padding:22px 0;border-block:1px solid var(--line)}
+.figure .fh{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.seg{display:flex;gap:2px;font-family:var(--f-mono);font-size:12px}
+.seg button{height:28px;padding:0 10px;border-radius:5px;color:var(--ink-2);line-height:1}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.joinviz{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:20px;align-items:start;overflow-x:auto}
+table.t{border-collapse:collapse;font-family:var(--f-mono);font-size:12px;width:100%}
+table.t caption{text-align:left;font:500 12px/1 var(--f-text);color:var(--ink-3);padding-bottom:8px}
+table.t th{text-align:left;font-weight:500;color:var(--ink-3);padding:6px 8px;border-bottom:1px solid var(--line-2)}
+table.t td{padding:6px 8px;border-bottom:1px solid var(--line)}
+table.t tr.hit td{background:var(--accent-soft)}
+table.t td.null{color:var(--ink-3);font-style:italic}
+table.t tr.miss td{color:var(--ink-3)}
+.check{margin:28px 0;max-width:66ch}
+.check .q{font-weight:500;margin-bottom:12px}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;background:var(--fill);margin-bottom:6px;cursor:pointer;font:14px/1.35 var(--f-text);transition:background .15s}
+.opt:hover{background:var(--line)}
+.opt input{margin:0;accent-color:var(--accent)}
+.opt.right{background:var(--ok-soft);color:var(--ok)}
+.src{font-size:13px;color:var(--ink-3);margin-top:36px;padding-top:16px;border-top:1px solid var(--line)}
+
+.sandbox{position:sticky;top:96px;align-self:start;min-width:0;background:var(--surface);border-radius:14px;box-shadow:var(--sh3)}
+.sb-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px;line-height:1}
+.sb-head .pill{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--ink-3)}
+.task{padding:16px;font-size:14px}
+.task b{font-weight:500}
+.editor{font:13px/1.7 var(--f-mono);background:var(--code-bg);padding:12px 0;overflow-x:auto;white-space:pre}
+.editor .ln{display:inline-block;width:34px;padding-right:12px;text-align:right;color:var(--ink-3);user-select:none}
+.kw{color:var(--accent)}.str{color:var(--ok)}.cm{color:var(--ink-3)}
+.sb-actions{display:flex;align-items:center;gap:8px;padding:16px 16px 8px}
+.sb-actions .faint{margin-left:auto;font-size:12px}
+.results{padding:12px 16px;max-height:220px;overflow:auto}
+.tests{padding:4px 16px 14px;font-size:13px}
+.tests div{display:flex;align-items:center;gap:10px;padding:5px 0;line-height:1.3}
+.tests .p{color:var(--ok)}.tests .f{color:var(--bad)}.tests .l{color:var(--ink-3)}
+.hint{display:flex;align-items:center;gap:12px;margin:0 16px 16px;padding:12px 14px;border-radius:12px;background:var(--violet-soft);color:var(--ink);font-size:13px;line-height:1.45}
+.hint svg{color:var(--violet)}
+
+/* quiz & exam inside study */
+.quiz{max-width:760px;padding-block:36px 80px}
+.quiz-meta{display:flex;gap:28px;flex-wrap:wrap;font-size:13px;color:var(--ink-3);margin:12px 0 36px}
+.quiz-meta b{color:var(--ink);font-weight:500}
+.qi{padding:26px 0;border-top:1px solid var(--line)}
+.qi .qh{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px}
+.qi .qh h3{font:500 16px/1.4 var(--f-text);letter-spacing:0}
+.qt{font-size:11px;color:var(--ink-3);white-space:nowrap;font-family:var(--f-mono)}
+.qt.review{color:var(--violet)}
+pre.code{font:13px/1.65 var(--f-mono);background:var(--code-bg);padding:14px 16px;border-radius:var(--r);margin:0 0 14px;overflow-x:auto}
+textarea{width:100%;min-height:96px;resize:vertical;font:14px/1.55 var(--f-text);color:var(--ink);background:var(--surface);border:0;background:var(--fill);border-radius:8px;padding:12px 14px}
+.inputs{display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--ink-3)}
+.inputs span{display:flex;align-items:center;gap:6px;line-height:1}
+.exam{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:56px;padding-block:36px 80px}
+.exam aside .eyebrow{margin-bottom:14px}
+.concept{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.3}
+.concept .s{width:8px;height:8px;border-radius:50%;flex:none}
+.reply{display:flex;gap:10px;margin-top:8px}
+.reply textarea{min-height:52px}
+
+/* ── Trainer ── */
+.split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:64px;padding-block:8px 80px}
+.mode{display:grid;grid-template-columns:40px 1fr auto;gap:18px;align-items:center;padding:20px 0;border-bottom:1px solid var(--line)}
+.mode:first-child{border-top:1px solid var(--line)}
+.mode .mi{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--violet-soft);color:var(--violet)}
+.mode h3{font:500 16px/1.3 var(--f-text);letter-spacing:0}
+.mode p{margin:4px 0 0;font-size:13px;color:var(--ink-2)}
+.mode .n{font-size:13px;color:var(--ink-3);text-align:right}
+.mode.primary .mi{background:linear-gradient(135deg,var(--accent),var(--violet));color:#fff}
+.upcoming{background:var(--tint);border-radius:16px;padding:22px;align-self:start}
+.upcoming .eyebrow{margin-bottom:16px}
+.ev{display:grid;grid-template-columns:52px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.ev .d{font:400 22px/1 var(--f-display);text-align:center}
+.ev .d small{display:block;font:500 11px/1.4 var(--f-text);color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.ev b{font-weight:500;font-size:14px}
+.ev p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+
+/* ── Record ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:48px;padding-block:8px}
+.stat .v{font:300 44px/1 var(--f-display);letter-spacing:-.02em}
+.stat .k{font-size:13px;color:var(--ink-3);margin-top:10px}
+.record{margin-top:48px}
+table.grades{width:100%;border-collapse:collapse;font-size:14px}
+table.grades th{text-align:left;font:500 12px/1 var(--f-text);color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;padding:0 12px 12px 0;border-bottom:1px solid var(--ink)}
+table.grades td{padding:14px 12px 14px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.grades td.g{font:500 15px/1.2 var(--f-display)}
+table.grades td .c{font-size:13px;color:var(--ink-2);max-width:46ch}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:64px;margin-top:56px}
+.two > div,.record{min-width:0}
+.heat{display:grid;grid-template-columns:repeat(30,12px);gap:4px;margin-top:14px;overflow-x:auto}
+.heat i{width:12px;height:12px;border-radius:4px;background:var(--fill)}
+.grade-pill{display:inline-block;font:600 13px/1 var(--f-text);padding:6px 10px;border-radius:999px}
+.grade-pill.ex{background:var(--ok-soft);color:var(--ok)}
+.grade-pill.gd{background:var(--violet-soft);color:var(--violet)}
+.libs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.lib-chip{display:inline-flex;align-items:center;gap:6px;font:12px/1 var(--f-mono);padding:8px 11px;border-radius:999px;background:var(--fill);color:var(--ink-3)}
+.lib-chip.open{background:var(--violet-soft);color:var(--violet)}
+
+@media (max-width:1100px){
+  .limits .meter{display:none}
+  .study{grid-template-columns:minmax(0,1fr)}
+  .outline,.sandbox{position:static}
+  .outline{display:none}
+  .courses{grid-template-columns:repeat(3,1fr);row-gap:28px}
+  .unlocks{grid-template-columns:1fr 1fr}
+  .flow{grid-template-columns:1fr 1fr 1fr}
+}
+@media (max-width:760px){
+  .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .nav{gap:16px}.limits,.avatar,.brand-name,.continue-chip,.tools{display:none}
+  .next-card,.daily{flex-direction:column;align-items:flex-start}
+  .aside{margin:4px 0 18px}
+  .study-head .wrap{padding-block:10px}
+  .top .wrap{gap:16px}
+  .sec-head,.teacher,.plan-course,.split,.exam,.two{grid-template-columns:1fr;gap:24px}
+  .ladder{grid-template-columns:1fr}
+  .ladder > div + div{padding-left:0;border-left:0;border-top:1px solid var(--line);margin-top:20px}
+  .stats{grid-template-columns:1fr 1fr}
+  .courses,.unlocks,.personas,.skills,.projects,.flow{grid-template-columns:1fr}
+  .personas{gap:28px}
+  .course + .course{padding-left:0}
+  .joinviz{grid-template-columns:1fr}
+  .disc{grid-template-columns:22px 1fr 70px}
+  .disc .grade{display:none}
+  .modes{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){.reveal{animation:none}}
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute">
-  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
-  <symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.1 6 9 3 3 6v15l6-3 6 3 6-3V3z"/><path d="M9 3v15M15 6v15"/></symbol>
-  <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
-  <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
-  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
-  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
-  <symbol id="i-exam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></symbol>
-  <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
-  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
-  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
-  <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/></symbol>
-  <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></symbol>
-  <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></symbol>
-  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
-  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
-  <symbol id="i-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></symbol>
-  <symbol id="i-git" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="9" r="3"/><path d="M6 9v6M18 12a6 6 0 0 1-6 6H9"/></symbol>
-  <symbol id="i-sigma" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 7V4H6l6 8-6 8h12v-3"/></symbol>
-  <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+  <symbol id="i-cap" viewBox="0 0 24 24"><path d="M21.4 10.9a1 1 0 0 0 0-1.8L12.8 5.2a2 2 0 0 0-1.7 0L2.6 9.1a1 1 0 0 0 0 1.8l8.6 3.9a2 2 0 0 0 1.7 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L7.4 18.6a2 2 0 0 1-.9.5l-2.9.8.8-2.9a2 2 0 0 1 .5-.9z"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.4a4 4 0 0 0 3.3-1.7l6.6-8.6A4 4 0 0 1 16.6 6H22"/><path d="M2 6h1.4a4 4 0 0 1 3.3 1.7l6.6 8.6a4 4 0 0 0 3.3 1.7H22"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.4 3.6a2.1 2.1 0 0 1 3 3L7.4 18.6 3 20l1.4-4.4z"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><path d="M10 2h4"/><path d="M12 14l3-3"/><circle cx="12" cy="14" r="8"/></symbol>
 </svg>
 
-<div class="app">
-  <aside>
-    <div class="logo"><div class="mark"><svg width="16" height="16"><use href="#i-spark"/></svg></div>Forge ML</div>
-    <div class="nav active" data-s="home"><svg width="18" height="18"><use href="#i-home"/></svg>Сегодня<span class="badge">7</span></div>
-    <div class="nav" data-s="map"><svg width="18" height="18"><use href="#i-map"/></svg>Роадмап</div>
-    <div class="nav" data-s="lesson"><svg width="18" height="18"><use href="#i-book"/></svg>Урок</div>
-    <div class="nav" data-s="task"><svg width="18" height="18"><use href="#i-code"/></svg>Задача</div>
-    <div class="nav" data-s="exam"><svg width="18" height="18"><use href="#i-exam"/></svg>Экзамен модуля</div>
-    <div class="nav" data-s="notes"><svg width="18" height="18"><use href="#i-note"/></svg>Шпаргалки и заметки</div>
-    <div class="nav" data-s="profile"><svg width="18" height="18"><use href="#i-user"/></svg>Профиль</div>
-    <div class="side-bottom">
-      <div class="row small" style="padding:6px 10px"><span class="claude-dot"></span><span>Claude подключён (MCP)</span></div>
-      <div style="padding:4px 10px" class="small muted">Лимит 5 ч: 38%</div>
-      <div style="padding:0 10px 6px"><div class="bar"><i style="width:38%"></i></div></div>
-      <div style="padding:4px 10px" class="small muted">Неделя: 61%</div>
-      <div style="padding:0 10px"><div class="bar"><i style="width:61%"></i></div></div>
-    </div>
-  </aside>
-
-  <main>
-  <!-- HOME -->
-  <section class="screen active" id="home">
-    <h1>Добрый вечер</h1>
-    <p class="sub">Модуль 2 · Математика · Линейная алгебра — урок 6 из 11</p>
-    <div class="grid g3" style="margin-bottom:16px">
-      <div class="card"><div class="muted small">Освоено концептов</div><div class="kpi">142 <span class="small muted">/ 1 180</span></div><div class="bar" style="margin-top:8px"><i style="width:12%"></i></div></div>
-      <div class="card"><div class="muted small">Удержание (прогноз FSRS)</div><div class="kpi">91%</div><div class="small muted">цель ≥ 90%</div></div>
-      <div class="card"><div class="muted small">Чистое время за неделю</div><div class="kpi">9 ч 40 м</div><div class="small muted">план 10 ч</div></div>
-    </div>
-    <div class="grid g2">
-      <div class="card">
-        <h2>План на сегодня</h2>
-        <div class="q"><div class="ic"><svg width="16" height="16"><use href="#i-repeat"/></svg></div><div class="t">Повторение: 9 вопросов<div class="small muted">Python: срезы, SQL: GROUP BY, Векторы: скалярное произведение</div></div><span class="pill"><svg width="12" height="12"><use href="#i-clock"/></svg>~8 мин</span></div>
-        <div class="q"><div class="ic"><svg width="16" height="16"><use href="#i-book"/></svg></div><div class="t">Урок 2.6 · Умножение матриц как композиция преобразований<div class="small muted">теория + интерактивная визуализация</div></div><span class="pill">~25 мин</span></div>
-        <div class="q"><div class="ic"><svg width="16" height="16"><use href="#i-sigma"/></svg></div><div class="t">Практика: 6 задач (2 руками, 4 в NumPy)<div class="small muted">автопроверка, подсказки уровня 2</div></div><span class="pill">~40 мин</span></div>
-        <div class="q"><div class="ic"><svg width="16" height="16"><use href="#i-flag"/></svg></div><div class="t">Чекпоинт: устный ответ «Почему AB ≠ BA?»<div class="small muted">проверит Claude по рубрике</div></div><span class="pill">~5 мин</span></div>
-        <div style="margin-top:14px"><button class="btn" onclick="go('lesson')"><svg width="14" height="14"><use href="#i-play"/></svg>Продолжить</button></div>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#home" aria-label="Forge ML — главная">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 L9 8 L13 14 L16 9 L21 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="16" cy="9" r="2.4" fill="var(--violet)"/></svg>
+      <span class="brand-name">Forge ML</span>
+    </a>
+    <nav class="nav">
+      <a href="#learn" data-nav="learn">Обучение</a>
+      <a href="#trainer" data-nav="trainer">Тренажёр<span class="badge tnum">14</span></a>
+      <a href="#record" data-nav="record">Зачётка</a>
+    </nav>
+    <div class="top-right">
+      <a class="continue-chip" href="#study"><svg class="ico sm"><use href="#i-play"/></svg>Продолжить 4.1</a>
+      <div class="limits" title="Claude подключён · лимиты подписки">
+        <span class="dot"></span><span>Claude</span>
+        <span class="meter tnum" title="Лимит сессии: использовано 38%, сброс в 21:40">Сессия <i style="--v:38%"></i> 38%</span>
+        <span class="meter tnum" title="Недельный лимит: использовано 61%, сброс в понедельник 09:00">Неделя <i style="--v:61%"></i> 61%</span>
       </div>
-      <div class="card">
-        <h2>Комментарий наставника</h2>
-        <p class="small" style="margin-top:0">За неделю ты дважды путал размерности при умножении матриц. В сегодняшнем повторении добавлены 2 задачи на это. Скорость решения Python-задач выросла на 30% — подсказки по синтаксису отключены.</p>
-        <div class="small muted">Claude · обновлено сегодня 18:12</div>
-        <h2 style="margin-top:18px">Активность</h2>
-        <div class="heat" id="heat"></div>
+      <button class="icon-btn" id="theme" aria-label="Сменить тему"><svg class="ico sm"><use href="#i-moon"/></svg></button>
+      <div class="avatar" aria-label="Профиль"><svg class="ico sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+    </div>
+  </div>
+</header>
+
+<!-- ═════════ HOME ═════════ -->
+<main class="view" id="v-home">
+  <section class="hero">
+    <canvas id="landscape" aria-hidden="true"></canvas>
+    <div class="wrap">
+      <div class="eyebrow reveal">Учебная программа · 6 курсов · 41 дисциплина</div>
+      <h1 class="reveal d1" style="margin-top:22px">От первой строки кода до <em>собственного GPT</em></h1>
+      <p class="lead reveal d2">Строгий курс по машинному обучению и данным с нуля. Каждую библиотеку вы сначала пишете сами, каждый экзамен защищаете у преподавателя, а забытое возвращается ровно тогда, когда начинает стираться.</p>
+      <div class="row reveal d3" style="gap:12px;flex-wrap:wrap">
+        <a class="btn" href="#learn">Начать с Курса I <svg class="ico sm"><use href="#i-arrow"/></svg></a>
+        <a class="btn ghost" href="#plan">Учебный план</a>
+      </div>
+      <div class="meta reveal d3">
+        <div><b class="tnum">≈ 1 700 ч</b>учёбы и проектов</div>
+        <div><b>14</b>библиотек открываются после своей реализации</div>
+        <div><b>7</b>курсовых и дипломный проект</div>
+        <div><b>Локально</b>git clone и одна команда</div>
       </div>
     </div>
   </section>
 
-  <!-- MAP -->
-  <section class="screen" id="map">
-    <h1>Роадмап</h1>
-    <p class="sub">Общий ствол для ML Engineer и Data Scientist, затем ветки. Модуль открывается после экзамена ≥ 85%.</p>
-    <div class="card track">
-      <div class="mod done"><div class="n"><svg width="14" height="14"><use href="#i-check"/></svg></div><div>0 · Инструменты: терминал, Git, VS Code, окружения</div><div class="bar"><i style="width:100%"></i></div><div class="small">экзамен 92%</div></div>
-      <div class="mod done"><div class="n"><svg width="14" height="14"><use href="#i-check"/></svg></div><div>1 · Python: от основ до ООП и тестов</div><div class="bar"><i style="width:100%"></i></div><div class="small">экзамен 88%</div></div>
-      <div class="mod cur"><div class="n">2</div><div>2 · Математика: алгебра → линал → матан → вероятности → статистика</div><div class="bar"><i style="width:34%"></i></div><div class="small">34%</div></div>
-      <div class="mod lock"><div class="n">3</div><div>3 · SQL и базы данных (PostgreSQL)</div><div class="bar"><i style="width:0"></i></div><div class="small row"><svg width="12" height="12"><use href="#i-lock"/></svg></div></div>
-      <div class="mod lock"><div class="n">4</div><div>4 · Анализ данных: NumPy, pandas, визуализация, EDA</div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">5</div><div>5 · Алгоритмы и структуры данных (собеседования)</div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">6</div><div>6 · Классическое ML: от линейной регрессии до бустинга</div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">7</div><div>7 · Deep Learning: PyTorch, backprop своими руками</div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">8</div><div>8 · NLP, трансформеры и LLM</div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">9</div><div>9 · LLM-инженерия: RAG, агенты, оценка <span class="branch">ветка ML Eng</span></div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">10</div><div>10 · Статистика в продукте: A/B-тесты, метрики <span class="branch">ветка DS</span></div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">11</div><div>11 · Big Data: Spark, Kafka, Airflow, хранилища</div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">12</div><div>12 · MLOps: Docker, MLflow, сервинг, мониторинг</div><div class="bar"><i></i></div><div></div></div>
-      <div class="mod lock"><div class="n">13</div><div>13 · Capstone-проекты и подготовка к собеседованиям</div><div class="bar"><i></i></div><div></div></div>
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Для кого</div><h2 style="margin-top:12px">Если вы готовы учиться всерьёз</h2></div>
+        <p>Курс начинается с нуля, но не делает поблажек. Он рассчитан на тех, кто хочет понимать, как всё устроено, а не собирать решения из чужих кусков.</p>
+      </div>
+      <div class="personas">
+        <div><svg class="ico"><use href="#i-msg"/></svg><h3>Пишете код с помощью ИИ</h3><p>Умеете собрать приложение промптами, но без нейросети не напишете и цикла. Здесь научитесь писать и объяснять код сами.</p></div>
+        <div><svg class="ico"><use href="#i-repeat"/></svg><h3>Меняете профессию</h3><p>Школьная математика забыта — курс начнёт с диагностики и повторит её. Нужен только компьютер и 10–15 часов в неделю.</p></div>
+        <div><svg class="ico"><use href="#i-cap"/></svg><h3>Учитесь в вузе</h3><p>Знакомое сдаётся перезачётом сразу, без прохождения тем. Время уходит только на то, чего вы ещё не знаете.</p></div>
+      </div>
     </div>
   </section>
 
-  <!-- LESSON -->
-  <section class="screen" id="lesson">
-    <div class="lesson">
-      <div class="card prose">
-        <div class="small muted">Модуль 2 · Линейная алгебра · Урок 6</div>
-        <h1>Умножение матриц — это «сделать одно, потом другое»</h1>
-        <p>Матрица — это не просто таблица чисел. Это <b>инструкция, как сдвинуть плоскость</b>: повернуть, растянуть, наклонить. Когда мы умножаем матрицы, мы склеиваем две такие инструкции в одну.</p>
-        <div class="callout"><svg width="20" height="20" style="color:var(--accent)"><use href="#i-bulb"/></svg><div>Пример из жизни: сначала повернуть фото на 90°, потом растянуть по ширине — это не то же самое, что сначала растянуть, потом повернуть. Поэтому <b>AB ≠ BA</b>.</div></div>
-        <div class="viz">
-          <div class="row small muted" style="margin-bottom:8px">Интерактив: двигай ползунки — смотри, куда уходят базисные векторы</div>
-          <svg id="plane" viewBox="-5 -5 10 10" style="width:100%;max-width:360px;display:block;margin:0 auto;background:#0b0e13;border-radius:8px"></svg>
-          <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
-            <label class="small">a₁₁ = <span id="va">1.0</span><input type="range" min="-2" max="2" step=".1" value="1" id="ra"></label>
-            <label class="small">a₁₂ = <span id="vb">0.5</span><input type="range" min="-2" max="2" step=".1" value=".5" id="rb"></label>
-            <label class="small">a₂₁ = <span id="vc">0.0</span><input type="range" min="-2" max="2" step=".1" value="0" id="rc"></label>
-            <label class="small">a₂₂ = <span id="vd">1.0</span><input type="range" min="-2" max="2" step=".1" value="1" id="rd"></label>
+  <section class="sec alt">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Результат</div><h2 style="margin-top:12px">Что вы будете уметь</h2></div>
+        <p>Набор навыков, который проверяют на собеседованиях на позиции ML-инженера, дата-сайентиста и AI-инженера.</p>
+      </div>
+      <div class="skills">
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Писать и тестировать код на Python без подсказок</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Отвечать на аналитические вопросы на SQL с оконными функциями</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Выводить градиенты и объяснять, почему работает обучение</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Строить модели без утечек и защищать выбор метрики</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Планировать и разбирать A/B-тесты</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Обучать нейросети на PyTorch и дообучать трансформеры</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Строить RAG и агентов с честной оценкой качества</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Выкатывать модель как сервис с мониторингом</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Решать алгоритмические задачи на время</div>
+        <div><svg class="ico sm"><use href="#i-check"/></svg>Проходить ML System Design интервью</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Структура</div><h2 style="margin-top:12px">Четыре ступени, четыре рубежа</h2></div>
+        <p>Материал идёт одним потоком, без школьного чередования предметов. Дальше можно пройти, только когда предыдущая ступень сдана и закреплена.</p>
+      </div>
+      <div class="ladder">
+        <div><div class="lv">Курс<small>I–VI</small></div><p>Большая ступень, как год в университете. Пять–восемь дисциплин и курсовой проект.</p><div class="gate"><svg class="ico sm"><use href="#i-lock"/></svg>Переводной экзамен</div></div>
+        <div><div class="lv">Дисциплина<small>41</small></div><p>Предмет: Git, SQL I, линейная алгебра, трансформеры.</p><div class="gate"><svg class="ico sm"><use href="#i-lock"/></svg>Экзамен и устный опрос</div></div>
+        <div><div class="lv">Раздел<small>166</small></div><p>Логический блок, как раздел ПДД: «Соединения таблиц», «Собственные векторы».</p><div class="gate"><svg class="ico sm"><use href="#i-lock"/></svg>Контрольная</div></div>
+        <div><div class="lv">Тема<small>391</small></div><p>Одно занятие на 30–90 минут: теория с визуализацией и практика рядом.</p><div class="gate"><svg class="ico sm"><use href="#i-check"/></svg>Встроенные проверки</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Занятие</div><h2 style="margin-top:12px">Как проходит одна тема</h2></div>
+        <p>Всё на одной странице: читаете, крутите визуализацию, сразу пробуете в песочнице рядом. Контрольная и экзамен открываются там же.</p>
+      </div>
+      <ol class="flow">
+        <li><span class="fn">1</span><b>Теория</b><span>Текст как в хорошей книге: термины с подсказками, иллюстрации, разобранные примеры</span></li>
+        <li><span class="fn">2</span><b>Визуализация</b><span>Двигаете параметры и видите, как работает идея</span></li>
+        <li><span class="fn">3</span><b>Проверь себя</b><span>Короткие вопросы по ходу текста</span></li>
+        <li><span class="fn">4</span><b>Практика</b><span>Задачи в песочнице с автопроверкой и подсказками, которые исчезают по мере роста</span></li>
+        <li><span class="fn">5</span><b>Повторение</b><span>Тема вернётся в тренажёр ровно тогда, когда начнёт забываться</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec" id="unlock">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Принцип</div><h2 style="margin-top:12px">Сначала своими руками</h2></div>
+        <p>Библиотека открывается только после того, как вы реализовали её идею сами и защитили это. После — пользоваться ею правильно и не стыдно.</p>
+      </div>
+      <div class="unlocks">
+        <div class="unlock">Свой класс Matrix<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">NumPy</span></div>
+        <div class="unlock">График в SVG своими руками<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">matplotlib</span></div>
+        <div class="unlock">Мини-таблица на словарях<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">pandas</span></div>
+        <div class="unlock">Своё мини-ORM<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">SQLAlchemy</span></div>
+        <div class="unlock">Дерево и бустинг с нуля<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">CatBoost</span></div>
+        <div class="unlock">Свой autograd<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">PyTorch</span></div>
+        <div class="unlock">Свой мини-GPT<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">Transformers</span></div>
+        <div class="unlock">RAG без фреймворков<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">LangChain</span></div>
+        <div class="unlock">MapReduce на процессах<svg class="ico sm"><use href="#i-arrow"/></svg><span class="lib">Spark</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt" id="plan">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Учебный план</div><h2 style="margin-top:12px">Шесть курсов и выпуск</h2></div>
+        <p>Один общий путь для ML-инженера, дата-сайентиста и AI-инженера: роли в индустрии пересекаются, и программа даёт их общий суперсет.</p>
+      </div>
+      <div class="courses">
+        <div class="course"><div class="num">I</div><h3>Фундамент</h3><p>Терминал, Git, Python, язык математики, SQL</p><div class="h tnum">178 ч</div></div>
+        <div class="course"><div class="num">II</div><h3>Математика и алгоритмы</h3><p>Линал, матанализ, вероятности, статистика, алгоритмы</p><div class="h tnum">345 ч</div></div>
+        <div class="course"><div class="num">III</div><h3>Данные</h3><p>NumPy, pandas, визуализация, SQL II, сбор и очистка</p><div class="h tnum">185 ч</div></div>
+        <div class="course"><div class="num">IV</div><h3>Машинное обучение</h3><p>От регрессии до бустинга, A/B-тесты</p><div class="h tnum">270 ч</div></div>
+        <div class="course"><div class="num">V</div><h3>Глубокое обучение и LLM</h3><p>Нейросети, трансформеры, RAG, агенты</p><div class="h tnum">275 ч</div></div>
+        <div class="course"><div class="num">VI</div><h3>Продакшен и Big Data</h3><p>Docker, сервисы, MLOps, Spark, System Design</p><div class="h tnum">230 ч</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Портфолио</div><h2 style="margin-top:12px">Семь проектов на реальных данных</h2></div>
+        <p>Каждый курс заканчивается проектом, который повторяет рабочую задачу. Claude проверяет, что репозиторий живой, а данные настоящие.</p>
+      </div>
+      <div class="projects">
+        <div><span class="pn">I</span><b>Первый репозиторий</b><span>CLI-утилита на Python поверх CSV и SQLite, история из pull request'ов</span><code>Python · SQL · Git</code></div>
+        <div><span class="pn">II</span><b>Своя научная библиотека</b><span>Матрицы, градиентный спуск, распределения, t-тест — с тестами и сравнением с NumPy</span><code>Python · pytest</code></div>
+        <div><span class="pn">III</span><b>Данные от сырья до отчёта</b><span>Реальный датасет → очистка → своя база → EDA-отчёт</span><code>pandas · SQL · matplotlib</code></div>
+        <div><span class="pn">IV</span><b>Реальные данные и эксперимент</b><span>Грязный датасет, записка для бизнеса, A/B с CUPED, рекомендательная система</span><code>CatBoost · SciPy</code></div>
+        <div><span class="pn">V</span><b>Свой RAG-ассистент</b><span>Русскоязычный корпус, золотой набор из 100+ вопросов, публичное демо</span><code>PyTorch · pgvector</code></div>
+        <div><span class="pn">VI</span><b>Дипломная система</b><span>Пайплайн данных, модель, сервис, CI и мониторинг в продакшене</span><code>Airflow · Docker · K8s</code></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt">
+    <div class="wrap teacher">
+      <div>
+        <div class="eyebrow">Преподаватель</div>
+        <h2 style="margin-top:12px;font-size:34px;line-height:1.1">Строгий, но справедливый</h2>
+        <p class="muted" style="font-size:17px;max-width:52ch">Claude не ставит двойку за неудачную формулировку. Он переспрашивает в другой форме, пока не поймёт, знаете вы тему или нет, и сразу закрывает найденный пробел.</p>
+        <ul style="margin-top:24px">
+          <li><svg class="ico sm"><use href="#i-msg"/></svg><span><b>Устные экзамены.</b> До четырёх уточняющих вопросов на концепт.</span></li>
+          <li><svg class="ico sm"><use href="#i-pen"/></svg><span><b>Любой формат ответа.</b> Текст, формулы, код или рукописное решение с графического планшета.</span></li>
+          <li><svg class="ico sm"><use href="#i-db"/></svg><span><b>Проверяет реальность.</b> Что репозиторий привязан к GitHub, а датасет взят с Kaggle.</span></li>
+        </ul>
+      </div>
+      <div class="chat" aria-label="Пример устного экзамена">
+        <div class="msg"><div class="who"><span class="mk">C</span>Преподаватель</div>Чем LEFT JOIN отличается от INNER JOIN?</div>
+        <div class="msg me"><div class="bubble">LEFT берёт больше строк.</div></div>
+        <div class="msg"><div class="who"><span class="mk">C</span>Преподаватель</div>Уточню. В <span class="mono">users</span> 3 строки, у одного пользователя нет заказов. Сколько строк вернёт каждый JOIN и что будет в столбцах <span class="mono">orders</span> у этого пользователя?</div>
+        <div class="msg me"><div class="bubble">INNER — 2, LEFT — 3. У пользователя без заказов в столбцах orders будет NULL.</div></div>
+        <div class="row" style="gap:8px"><span class="verdict ok"><svg class="ico sm"><use href="#i-check"/></svg>LEFT JOIN — подтверждён после уточнения</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Вопросы</div><h2 style="margin-top:12px">Частые вопросы</h2></div>
+        <div class="faq">
+          <details open><summary>Сколько времени займёт курс?</summary><p>Около 1 700 часов вместе с проектами: при 15 часах в неделю — чуть больше двух лет. Откликаться на стажировки можно уже после Курса IV.</p></details>
+          <details><summary>Нужна ли подписка на Claude?</summary><p>Нет. Платформа работает без неё. С подпиской появляется преподаватель: устные экзамены, разбор ошибок, проверка рукописных решений.</p></details>
+          <details><summary>Потянет ли мой компьютер?</summary><p>Курсы I–IV работают прямо в браузере на любом ноутбуке. Тяжёлое обучение нейросетей в Курсе V идёт в бесплатных Kaggle и Colab.</p></details>
+          <details><summary>Можно пропустить то, что я уже знаю?</summary><p>Да. Любую дисциплину можно сдать перезачётом сразу, без прохождения тем.</p></details>
+          <details><summary>Что будет, если пропущу неделю?</summary><p>Ничего страшного. Повторение не превратится в долг из сотен карточек: после перерыва забытое возвращается постепенно, по 20–25 минут в день.</p></details>
+          <details><summary>Почему нельзя сразу взять библиотеку?</summary><p>Потому что на собеседовании спросят, как она устроена. Вы пишете идею сами один раз, сдаёте её — и дальше спокойно пользуетесь библиотекой.</p></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <h2>Первая тема — 15 минут.<br>Терминал и то, как компьютер хранит текст.</h2>
+      <a class="btn" href="#learn">Начать с Курса I <svg class="ico sm"><use href="#i-arrow"/></svg></a>
+    </div>
+  </section>
+
+  <footer class="foot"><div class="wrap"><span>Forge ML · открытый курс, запускается локально</span><span>Код — MIT · Материалы — CC BY-SA 4.0</span></div></footer>
+</main>
+
+<!-- ═════════ LEARN (plan) ═════════ -->
+<main class="view" id="v-learn">
+  <div class="wrap">
+    <div class="page-head">
+      <div><div class="eyebrow">Обучение</div><h1 style="margin-top:10px">Курс I. Фундамент</h1><p>Дисциплина 6 из 6 · переводной экзамен откроется после экзамена по SQL I</p></div>
+    </div>
+    <div class="continue">
+      <div>
+        <div class="eyebrow">Продолжить</div>
+        <h2>SQL I · Соединения таблиц · Тема 4.1 — виды соединений</h2>
+        <div class="muted" style="font-size:14px">≈ 45 минут · теория, визуализация, 3 задачи в песочнице</div>
+        <div class="prog"><i style="width:58%"></i></div>
+      </div>
+      <a class="btn" href="#study"><svg class="ico sm"><use href="#i-play"/></svg>Продолжить</a>
+    </div>
+
+    <div class="plan">
+      <div class="plan-course">
+        <div class="cn">Курс I<b>Фундамент</b>178 ч · идёт сейчас</div>
+        <div>
+          <div class="disc"><span class="st done"><svg class="ico sm" style="width:11px;height:11px;stroke-width:3"><use href="#i-check"/></svg></span><span>Компьютер и терминал</span><span class="bar"><i style="width:100%"></i></span><span class="grade tnum">отлично</span></div>
+          <div class="disc"><span class="st done"><svg class="ico sm" style="width:11px;height:11px;stroke-width:3"><use href="#i-check"/></svg></span><span>Git и GitHub</span><span class="bar"><i style="width:100%"></i></span><span class="grade tnum">отлично</span></div>
+          <div class="disc"><span class="st done"><svg class="ico sm" style="width:11px;height:11px;stroke-width:3"><use href="#i-check"/></svg></span><span>Python I — язык</span><span class="bar"><i style="width:100%"></i></span><span class="grade tnum">хорошо</span></div>
+          <div class="disc"><span class="st done"><svg class="ico sm" style="width:11px;height:11px;stroke-width:3"><use href="#i-check"/></svg></span><span>Математика I — язык математики</span><span class="bar"><i style="width:100%"></i></span><span class="grade tnum">отлично</span></div>
+          <div class="disc cur"><span class="st cur"></span><span>SQL I — запросы</span><span class="bar"><i style="width:58%"></i></span><span class="grade tnum faint">раздел 4 из 6</span></div>
+        </div>
+      </div>
+      <div class="plan-course locked">
+        <div class="cn">Курс II<b>Математика и алгоритмы</b>345 ч</div>
+        <div>
+          <div class="disc"><span class="st todo"></span><span>Python II — инженерный Python</span><span class="bar"><i style="width:0"></i></span><span class="grade"></span></div>
+          <div class="disc"><span class="st todo"></span><span>Алгоритмы и структуры данных I</span><span class="bar"><i style="width:0"></i></span><span class="grade"></span></div>
+          <div class="disc"><span class="st todo"></span><span>Линейная алгебра<span class="tag">→ NumPy</span></span><span class="bar"><i style="width:0"></i></span><span class="grade"></span></div>
+          <div class="disc"><span class="st todo"></span><span>Математический анализ</span><span class="bar"><i style="width:0"></i></span><span class="grade"></span></div>
+          <div class="disc"><span class="st todo"></span><span>Теория вероятностей</span><span class="bar"><i style="width:0"></i></span><span class="grade"></span></div>
+          <div class="disc"><span class="st todo"></span><span>Статистика<span class="tag">→ SciPy</span></span><span class="bar"><i style="width:0"></i></span><span class="grade"></span></div>
+        </div>
+      </div>
+      <div class="plan-course locked"><div class="cn">Курс III<b>Данные</b>185 ч</div><div class="muted" style="font-size:14px;padding-top:6px">NumPy · Визуализация · Табличные данные · SQL II · Алгоритмы II · Сбор и подготовка данных</div></div>
+      <div class="plan-course locked"><div class="cn">Курс IV<b>Машинное обучение</b>270 ч</div><div class="muted" style="font-size:14px;padding-top:6px">Основы ML · Линейные модели · Деревья и ансамбли · Другие методы · Практика ML · Эксперименты</div></div>
+      <div class="plan-course locked"><div class="cn">Курс V<b>Глубокое обучение и LLM</b>275 ч</div><div class="muted" style="font-size:14px;padding-top:6px">Нейросети с нуля · Практика · CV · Тексты · Трансформеры · LLM · Поиск и RAG · Агенты</div></div>
+      <div class="plan-course locked"><div class="cn">Курс VI<b>Продакшен и Big Data</b>230 ч</div><div class="muted" style="font-size:14px;padding-top:6px">Linux и сети · Контейнеры · ML-сервисы · MLOps · Большие данные · ML System Design</div></div>
+    </div>
+  </div>
+</main>
+
+<!-- ═════════ STUDY (one page: topic / test / exam) ═════════ -->
+<main class="view" id="v-study">
+  <div class="study-head">
+    <div class="wrap wide">
+      <div class="crumbs"><span>Курс I</span><span>/</span><span>SQL I</span><span>/</span><span>Соединения таблиц</span><span>/</span><b>4.1 Виды соединений</b></div>
+      <div class="modes" role="tablist">
+        <button class="on" data-mode="topic"><svg class="ico sm"><use href="#i-book"/></svg>Тема</button>
+        <button data-mode="quiz" title="Откроется после темы 4.3 · сейчас — предпросмотр"><svg class="ico sm"><use href="#i-lock"/></svg>Контрольная</button>
+        <button data-mode="exam" title="Откроется после всех контрольных SQL I · сейчас — предпросмотр"><svg class="ico sm"><use href="#i-lock"/></svg>Экзамен</button>
+      </div>
+      <div class="tools" aria-label="Инструменты">
+        <button title="Спросить Claude о выделенном или о теме"><svg class="ico sm"><use href="#i-msg"/></svg></button>
+        <button title="Заметка к теме"><svg class="ico sm"><use href="#i-note"/></svg></button>
+        <button title="Шпаргалка"><svg class="ico sm"><use href="#i-layers"/></svg></button>
+        <button title="Предложить правку урока"><svg class="ico sm"><use href="#i-flag"/></svg></button>
+        <button title="Скрыть песочницу — режим чтения"><svg class="ico sm"><use href="#i-panel"/></svg></button>
+      </div>
+    </div>
+    <div class="topic-progress" aria-label="Прогресс темы"><i style="width:42%"></i></div>
+  </div>
+
+  <!-- topic -->
+  <div class="wrap wide mode-pane" id="m-topic">
+    <div class="study">
+      <nav class="outline" aria-label="Темы раздела">
+        <div class="eyebrow">SQL I · разделы</div>
+        <a class="done" href="#study"><svg class="ico sm"><use href="#i-check"/></svg>1 Реляционная модель</a>
+        <a class="done" href="#study"><svg class="ico sm"><use href="#i-check"/></svg>2 Выборка</a>
+        <a class="done" href="#study"><svg class="ico sm"><use href="#i-check"/></svg>3 Агрегация</a>
+        <div class="ol-group">
+          <div class="ol-title">4 Соединения таблиц</div>
+          <a class="on" href="#study">4.1 Виды соединений</a>
+          <ol class="steps">
+            <li class="d">Теория</li><li class="d">Интерактив</li><li class="c">Проверь себя</li><li>Задача 4.1.2</li><li>Итог</li>
+          </ol>
+          <a href="#study">4.2 Self-join</a>
+          <a href="#study">4.3 Ловушки соединений</a>
+          <div class="gate"><svg class="ico sm"><use href="#i-lock"/></svg>Контрольная раздела</div>
+        </div>
+        <a class="lock" href="#study"><svg class="ico sm"><use href="#i-lock"/></svg>5 Подзапросы</a>
+        <a class="lock" href="#study"><svg class="ico sm"><use href="#i-lock"/></svg>6 Изменение данных</a>
+      </nav>
+
+      <article class="prose">
+        <div class="eyebrow">Тема 4.1 · 45 минут</div>
+        <h1>JOIN — это операция над множествами строк</h1>
+        <p class="lead">Две таблицы почти всегда связаны: у заказа есть покупатель, у покупателя — заказы. Как получить в одном ответе и имя покупателя, и сумму его заказа?</p>
+        <div class="withaside">
+          <p><b>Соединение</b> (JOIN) <mark>склеивает строки двух таблиц в одну, если они удовлетворяют условию</mark>. Обычно условие сравнивает <span class="term" tabindex="0">внешний ключ<span class="card"><b>Внешний ключ</b>Столбец, который хранит идентификатор строки из другой таблицы. Так таблицы «ссылаются» друг на друга.<span class="meta"><span>Введено: SQL I · 1.2</span><span>В шпаргалку</span></span></span></span> одной таблицы с <span class="term" tabindex="0">первичным ключом<span class="card"><b>Первичный ключ</b>Столбец, значение которого уникально для каждой строки и никогда не бывает пустым. По нему строку можно найти однозначно.<span class="meta"><span>Введено: SQL I · 1.2</span><span>В шпаргалку</span></span></span></span> другой: <code>users.id = orders.user_id</code>.</p>
+          <div class="aside"><div class="eyebrow">На полях</div>Слово JOIN пришло из реляционной алгебры Эдгара Кодда (1970). Там это операция «соединение» — частный случай декартова произведения.</div>
+        </div>
+        <p>Главный вопрос любого JOIN — <i>что делать со строками, которым пары не нашлось?</i> Ответ и отличает виды соединений друг от друга. Переключайте вид и смотрите, какие строки попадают в результат.</p>
+
+        <div class="figure">
+          <div class="fh">
+            <span class="eyebrow">Интерактив</span>
+            <div class="seg" role="tablist" aria-label="Вид соединения">
+              <button class="on" data-j="inner">INNER</button><button data-j="left">LEFT</button><button data-j="right">RIGHT</button><button data-j="full">FULL</button>
+            </div>
+          </div>
+          <div class="joinviz">
+            <table class="t" id="tu"><caption>users</caption></table>
+            <table class="t" id="to"><caption>orders</caption></table>
+            <table class="t" id="tr"><caption id="trc">результат</caption></table>
           </div>
         </div>
-        <p>В ML это встречается везде: слой нейросети — это умножение на матрицу весов, а глубокая сеть — цепочка таких умножений.</p>
-        <div class="row" style="gap:8px;margin-top:8px"><button class="btn" onclick="go('task')">К практике</button><button class="btn ghost"><svg width="14" height="14"><use href="#i-note"/></svg>В шпаргалку</button></div>
-      </div>
-      <div class="grid" style="align-content:start">
-        <div class="card"><h2>Проверь себя</h2>
-          <div class="small" style="margin-bottom:6px">Матрица A — 2×3, B — 3×4. Какой размер у AB?</div>
-          <label class="opt"><input type="radio" name="q1">3×3</label>
-          <label class="opt"><input type="radio" name="q1">2×4</label>
-          <label class="opt"><input type="radio" name="q1">Не определено</label>
+
+        <figure style="margin:8px 0 22px">
+          <svg class="venn" viewBox="0 0 360 150" role="img" aria-label="LEFT JOIN: вся левая таблица и пересечение">
+            <circle cx="135" cy="75" r="62" fill="color-mix(in srgb, var(--accent) 22%, transparent)" stroke="var(--accent)" stroke-width="1.5"/>
+            <circle cx="225" cy="75" r="62" fill="none" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <path d="M180 32 A62 62 0 0 1 180 118 A62 62 0 0 1 180 32Z" fill="color-mix(in srgb, var(--accent) 45%, transparent)"/>
+            <text x="98" y="80" font-family="Nunito,sans-serif" font-size="12" fill="var(--ink)">users</text>
+            <text x="238" y="80" font-family="Nunito,sans-serif" font-size="12" fill="var(--ink-3)">orders</text>
+            <text x="300" y="22" font-family="Nunito,sans-serif" font-size="11" fill="var(--ink-2)">пары есть</text>
+            <path d="M298 25 L196 62" stroke="var(--ink-3)" stroke-width="1" fill="none"/>
+            <text x="6" y="146" font-family="Nunito,sans-serif" font-size="11" fill="var(--ink-2)">пары нет — столбцы orders = NULL</text>
+            <path d="M60 136 L100 100" stroke="var(--ink-3)" stroke-width="1" fill="none"/>
+          </svg>
+          <figcaption class="figcap">LEFT JOIN берёт всю левую таблицу; правая дополняет её там, где нашлась пара.</figcaption>
+        </figure>
+
+        <div class="note"><svg class="ico"><use href="#i-alert"/></svg><span>Строки без пары не исчезают в LEFT JOIN: их столбцы из правой таблицы заполняются <code>NULL</code>. Отсюда частая ошибка — фильтр <code>WHERE orders.sum &gt; 0</code> молча превращает LEFT JOIN обратно в INNER.</span></div>
+
+        <div class="check">
+          <div class="q">В users 4 строки, в orders 5. У двух пользователей нет заказов, все заказы чьи-то. Сколько строк вернёт LEFT JOIN, если у одного пользователя 3 заказа, а у другого 2?</div>
+          <label class="opt"><input type="radio" name="c1">4</label>
+          <label class="opt right"><input type="radio" name="c1" checked>7</label>
+          <label class="opt"><input type="radio" name="c1">9</label>
         </div>
-        <div class="card"><h2>Источники</h2><div class="small muted">3Blue1Brown · Essence of LA, гл. 4<br>MML (Deisenroth), §2.2<br>Strang, 18.06, лекция 3</div></div>
-        <div class="card"><h2>Заметка к уроку</h2><textarea rows="4" placeholder="Что было непонятно? Что улучшить в уроке?"></textarea><div class="small muted" style="margin-top:6px">Заметки с меткой «улучшение» попадают в очередь на доработку курса</div></div>
+
+        <p>Математически INNER JOIN — это подмножество <span class="term" tabindex="0">декартова произведения<span class="card"><b>Декартово произведение</b>Множество всех упорядоченных пар (a, b), где a из первого множества, b из второго. Для таблиц из 3 и 4 строк — 12 пар.<span class="meta"><span>Введено: Математика I · 3.3</span><span>В шпаргалку</span></span></span></span>, отобранное условием. Поэтому без условия вы получите все пары строк — <b>CROSS JOIN</b>.</p>
+        <div class="next-card">
+          <div><div class="eyebrow">Итог темы</div><p>Вы умеете выбирать вид JOIN по тому, что нужно сделать со строками без пары, и знаете, откуда берутся NULL.</p></div>
+          <a class="btn" href="#study">Дальше: 4.2 Self-join <svg class="ico sm"><use href="#i-arrow"/></svg></a>
+        </div>
+        <div class="src">Соответствует: CMU 15-445, лекция 2 · PostgreSQL Docs, 7.2.1 · Учебник по базам данных, гл. «Реляционная алгебра»</div>
+      </article>
+
+      <aside class="sandbox" aria-label="Песочница SQL">
+        <div class="sb-head"><svg class="ico sm"><use href="#i-db"/></svg><b style="font-weight:500">Задача 4.1.2</b><span class="pill">PostgreSQL · в браузере</span></div>
+        <div class="task">Выведите имена всех пользователей и число их заказов, <b>включая тех, у кого заказов нет</b>. Отсортируйте по убыванию числа заказов.</div>
+        <div class="editor"><span class="ln">1</span><span class="kw">SELECT</span> u.name, <span class="kw">COUNT</span>(*) <span class="kw">AS</span> n
+<span class="ln">2</span><span class="kw">FROM</span> users u
+<span class="ln">3</span><span class="kw">LEFT JOIN</span> orders o <span class="kw">ON</span> o.user_id = u.id
+<span class="ln">4</span><span class="kw">GROUP BY</span> u.name
+<span class="ln">5</span><span class="kw">ORDER BY</span> n <span class="kw">DESC</span>;</div>
+        <div class="sb-actions"><button class="btn sm"><svg class="ico sm"><use href="#i-play"/></svg>Проверить</button><button class="btn sm ghost">Подсказка</button><button class="txt-btn" title="Вернуть заготовку">Сбросить</button><span class="faint tnum">попытка 2 · 03:12</span></div>
+        <div class="results">
+          <table class="t"><thead><tr><th>name</th><th>n</th></tr></thead>
+          <tbody><tr><td>Анна</td><td>2</td></tr><tr><td>Борис</td><td>1</td></tr><tr class="hit"><td>Вера</td><td>1</td></tr></tbody></table>
+        </div>
+        <div class="tests">
+          <div class="p"><svg class="ico sm"><use href="#i-check"/></svg>Все пользователи в результате</div>
+          <div class="f"><svg class="ico sm"><use href="#i-x"/></svg>У Веры 0 заказов, получено 1</div>
+          <div class="l" title="Проверяют крайние случаи: пустые таблицы, повторы, NULL"><svg class="ico sm"><use href="#i-lock"/></svg>Скрытые проверки: 3 · решение откроется после 5 попыток</div>
+        </div>
+        <div class="hint"><svg class="ico"><use href="#i-bulb"/></svg><span><b>Подсказка 1 · где искать.</b> Что именно считает <span class="mono">COUNT(*)</span> в строке, где все столбцы orders равны NULL?</span></div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- section test -->
+  <div class="wrap mode-pane" id="m-quiz" hidden>
+    <div class="quiz">
+      <div class="eyebrow">Контрольная раздела</div>
+      <h1 style="font-size:34px;margin-top:10px">Соединения таблиц</h1>
+      <div class="quiz-meta"><span><b>12</b> вопросов</span><span><b>35</b> минут</span><span>Порог <b>85%</b>, каждая тема не ниже 80%</span><span><b>3</b> вопроса из прошлых дисциплин</span></div>
+
+      <div class="qi"><div class="qh"><h3>1. Что вернёт запрос?</h3><span class="qt">предскажи результат</span></div>
+        <pre class="code">SELECT COUNT(*) FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+WHERE o.sum &gt; 100;</pre>
+        <label class="opt"><input type="radio" name="q1">Число всех пользователей</label>
+        <label class="opt"><input type="radio" name="q1">Число заказов дороже 100 с их владельцами</label>
+        <label class="opt"><input type="radio" name="q1">Ошибку</label>
+      </div>
+      <div class="qi"><div class="qh"><h3>2. Какие утверждения верны?</h3><span class="qt">несколько ответов</span></div>
+        <label class="opt"><input type="checkbox">FULL JOIN = LEFT JOIN ∪ RIGHT JOIN</label>
+        <label class="opt"><input type="checkbox">CROSS JOIN таблиц из 3 и 4 строк даёт 7 строк</label>
+        <label class="opt"><input type="checkbox">INNER JOIN коммутативен по набору строк</label>
+      </div>
+      <div class="qi"><div class="qh"><h3>3. Объясните своими словами, почему self-join нужен для поиска сотрудника и его руководителя</h3><span class="qt">проверит Claude</span></div>
+        <textarea id="ans3" placeholder="Можно с формулами в $…$"></textarea>
+        <div class="inputs"><span><svg class="ico sm"><use href="#i-pen"/></svg>Нарисовать от руки</span><span>Прикрепить фото</span></div>
+      </div>
+      <div class="qi"><div class="qh"><h3>4. Сколько элементов в A × B, если |A| = 3, |B| = 4?</h3><span class="qt review">повторение · Математика I</span></div>
+        <textarea id="ans4" style="min-height:48px" placeholder="Ответ"></textarea>
+      </div>
+      <div class="row" style="margin-top:24px"><button class="btn">Сдать контрольную</button><span class="faint" style="font-size:13px">Подсказки в контрольной недоступны</span></div>
+    </div>
+  </div>
+
+  <!-- oral exam -->
+  <div class="wrap mode-pane" id="m-exam" hidden>
+    <div class="exam">
+      <div>
+        <div class="eyebrow">Экзамен по дисциплине · устная часть</div>
+        <h1 style="font-size:34px;margin:10px 0 28px">SQL I — запросы</h1>
+        <div class="chat">
+          <div class="msg"><div class="who"><span class="mk">C</span>Преподаватель</div>Начнём с порядка выполнения. Почему в <span class="mono">WHERE</span> нельзя использовать псевдоним из <span class="mono">SELECT</span>, а в <span class="mono">ORDER BY</span> можно?</div>
+          <div class="msg me"><div class="bubble">Потому что WHERE выполняется раньше SELECT, псевдонима ещё нет. ORDER BY — после.</div></div>
+          <div class="row"><span class="verdict ok"><svg class="ico sm"><use href="#i-check"/></svg>Порядок выполнения — подтверждён</span></div>
+          <div class="msg"><div class="who"><span class="mk">C</span>Преподаватель</div>Хорошо. Чем отличается <span class="mono">WHERE</span> от <span class="mono">HAVING</span>?</div>
+          <div class="msg me"><div class="bubble">HAVING — это тоже фильтр, но для агрегатов.</div></div>
+          <div class="msg"><div class="who"><span class="mk">C</span>Преподаватель</div>Направление верное. Тогда на примере: нужно найти города, где больше 10 покупателей старше 30 лет. Какое условие пойдёт в WHERE, а какое в HAVING, и почему не наоборот?</div>
+          <div class="row"><span class="verdict part"><svg class="ico sm"><use href="#i-clock"/></svg>WHERE и HAVING — уточняется, вопрос 2 из 4</span></div>
+          <div class="reply"><textarea id="exam-reply" placeholder="Ваш ответ"></textarea><button class="btn" style="height:auto">Ответить</button></div>
+        </div>
+      </div>
+      <aside>
+        <div class="eyebrow">Билет · 6 концептов</div>
+        <div class="concept"><span>Порядок выполнения запроса</span><span class="s" style="background:var(--ok)"></span></div>
+        <div class="concept"><span>WHERE и HAVING</span><span class="s" style="background:var(--warn)"></span></div>
+        <div class="concept"><span>NULL и трёхзначная логика</span><span class="s" style="background:var(--line-2)"></span></div>
+        <div class="concept"><span>Виды JOIN</span><span class="s" style="background:var(--line-2)"></span></div>
+        <div class="concept"><span>Подзапросы и EXISTS</span><span class="s" style="background:var(--line-2)"></span></div>
+        <div class="concept"><span>Транзакция</span><span class="s" style="background:var(--line-2)"></span></div>
+        <p class="faint" style="font-size:12px;margin-top:16px">Не больше 4 вопросов на концепт. Если пробел найден, преподаватель объяснит его и вернётся к концепту на пересдаче.</p>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<!-- ═════════ TRAINER ═════════ -->
+<main class="view" id="v-trainer">
+  <div class="wrap">
+    <div class="page-head"><div><div class="eyebrow">Тренажёр</div><h1 style="margin-top:10px">Повторение и тренировка</h1><p>Всё пройденное — в любом режиме. Вопросы каждый раз новые: числа, данные и формулировки меняются.</p></div></div>
+    <div class="split">
+      <div>
+        <div class="daily">
+          <div><div class="eyebrow">Сегодня</div><h2>Ежедневное повторение</h2><p>Python: срезы · SQL: GROUP BY · Множества: декартово произведение — то, что начинает забываться.</p></div>
+          <a class="btn" href="#trainer"><svg class="ico sm"><use href="#i-play"/></svg>Начать · 14 вопросов, ≈ 12 мин</a>
+        </div>
+        <div class="eyebrow group-h">Тренироваться самостоятельно</div>
+        <a class="mode" href="#trainer"><span class="mi"><svg class="ico"><use href="#i-book"/></svg></span><div><h3>По теме или разделу</h3><p>Выберите любое пройденное</p></div><span class="n tnum">86 тем</span></a>
+        <div class="eyebrow group-h">Подготовка к рубежам</div>
+        <a class="mode" href="#trainer"><span class="mi"><svg class="ico"><use href="#i-ticket"/></svg></span><div><h3>Билеты</h3><p>20 вопросов в формате экзамена, на время</p></div><span class="n">40 мин</span></a>
+        <a class="mode" href="#trainer"><span class="mi"><svg class="ico"><use href="#i-shuffle"/></svg></span><div><h3>Марафон</h3><p>Все пройденные вопросы вперемешку, пока не остановитесь</p></div><span class="n">без лимита</span></a>
+        <a class="mode" href="#trainer"><span class="mi"><svg class="ico"><use href="#i-alert"/></svg></span><div><h3>Работа над ошибками</h3><p>Только то, где ошибались</p></div><span class="n tnum">23 вопроса</span></a>
+        <div class="mode locked"><span class="mi"><svg class="ico"><use href="#i-lock"/></svg></span><div><h3>Контест</h3><p>Алгоритмические задачи на время, как онлайн-этап собеседования</p></div><span class="n">откроется в Курсе II</span></div>
+      </div>
+      <div class="upcoming">
+        <div class="eyebrow">Слабые места</div>
+        <a class="weak" href="#trainer"><span>NULL после LEFT JOIN</span><span class="faint">6 вопросов</span></a>
+        <a class="weak" href="#trainer"><span>WHERE и HAVING</span><span class="faint">4 вопроса</span></a>
+        <a class="weak" href="#trainer"><span>Изменяемость списков</span><span class="faint">3 вопроса</span></a>
+        <div class="eyebrow" style="margin-top:36px">Рубежи</div>
+        <div class="ev"><div class="d tnum">21<small>ноя</small></div><div><b>Контрольная · Соединения таблиц</b><p>Откроется после темы 4.3</p></div></div>
+        <div class="ev"><div class="d tnum">28<small>ноя</small></div><div><b>Экзамен · SQL I</b><p>Практика и устный опрос у Claude</p></div></div>
+        <div class="ev"><div class="d tnum">5<small>дек</small></div><div><b>Переводной экзамен · Курс I</b><p>Все пять дисциплин + защита курсового проекта</p></div></div>
+        <div class="ev"><div class="d"><svg class="ico" style="margin:0 auto"><use href="#i-clock"/></svg><small>фев</small></div><div><b>Проверка остаточных знаний</b><p>Середина Курса II, по всему Курсу I</p></div></div>
       </div>
     </div>
-  </section>
+  </div>
+</main>
 
-  <!-- TASK -->
-  <section class="screen" id="task">
-    <div class="task">
-      <div class="card">
-        <div class="row" style="justify-content:space-between"><span class="small muted">Задача 2.6.4 · NumPy · средняя</span><span class="pill"><svg width="12" height="12"><use href="#i-clock"/></svg>12:41</span></div>
-        <h2 style="margin-top:8px">Композиция преобразований</h2>
-        <p class="small">Напиши функцию <code>compose(*mats)</code>, которая возвращает одну матрицу, эквивалентную применению всех преобразований <b>по порядку</b> (сначала первая). Используй только <code>@</code>, без циклов по элементам.</p>
-        <p class="small muted">Дано: модуль <code>numpy as np</code> уже импортирован. Входы — квадратные матрицы одного размера.</p>
-        <h2 style="margin-top:16px">Тесты</h2>
-        <div class="tests">
-          <div class="t" style="color:var(--ok)"><svg width="14" height="14"><use href="#i-check"/></svg>compose(I) == I</div>
-          <div class="t" style="color:var(--ok)"><svg width="14" height="14"><use href="#i-check"/></svg>compose(R90) == R90</div>
-          <div class="t" style="color:var(--bad)"><svg width="14" height="14"><use href="#i-x"/></svg>compose(R90, S) == S @ R90</div>
-          <div class="t muted"><svg width="14" height="14"><use href="#i-lock"/></svg>скрытые тесты: 5</div>
-        </div>
-        <div class="hint"><svg width="18" height="18" style="color:var(--warn)"><use href="#i-bulb"/></svg><div class="small"><b>Подсказка 1 из 3 · концепт.</b> Векторы умножаются справа: <code>M @ v</code>. Какая матрица должна стоять ближе к вектору — та, что применяется первой?</div></div>
-        <div class="row" style="gap:8px;margin-top:12px"><button class="btn ghost">Ещё подсказка</button><button class="btn ghost"><svg width="14" height="14"><use href="#i-spark"/></svg>Спросить Claude</button></div>
+<!-- ═════════ RECORD ═════════ -->
+<main class="view" id="v-record">
+  <div class="wrap" style="padding-bottom:80px">
+    <div class="page-head"><div><div class="eyebrow">Зачётка</div><h1 style="margin-top:10px">Зачётная книжка</h1><p>Курс I · обучение с 1 октября 2026 (пример данных)</p></div></div>
+    <div class="stats">
+      <div class="stat"><div class="v tnum">118 ч</div><div class="k">чистого времени</div></div>
+      <div class="stat"><div class="v tnum">74 / 391</div><div class="k">тем пройдено</div></div>
+      <div class="stat"><div class="v tnum">91%</div><div class="k">удержание через 30 дней</div></div>
+      <div class="stat"><div class="v tnum">0.6</div><div class="k">подсказки на задачу, месяц назад 1.9</div></div>
+    </div>
+
+    <div class="record" style="overflow-x:auto">
+      <table class="grades" style="min-width:680px">
+        <thead><tr><th>Дисциплина</th><th>Часы</th><th>Дата</th><th>Оценка</th><th>Комментарий преподавателя</th></tr></thead>
+        <tbody>
+          <tr><td>Компьютер и терминал</td><td class="tnum">14</td><td class="tnum">12.10</td><td class="g"><span class="grade-pill ex">Отлично</span></td><td><div class="c">Уверенно с пайпами и правами. Кодировки объяснил на собственном примере.</div></td></tr>
+          <tr><td>Git и GitHub</td><td class="tnum">22</td><td class="tnum">24.10</td><td class="g"><span class="grade-pill ex">Отлично</span></td><td><div class="c">Конфликт при rebase разрешил без подсказок. Репозиторий проверен на GitHub.</div></td></tr>
+          <tr><td>Python I — язык</td><td class="tnum">58</td><td class="tnum">09.11</td><td class="g"><span class="grade-pill gd">Хорошо</span></td><td><div class="c">Изменяемость и ссылки — подтверждено после доучивания. Повторить через 8 дней.</div></td></tr>
+          <tr><td>Математика I</td><td class="tnum">24</td><td class="tnum">15.11</td><td class="g"><span class="grade-pill ex">Отлично</span></td><td><div class="c">Индукция — сильная сторона. Рукописные решения аккуратные.</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="two">
+      <div>
+        <div class="eyebrow">Профиль обучения · обновлён Claude в воскресенье</div>
+        <p style="max-width:58ch;margin-top:14px">Быстро схватываете через визуализацию. Слабые места: NULL после LEFT JOIN, путаница WHERE и HAVING. В SQL оцениваете себя выше результата на 12% — в повторении больше вопросов «предскажи результат».</p>
+        <a class="btn sm" href="#trainer" style="margin-top:4px">Повторить слабые места · 10 вопросов</a>
+        <div class="eyebrow" style="margin-top:32px">Активность · 30 недель</div>
+        <div class="heat" id="heat"></div>
       </div>
       <div>
-        <div class="editor">
-          <div class="ed-head"><svg width="14" height="14"><use href="#i-code"/></svg><span class="small">solution.py</span><span class="pill" style="margin-left:auto">Python 3.12 · Pyodide</span></div>
-<div class="code"><span class="ln">1</span><span class="k">def</span> <span class="f">compose</span>(*mats):
-<span class="ln">2</span>    <span class="s">"""Матрица, равная применению mats по порядку."""</span>
-<span class="ln">3</span>    result = np.eye(mats[<span class="num">0</span>].shape[<span class="num">0</span>])
-<span class="ln">4</span>    <span class="k">for</span> m <span class="k">in</span> mats:
-<span class="ln">5</span>        result = result @ m   <span class="c"># порядок?</span>
-<span class="ln">6</span>    <span class="k">return</span> result
-</div>
+        <div class="eyebrow">Библиотеки</div>
+        <p class="faint" style="font-size:13px;margin:8px 0 0">Открываются после того, как вы реализовали их идею сами</p>
+        <div class="libs">
+          <span class="lib-chip open"><svg class="ico sm"><use href="#i-unlock"/></svg>pathlib</span>
+          <span class="lib-chip open"><svg class="ico sm"><use href="#i-unlock"/></svg>csv · json</span>
+          <span class="lib-chip"><svg class="ico sm"><use href="#i-lock"/></svg>NumPy</span>
+          <span class="lib-chip"><svg class="ico sm"><use href="#i-lock"/></svg>SciPy</span>
+          <span class="lib-chip"><svg class="ico sm"><use href="#i-lock"/></svg>matplotlib</span>
+          <span class="lib-chip"><svg class="ico sm"><use href="#i-lock"/></svg>pandas</span>
+          <span class="lib-chip"><svg class="ico sm"><use href="#i-lock"/></svg>SQLAlchemy</span>
+          <span class="lib-chip"><svg class="ico sm"><use href="#i-lock"/></svg>scikit-learn</span>
+          <span class="lib-chip"><svg class="ico sm"><use href="#i-lock"/></svg>PyTorch</span>
         </div>
-        <div class="row" style="gap:8px;margin:12px 0"><button class="btn"><svg width="14" height="14"><use href="#i-play"/></svg>Запустить тесты</button><button class="btn ghost">Сдать</button><span class="small muted" style="margin-left:auto">попытка 3 · правок 41</span></div>
-        <div class="card"><div class="small" style="font-family:var(--mono);color:var(--bad)">AssertionError: compose(R90, S) ≠ S @ R90</div><div class="small muted" style="margin-top:6px">Логика, а не синтаксис: результат корректной формы, но порядок множителей обратный.</div></div>
       </div>
     </div>
-  </section>
-
-  <!-- EXAM -->
-  <section class="screen" id="exam">
-    <h1>Экзамен · Модуль 1 · Python</h1>
-    <p class="sub">28 вопросов · 70 мин · порог 85% · 20% вопросов — повторение из модуля 0</p>
-    <div class="card qcard"><div class="row" style="justify-content:space-between"><b>3. Что выведет код?</b><span class="tag">предсказать вывод</span></div>
-      <pre style="font-family:var(--mono);background:#0b0e13;padding:10px;border-radius:8px">a = [[0]*2]*2
-a[0][0] = 1
-print(a)</pre>
-      <label class="opt"><input type="radio" name="e3">[[1, 0], [0, 0]]</label>
-      <label class="opt"><input type="radio" name="e3">[[1, 0], [1, 0]]</label>
-      <label class="opt"><input type="radio" name="e3">Ошибка</label>
-    </div>
-    <div class="card qcard"><div class="row" style="justify-content:space-between"><b>11. Выбери все верные утверждения о словарях</b><span class="tag">несколько ответов</span></div>
-      <label class="opt"><input type="checkbox">Ключом может быть кортеж из чисел</label>
-      <label class="opt"><input type="checkbox">Ключом может быть список</label>
-      <label class="opt"><input type="checkbox">Поиск по ключу в среднем O(1)</label>
-    </div>
-    <div class="card qcard"><div class="row" style="justify-content:space-between"><b>19. Объясни своими словами: зачем нужна ветка в Git и чем merge отличается от rebase?</b><span class="tag review">повторение · модуль 0</span></div>
-      <textarea rows="4" placeholder="Ответ проверит Claude по рубрике: точность, полнота, примеры"></textarea>
-    </div>
-    <div class="card qcard"><div class="row" style="justify-content:space-between"><b>24. Практика: напиши класс LRUCache</b><span class="tag">код · скрытые тесты</span></div>
-      <div class="small muted">Откроется в редакторе. Подсказки на экзамене отключены.</div>
-    </div>
-  </section>
-
-  <!-- NOTES -->
-  <section class="screen" id="notes">
-    <h1>Шпаргалки и заметки</h1>
-    <p class="sub">Личный словарь методов и концептов — как словарь слов при изучении языка. Каждая карточка участвует в повторении.</p>
-    <div class="grid g3">
-      <div class="card"><div class="row"><svg width="16" height="16"><use href="#i-code"/></svg><b>list.sort() vs sorted()</b></div><p class="small muted">sort меняет список на месте и возвращает None; sorted создаёт новый.</p><span class="tag">Python · урок 1.4</span></div>
-      <div class="card"><div class="row"><svg width="16" height="16"><use href="#i-db"/></svg><b>WHERE vs HAVING</b></div><p class="small muted">WHERE фильтрует строки до группировки, HAVING — группы после.</p><span class="tag">SQL · урок 3.5</span></div>
-      <div class="card"><div class="row"><svg width="16" height="16"><use href="#i-git"/></svg><b>git switch -c</b></div><p class="small muted">Создать ветку и сразу перейти на неё.</p><span class="tag">Git · урок 0.6</span></div>
-    </div>
-  </section>
-
-  <!-- PROFILE -->
-  <section class="screen" id="profile">
-    <h1>Профиль обучения</h1>
-    <p class="sub">Метрики собираются платформой, интерпретацию раз в неделю пишет Claude</p>
-    <div class="grid g3">
-      <div class="card"><div class="muted small">Самооценка vs результат</div><div class="kpi">+6%</div><div class="small muted">слегка переоцениваешь себя в SQL</div></div>
-      <div class="card"><div class="muted small">Подсказок на задачу</div><div class="kpi">0.7</div><div class="small muted">месяц назад 2.1</div></div>
-      <div class="card"><div class="muted small">Типичные ошибки</div><div class="small">off-by-one в срезах · порядок умножения · NULL в агрегатах</div></div>
-    </div>
-    <div class="card" style="margin-top:16px"><h2>Навыки по модулям</h2>
-      <div class="grid" style="gap:10px">
-        <div><div class="row small" style="justify-content:space-between"><span>Git и терминал</span><span>92%</span></div><div class="bar"><i style="width:92%"></i></div></div>
-        <div><div class="row small" style="justify-content:space-between"><span>Python</span><span>88%</span></div><div class="bar"><i style="width:88%"></i></div></div>
-        <div><div class="row small" style="justify-content:space-between"><span>Линейная алгебра</span><span>41%</span></div><div class="bar"><i style="width:41%"></i></div></div>
-      </div>
-    </div>
-  </section>
-  </main>
-</div>
+  </div>
+</main>
 
 <script>
-function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id===id));document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.s===id));window.scrollTo(0,0)}
-document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>go(n.dataset.s));
-const heat=document.getElementById('heat');for(let i=0;i<26*5;i++){const e=document.createElement('i');const v=Math.random();if(v>.45)e.style.background=`rgba(124,156,255,${(v-.3).toFixed(2)})`;heat.appendChild(e)}
-const P=document.getElementById('plane');
-function draw(){const a=+ra.value,b=+rb.value,c=+rc.value,d=+rd.value;va.textContent=a.toFixed(1);vb.textContent=b.toFixed(1);vc.textContent=c.toFixed(1);vd.textContent=d.toFixed(1);
-let s='';for(let k=-4;k<=4;k++){s+=`<line x1="${a*k-4*b}" y1="${-(c*k-4*d)}" x2="${a*k+4*b}" y2="${-(c*k+4*d)}" stroke="#2a313c" stroke-width=".04"/>`;s+=`<line x1="${b*k-4*a}" y1="${-(d*k-4*c)}" x2="${b*k+4*a}" y2="${-(d*k+4*c)}" stroke="#2a313c" stroke-width=".04"/>`}
-s+=`<line x1="0" y1="0" x2="${a}" y2="${-c}" stroke="#7c9cff" stroke-width=".12"/><line x1="0" y1="0" x2="${b}" y2="${-d}" stroke="#5eead4" stroke-width=".12"/>`;P.innerHTML=s}
-['ra','rb','rc','rd'].forEach(id=>document.getElementById(id).oninput=draw);draw();
+/* ── routing ── */
+const views = ["home","learn","study","trainer","record"];
+function route(){
+  let h = location.hash.replace("#","") || "home";
+  if (h === "plan" || h === "unlock") { show("home"); requestAnimationFrame(()=>document.getElementById(h).scrollIntoView()); return; }
+  if (!views.includes(h)) h = "home";
+  show(h);
+}
+function show(id){
+  views.forEach(v => document.getElementById("v-"+v).classList.toggle("on", v===id));
+  const navKey = id === "study" ? "learn" : id;
+  document.querySelectorAll("[data-nav]").forEach(a => a.classList.toggle("on", a.dataset.nav===navKey));
+  window.scrollTo(0,0);
+}
+addEventListener("hashchange", route); route();
+
+/* ── theme ── */
+const root = document.documentElement;
+function isDark(){ const t = root.dataset.theme; return t ? t==="dark" : matchMedia("(prefers-color-scheme: dark)").matches; }
+function syncThemeIcon(){ document.querySelector("#theme use").setAttribute("href", isDark() ? "#i-sun" : "#i-moon"); }
+document.getElementById("theme").onclick = () => { root.dataset.theme = isDark() ? "light" : "dark"; try{localStorage.setItem("theme",root.dataset.theme)}catch(e){} syncThemeIcon(); };
+try{ const t = localStorage.getItem("theme"); if (t) root.dataset.theme = t; }catch(e){}
+syncThemeIcon();
+
+/* ── study modes ── */
+document.querySelectorAll(".modes button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x===b));
+  document.querySelectorAll(".mode-pane").forEach(p => p.hidden = p.id !== "m-"+b.dataset.mode);
+});
+
+/* ── JOIN visualisation ── */
+const users = [[1,"Анна"],[2,"Борис"],[3,"Вера"]];
+const orders = [[10,1,1200],[11,1,340],[12,2,990],[13,4,150]];
+function tbl(el, head, rows, cls){ el.innerHTML = el.querySelector("caption").outerHTML + "<thead><tr>"+head.map(h=>"<th>"+h+"</th>").join("")+"</tr></thead><tbody>"+rows.map((r,i)=>"<tr class='"+(cls?cls[i]:"")+"'>"+r.map(c=>c===null?"<td class='null'>NULL</td>":"<td>"+c+"</td>").join("")+"</tr>").join("")+"</tbody>"; }
+function join(kind){
+  const res = [], uHit = new Set(), oHit = new Set();
+  users.forEach(u => orders.forEach(o => { if (o[1]===u[0]) { res.push([u[1],o[0],o[2]]); uHit.add(u[0]); oHit.add(o[0]); } }));
+  if (kind==="left"||kind==="full") users.forEach(u => { if(!uHit.has(u[0])) res.push([u[1],null,null]); });
+  if (kind==="right"||kind==="full") orders.forEach(o => { if(!oHit.has(o[0])) res.push([null,o[0],o[2]]); });
+  const keepU = kind==="left"||kind==="full", keepO = kind==="right"||kind==="full";
+  tbl(document.getElementById("tu"), ["id","name"], users, users.map(u => uHit.has(u[0]) ? "hit" : (keepU ? "" : "miss")));
+  tbl(document.getElementById("to"), ["id","user_id","sum"], orders, orders.map(o => oHit.has(o[0]) ? "hit" : (keepO ? "" : "miss")));
+  const n = res.length, w = (n%10===1&&n%100!==11) ? "строка" : ([2,3,4].includes(n%10)&&![12,13,14].includes(n%100)) ? "строки" : "строк";
+  document.getElementById("trc").textContent = "результат · " + n + " " + w;
+  tbl(document.getElementById("tr"), ["name","order","sum"], res);
+}
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { document.querySelectorAll(".seg button").forEach(x=>x.classList.toggle("on",x===b)); join(b.dataset.j); });
+join("inner");
+
+/* ── activity heatmap (example data) ── */
+const heat = document.getElementById("heat");
+for (let i=0;i<30*4;i++){ const e=document.createElement("i"); const v=Math.sin(i*1.7)*.5+.5; if(i>40 && v>.25) e.style.background=`color-mix(in srgb, var(--accent) ${Math.round(25+v*75)}%, var(--fill))`; heat.appendChild(e); }
+
+/* ── hero: loss landscape with gradient descent ── */
+(function(){
+  const cv = document.getElementById("landscape"), ctx = cv.getContext("2d");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W, H, dpr, t = 0, parts = [];
+  const wells = [[.72,.42,.18,-1.1],[.86,.72,.12,-.8],[.55,.78,.14,-.6],[.95,.25,.1,-.5],[.62,.2,.09,.5]];
+  function f(x,y,tt){ let v = .35*((x-.75)**2+(y-.5)**2);
+    for (const [cx,cy,s,a] of wells){ const ox = cx+.025*Math.sin(tt*.6+cy*9), oy = cy+.025*Math.cos(tt*.5+cx*7); v += a*Math.exp(-((x-ox)**2+(y-oy)**2)/(2*s*s)); } return v; }
+  function resize(){ dpr = Math.min(devicePixelRatio||1,2); W = cv.clientWidth; H = cv.clientHeight; cv.width = W*dpr; cv.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  function spawn(){ return {x:.58+Math.random()*.4, y:.08+Math.random()*.84, tr:[]}; }
+  for (let i=0;i<14;i++) parts.push(spawn());
+  const stars = Array.from({length:70}, () => ({x:.4+Math.random()*.6, y:Math.random(), r:Math.random()*1.3+.3, ph:Math.random()*6.3, v:Math.random()<.5}));
+  let vio = getComputedStyle(root).getPropertyValue("--violet").trim();
+  function col(a){ return `rgba(${getComputedStyle(root).getPropertyValue("--contour").trim()},${a})`; }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for (const s of stars){ const a = .25 + .35*Math.sin(t*2 + s.ph); ctx.fillStyle = s.v ? `color-mix(in srgb, ${vio} ${Math.round(a*100)}%, transparent)` : col(a*.6); ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r, 0, 7); ctx.fill(); }
+    const asp = W/H, nx = 96, ny = Math.round(96/asp*1.0)+1, gx = W/nx, gy = H/ny, g = [];
+    for (let j=0;j<=ny;j++){ g[j]=[]; for (let i=0;i<=nx;i++) g[j][i] = f(i/nx, j/ny/asp*1.6, t); }
+    const levels = 16, lo = -1.0, hi = .25;
+    for (let k=0;k<levels;k++){
+      const L = lo + (hi-lo)*k/levels; ctx.beginPath();
+      for (let j=0;j<ny;j++) for (let i=0;i<nx;i++){
+        const a=g[j][i], b=g[j][i+1], c=g[j+1][i+1], d=g[j+1][i];
+        const pts=[]; const x=i*gx, y=j*gy;
+        if ((a<L)!==(b<L)) pts.push([x+gx*(L-a)/(b-a), y]);
+        if ((b<L)!==(c<L)) pts.push([x+gx, y+gy*(L-b)/(c-b)]);
+        if ((d<L)!==(c<L)) pts.push([x+gx*(L-d)/(c-d), y+gy]);
+        if ((a<L)!==(d<L)) pts.push([x, y+gy*(L-a)/(d-a)]);
+        if (pts.length>=2){ ctx.moveTo(pts[0][0],pts[0][1]); ctx.lineTo(pts[1][0],pts[1][1]); }
+        if (pts.length===4){ ctx.moveTo(pts[2][0],pts[2][1]); ctx.lineTo(pts[3][0],pts[3][1]); }
+      }
+      ctx.strokeStyle = col(k%4===0 ? .22 : .09); ctx.lineWidth = 1; ctx.stroke();
+    }
+    vio = getComputedStyle(root).getPropertyValue("--violet").trim(); const acc = vio, e = 1e-3;
+    if (W < 700) return;
+    for (const p of parts){
+      const sy = 1/asp*1.6, gxv = (f(p.x+e,p.y*sy,t)-f(p.x-e,p.y*sy,t))/(2*e), gyv = (f(p.x,(p.y+e)*sy,t)-f(p.x,(p.y-e)*sy,t))/(2*e);
+      let dx = -.0035*gxv, dy = -.0035*gyv/sy; const m = Math.hypot(dx,dy), cap = .004; if (m>cap){ dx*=cap/m; dy*=cap/m; } p.x += dx; p.y += dy; p.tr.push([p.x*W, p.y*H]); if (p.tr.length>60) p.tr.shift();
+      if (Math.hypot(gxv,gyv)<.02 && p.tr.length>=60 || p.x<.5||p.x>1||p.y<0||p.y>1) Object.assign(p, spawn());
+      ctx.beginPath(); p.tr.forEach((q,i)=> i? ctx.lineTo(q[0],q[1]) : ctx.moveTo(q[0],q[1]));
+      ctx.strokeStyle = acc; ctx.globalAlpha = .55; ctx.lineWidth = 1.4; ctx.stroke(); ctx.globalAlpha = 1;
+      const q = p.tr[p.tr.length-1]; ctx.beginPath(); ctx.arc(q[0],q[1],2.4,0,7); ctx.fillStyle = acc; ctx.fill();
+    }
+  }
+  function loop(){ t += .006; draw(); if (!still && document.getElementById("v-home").classList.contains("on")) requestAnimationFrame(loop); else running=false; }
+  let running = false;
+  function start(){ if (!running){ running = true; requestAnimationFrame(loop); } }
+  resize(); for (let i=0;i<40;i++){ t+=.006; draw(); } draw();
+  addEventListener("resize", ()=>{ resize(); draw(); });
+  addEventListener("hashchange", ()=> setTimeout(start, 0));
+  if (!still) start();
+})();
 </script>
 </body>
 </html>

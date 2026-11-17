@@ -1,0 +1,1409 @@
+# Учебный план Forge ML — единственный источник правды о структуре курса.
+# Иерархия: Курс → Дисциплина → Раздел → Тема (→ концепты задаются в уроках).
+# Порядок в файле = порядок прохождения. Дисциплины внутри курса идут строго последовательно.
+#
+# Поля раздела:
+#   requires  — разделы, на которые опирается этот (обязаны стоять РАНЬШЕ в файле)
+#   used_by   — для математики и «фундаментальных» разделов: где это пригодится дальше (обязаны стоять ПОЗЖЕ)
+#   why       — зачем это нужно, одной фразой
+# Поле дисциплины:
+#   unlocks   — библиотеки, которые «открываются» после сдачи дисциплины (до этого — только своими руками)
+# Проверка и генерация документа: uv run --with pyyaml tools/program/build.py
+
+program:
+  title: Forge ML
+  levels:
+    - {id: course, title: Курс, gate: Переводной экзамен (письменная часть + устная защита у Claude) + курсовой проект}
+    - {id: discipline, title: Дисциплина, gate: Экзамен по дисциплине (практика + устный опрос)}
+    - {id: section, title: Раздел, gate: Контрольная (смешанные вопросы по всем темам раздела)}
+    - {id: topic, title: Тема, gate: Встроенные проверки и практика темы}
+  residual_check: в середине каждого курса, начиная со II, — проверка остаточных знаний по всем прошлым курсам
+
+courses:
+
+# ═══════════════════════════════════════════════════════════════════
+- id: I
+  title: Фундамент
+  tagline: Компьютер, Git, Python, язык математики и SQL — то, без чего нельзя написать ни строчки
+  project: >-
+    «Первый настоящий репозиторий»: CLI-утилита на Python, которая читает CSV и SQLite-базу и отвечает на вопросы
+    пользователя. Живёт на GitHub, история из веток и pull request'ов. Claude проверяет реальный репозиторий через remote.
+  disciplines:
+
+  - id: intro
+    title: Вводная — куда мы идём
+    hours: 3
+    sections:
+    - id: intro.map
+      title: Карта профессии и курса
+      topics:
+      - Что делают ML-инженер, дата-сайентист, AI-инженер и инженер данных — и где роли пересекаются
+      - Живые демонстрации в браузере — модель узнаёт нарисованную вами цифру, поиск по смыслу, генерация текста (только смотрим — всё это вы построите сами)
+      - Как устроен курс — ступени, рубежи, повторение, преподаватель; правила работы с ИИ
+
+  - id: comp
+    title: Компьютер и терминал
+    hours: 15
+    sections:
+    - id: comp.machine
+      title: Как устроен компьютер
+      topics:
+      - Процессор, память, диск; программа и процесс
+      - Биты и байты; двоичная и шестнадцатеричная системы счисления
+      - Кодировки текста (ASCII, Unicode, UTF-8) и почему «ломается» кириллица
+    - id: comp.shell
+      title: Терминал
+      requires: [comp.machine]
+      topics:
+      - Файловая система, пути абсолютные и относительные
+      - Навигация и работа с файлами
+      - Пайпы и перенаправление ввода-вывода
+      - Поиск — grep и find
+      - Переменные окружения и PATH
+      - Права доступа; процессы и сигналы
+    - id: comp.env
+      title: Окружение разработчика
+      requires: [comp.shell]
+      topics:
+      - Пакетные менеджеры и установка программ
+      - Редактор кода (VS Code) и его возможности
+      - Изолированные окружения Python (uv, venv) — зачем они нужны
+      - Как читать сообщения об ошибках и искать ответ
+
+  - id: git
+    title: Git и GitHub
+    hours: 20
+    sections:
+    - id: git.local
+      title: Git локально
+      requires: [comp.shell]
+      topics:
+      - Зачем контроль версий; init, add, commit
+      - Состояния файлов — рабочая папка, индекс, репозиторий
+      - История и diff; .gitignore
+      - Отмена изменений — restore, reset, revert
+    - id: git.branches
+      title: Ветки
+      requires: [git.local]
+      topics:
+      - Коммиты как граф; HEAD; branch и switch
+      - Merge, fast-forward и конфликты
+      - Rebase и когда его использовать; stash
+    - id: git.remote
+      title: Удалённые репозитории
+      requires: [git.branches]
+      topics:
+      - remote, push, pull, fetch
+      - GitHub — SSH-ключи, форк, pull request, code review
+      - GitHub flow; теги и релизы
+
+  - id: py1
+    title: Python I — язык
+    hours: 60
+    sections:
+    - id: py1.basics
+      title: Основы
+      requires: [comp.env]
+      topics:
+      - print, input, переменные
+      - Типы int, float, str, bool; арифметика и приоритет операций
+      - Сравнения и логические операции; условия
+      - Циклы while и for; range
+    - id: py1.functions
+      title: Функции
+      requires: [py1.basics]
+      topics:
+      - Определение, аргументы, return; значения по умолчанию
+      - Область видимости
+      - Рекурсия (база)
+      - Документирование функций
+    - id: py1.collections
+      title: Коллекции
+      requires: [py1.functions]
+      topics:
+      - Списки и кортежи; срезы
+      - Словари и множества
+      - Изменяемость и ссылки — классические ловушки
+      - Comprehensions; сортировка с key
+    - id: py1.text_files
+      title: Текст и файлы
+      requires: [py1.collections]
+      topics:
+      - Строки и форматирование
+      - Регулярные выражения
+      - Чтение и запись файлов; pathlib
+      - CSV и JSON
+    - id: py1.miniproject
+      title: Мини-проект
+      requires: [py1.text_files]
+      topics:
+      - Небольшое приложение целиком — консольная игра или утилита на 100–200 строк
+    - id: py1.errors_modules
+      title: Ошибки и модули
+      requires: [py1.miniproject]
+      topics:
+      - Исключения — try/except/finally, свои исключения
+      - Модули и импорт; стандартная библиотека (math, random, collections, itertools, datetime)
+      - Сторонние пакеты и зависимости
+    - id: py1.algothink
+      title: Алгоритмическое мышление
+      requires: [py1.errors_modules]
+      topics:
+      - Разбиение задачи на шаги; трассировка кода вручную
+      - Простые алгоритмы — максимум, подсчёт, линейный поиск, простая сортировка
+      - Отладка — print и отладчик
+
+  - id: math1
+    title: Математика I — язык математики
+    hours: 50
+    sections:
+    - id: math1.school
+      title: Школьная база (диагностика и повторение)
+      requires: [py1.basics]
+      used_by: [math1.numbers]
+      why: Без дробей, уравнений и пропорций дальше не сдвинуться — пройдёт быстро, если всё помните
+      topics:
+      - Диагностический тест — что можно пропустить
+      - Дроби, проценты, пропорции
+      - Уравнения и системы уравнений (школьный уровень)
+      - Координатная плоскость и график прямой
+    - id: math1.numbers
+      title: Числа и вычисления
+      requires: [math1.school]
+      used_by: [calc.limits, prob.info]
+      why: Логарифмы и экспонента — в каждой функции потерь; float — источник реальных багов
+      topics:
+      - Дроби, степени, корни
+      - Логарифм и экспонента; число e
+      - Числа с плавающей точкой — почему 0.1 + 0.2 ≠ 0.3
+      - Вычислительная устойчивость — переполнение, потеря точности, почему exp(1000) ломает программу
+    - id: math1.functions
+      title: Функции и графики
+      requires: [math1.numbers]
+      used_by: [algo1.complexity, linear.logistic, nn.perceptron]
+      why: Модель машинного обучения — это функция; сигмоида и логарифм встречаются постоянно
+      topics:
+      - Функция, область определения, график
+      - Линейная, квадратичная, степенная, показательная, логарифмическая функции
+      - Преобразования графиков; сигмоида
+    - id: math1.logic_sets
+      title: Логика и множества
+      requires: [math1.functions]
+      used_by: [sql1.model, sql1.joins, prob.basics]
+      why: JOIN в SQL — это операции над множествами; события в вероятности — тоже множества
+      topics:
+      - Высказывания, логические операции, таблицы истинности
+      - Множества и операции над ними; диаграммы Эйлера–Венна
+      - Декартово произведение и отношения
+    - id: math1.sums
+      title: Суммы и обозначения
+      requires: [math1.logic_sets]
+      used_by: [linalg.vectors, stats.descriptive, mlbase.metrics]
+      why: Почти каждая формула в ML записана через Σ
+      topics:
+      - Знаки Σ и Π, индексы
+      - Свойства сумм; среднее как сумма
+    - id: math1.combinatorics
+      title: Комбинаторика
+      requires: [math1.sums]
+      used_by: [prob.basics]
+      why: Основа подсчёта вероятностей
+      topics:
+      - Правила суммы и произведения
+      - Перестановки, размещения, сочетания
+    - id: math1.proof
+      title: Как читать математику
+      requires: [math1.combinatorics]
+      used_by: [linalg.systems, calc.limits]
+      why: Без умения читать определения и доказательства дальше будет только заучивание
+      topics:
+      - Определение, теорема, доказательство
+      - Прямое доказательство, от противного, индукция
+
+  - id: sql1
+    title: SQL I — запросы
+    hours: 30
+    sections:
+    - id: sql1.model
+      title: Реляционная модель
+      requires: [math1.logic_sets, py1.collections]
+      topics:
+      - Таблицы, строки, столбцы, типы
+      - Первичные и внешние ключи; связи один-ко-многим и многие-ко-многим
+    - id: sql1.select
+      title: Выборка
+      requires: [sql1.model]
+      topics:
+      - SELECT, WHERE, ORDER BY, LIMIT
+      - Операторы LIKE, IN, BETWEEN; DISTINCT; выражения и CASE
+      - NULL и трёхзначная логика
+    - id: sql1.aggregate
+      title: Агрегация
+      requires: [sql1.select]
+      topics:
+      - Агрегатные функции; GROUP BY; HAVING
+      - Порядок выполнения запроса
+    - id: sql1.joins
+      title: Соединения таблиц
+      requires: [sql1.aggregate, math1.logic_sets]
+      topics:
+      - Виды соединений — INNER, LEFT, RIGHT, FULL, CROSS — как операции над множествами
+      - Self-join
+      - Ловушки — размножение строк, NULL после LEFT JOIN
+    - id: sql1.subqueries
+      title: Подзапросы и операции над множествами
+      requires: [sql1.joins]
+      topics:
+      - Подзапросы в WHERE, FROM, SELECT; EXISTS
+      - UNION, INTERSECT, EXCEPT
+      - Введение в CTE (WITH)
+    - id: sql1.modify
+      title: Изменение данных
+      requires: [sql1.subqueries]
+      topics:
+      - CREATE TABLE и ограничения
+      - INSERT, UPDATE, DELETE
+      - Транзакция (база)
+
+# ═══════════════════════════════════════════════════════════════════
+- id: II
+  title: Математика и алгоритмы
+  tagline: Двигатель всего ML — от собственного класса Matrix до t-теста, написанных своими руками
+  project: >-
+    «Своя научная библиотека»: Python-пакет с классом Matrix, решением систем, численной производной, градиентным
+    спуском, распределениями, бутстрапом и t-тестом. С тестами и сравнением точности и скорости с NumPy/SciPy.
+  disciplines:
+
+  - id: py2
+    title: Python II — инженерный Python
+    hours: 45
+    sections:
+    - id: py2.oop
+      title: Объектно-ориентированное программирование
+      requires: [py1.algothink]
+      used_by: [linalg.matrices]
+      why: Свой класс Matrix с операторами — первый большой проект курса
+      topics:
+      - Классы, объекты, атрибуты, методы
+      - Наследование и композиция
+      - Магические методы — __repr__, __eq__, __add__, __matmul__, __getitem__, __len__
+    - id: py2.iter
+      title: Итераторы и генераторы
+      requires: [py2.oop]
+      topics:
+      - Протокол итератора; yield
+      - Ленивые вычисления; itertools
+    - id: py2.functional
+      title: Функции как объекты
+      requires: [py2.iter]
+      topics:
+      - Замыкания, lambda, functools
+      - Декораторы
+    - id: py2.quality
+      title: Качество кода
+      requires: [py2.functional]
+      topics:
+      - Аннотации типов и mypy
+      - Стиль и линтер ruff
+      - dataclasses; контекстные менеджеры
+    - id: py2.testing
+      title: Тестирование
+      requires: [py2.quality]
+      topics:
+      - pytest, фикстуры, параметризация
+      - Property-based тесты (hypothesis)
+      - TDD как приём
+    - id: py2.project
+      title: Структура проекта
+      requires: [py2.testing, git.remote]
+      topics:
+      - Пакет и pyproject.toml
+      - Логирование; CLI через argparse
+
+  - id: algo1
+    title: Алгоритмы и структуры данных I
+    hours: 50
+    sections:
+    - id: algo1.complexity
+      title: Сложность алгоритмов
+      requires: [py1.algothink, math1.functions]
+      topics:
+      - O-большое; время и память
+      - Оценка сложности кода; амортизация
+    - id: algo1.arrays
+      title: Массивы и строки
+      requires: [algo1.complexity]
+      topics:
+      - Два указателя
+      - Скользящее окно
+      - Префиксные суммы
+    - id: algo1.hashing
+      title: Хэширование
+      requires: [algo1.arrays, py2.oop]
+      topics:
+      - Хэш-функции; своя хэш-таблица
+      - Как устроены dict и set
+      - Задачи на подсчёт и группировку
+    - id: algo1.sorting
+      title: Сортировка и поиск
+      requires: [algo1.hashing]
+      topics:
+      - Сортировки — вставками, слиянием, быстрая; устойчивость
+      - Бинарный поиск и его варианты
+    - id: algo1.linear
+      title: Линейные структуры
+      requires: [algo1.sorting]
+      topics:
+      - Стек, очередь, дек, связный список
+      - Скобочные последовательности; монотонный стек
+    - id: algo1.recursion
+      title: Рекурсия и перебор
+      requires: [algo1.linear]
+      topics:
+      - Разделяй и властвуй
+      - Перебор с возвратом
+
+  - id: linalg
+    title: Линейная алгебра
+    hours: 80
+    unlocks: [NumPy]
+    sections:
+    - id: linalg.vectors
+      title: Векторы
+      requires: [math1.sums, py2.oop]
+      used_by: [mlbase.baselines, nlp.embeddings, rag.search]
+      why: Любой объект в ML — вектор; близость векторов — основа поиска и RAG
+      topics:
+      - Вектор как стрелка и как список чисел; сложение, умножение на число
+      - Норма и расстояние
+      - Скалярное произведение, угол, косинусная близость; неравенство Коши–Буняковского (с доказательством)
+    - id: linalg.matrices
+      title: Матрицы
+      requires: [linalg.vectors]
+      used_by: [nn.perceptron, viz.fromscratch]
+      why: Слой нейросети — это умножение на матрицу
+      topics:
+      - Матрица как таблица и как преобразование плоскости
+      - Умножение матрицы на вектор и матриц; почему AB ≠ BA
+      - Транспонирование, единичная матрица, свойства
+      - Свой класс Matrix
+    - id: linalg.systems
+      title: Системы уравнений
+      requires: [linalg.matrices, math1.proof]
+      used_by: [linear.regression]
+      why: Нормальное уравнение линейной регрессии — это система уравнений
+      topics:
+      - Метод Гаусса
+      - Линейная зависимость, базис, размерность, ранг
+      - Обратная матрица; определитель как изменение площади
+    - id: linalg.geometry
+      title: Ортогональность и проекции
+      requires: [linalg.systems]
+      used_by: [linear.regression]
+      why: Метод наименьших квадратов — это проекция
+      topics:
+      - Проекции и ортогональность; доказательство — проекция ближе всего
+      - Ортонормированные базисы; QR-разложение
+      - Метод наименьших квадратов; почему нормальное уравнение численно неустойчиво (обусловленность)
+    - id: linalg.eigen
+      title: Собственные векторы и SVD
+      requires: [linalg.geometry]
+      used_by: [otherml.unsupervised, recsys.collab, llm.finetune]
+      why: PCA, рекомендательные системы и LoRA построены на SVD
+      topics:
+      - Собственные векторы и числа; диагонализация
+      - Симметричные матрицы
+      - SVD и низкоранговое приближение
+    - id: linalg.numpy_unlock
+      title: Открытие NumPy
+      requires: [linalg.eigen]
+      topics:
+      - ndarray против своего класса Matrix — сравнение результатов и скорости
+      - Broadcasting и векторизация
+
+  - id: calc
+    title: Математический анализ
+    hours: 70
+    sections:
+    - id: calc.limits
+      title: Пределы и непрерывность
+      requires: [math1.proof, math1.numbers]
+      used_by: [calc.derivative]
+      why: Производная определяется через предел
+      topics:
+      - Последовательности и пределы; число e
+      - Непрерывность; строгое определение (ознакомительно)
+    - id: calc.derivative
+      title: Производная
+      requires: [calc.limits]
+      used_by: [nn.backprop]
+      why: Обратное распространение ошибки — это цепное правило
+      topics:
+      - Производная как скорость и наклон
+      - Правила дифференцирования; цепное правило
+      - Численная производная в Python
+    - id: calc.optim
+      title: Оптимизация в одном измерении
+      requires: [calc.derivative]
+      used_by: [linear.regression]
+      why: Обучение модели — это поиск минимума функции потерь
+      topics:
+      - Экстремумы и выпуклость
+      - Градиентный спуск; скорость обучения
+    - id: calc.multivar
+      title: Функции многих переменных
+      requires: [calc.optim, linalg.matrices]
+      used_by: [linear.logistic, nn.backprop]
+      why: У модели миллионы параметров — нужен градиент
+      topics:
+      - Частные производные и градиент
+      - Якобиан и гессиан (смысл)
+      - Многомерный градиентный спуск; матричное дифференцирование (база)
+    - id: calc.matrix
+      title: Матричное дифференцирование
+      requires: [calc.multivar]
+      used_by: [linear.logistic, nn.backprop]
+      why: Градиенты логистической регрессии и обратного прохода сети записываются в матричной форме
+      topics:
+      - Производные по вектору и матрице — d(Wx)/dW, d(xᵀAx)/dx
+      - Векторизованное цепное правило
+      - Градиент softmax и кросс-энтропии
+    - id: calc.optim_multi
+      title: Многомерная оптимизация
+      requires: [calc.matrix]
+      used_by: [otherml.svm, linear.regularization]
+      why: Без выпуклости и условий оптимальности не понять ни SVM, ни поведение оптимизаторов
+      topics:
+      - Выпуклость в многомерии; гессиан и положительная определённость
+      - Обусловленность и скорость градиентного спуска; доказательство сходимости на квадратичной функции
+      - Метод Ньютона и идея L-BFGS
+      - Условная оптимизация — множители Лагранжа, идея двойственности
+    - id: calc.integral
+      title: Интеграл
+      requires: [calc.optim_multi]
+      used_by: [prob.continuous]
+      why: Вероятность непрерывной величины — это площадь под плотностью
+      topics:
+      - Интеграл как площадь и накопление
+      - Численное интегрирование
+    - id: calc.taylor
+      title: Приближения
+      requires: [calc.integral]
+      used_by: [nn.training]
+      why: Объясняет, почему работают оптимизаторы
+      topics:
+      - Линейное приближение; ряд Тейлора
+
+  - id: prob
+    title: Теория вероятностей
+    hours: 55
+    sections:
+    - id: prob.basics
+      title: Вероятность
+      requires: [math1.combinatorics, math1.logic_sets]
+      used_by: [prob.conditional]
+      topics:
+      - События и вероятность; классическое определение
+      - Симуляции Монте-Карло на Python
+    - id: prob.conditional
+      title: Условная вероятность
+      requires: [prob.basics]
+      used_by: [mlbase.baselines, abtest.analysis]
+      why: Наивный Байес и интерпретация тестов
+      topics:
+      - Условная вероятность и независимость
+      - Формула полной вероятности; формула Байеса
+    - id: prob.rv
+      title: Случайные величины
+      requires: [prob.conditional]
+      used_by: [stats.sampling]
+      topics:
+      - Дискретные распределения — Бернулли, биномиальное, Пуассона, геометрическое
+      - Матожидание и дисперсия, их свойства
+    - id: prob.continuous
+      title: Непрерывные распределения
+      requires: [prob.rv, calc.integral]
+      used_by: [stats.sampling, nn.training]
+      topics:
+      - Плотность и функция распределения
+      - Равномерное, нормальное, экспоненциальное
+      - Совместные распределения; ковариация и корреляция
+      - Многомерное нормальное распределение; условное матожидание
+    - id: prob.limits
+      title: Предельные теоремы
+      requires: [prob.continuous]
+      used_by: [stats.sampling, abtest.analysis]
+      why: Без ЦПТ не работает ни один A/B-тест
+      topics:
+      - Закон больших чисел
+      - Центральная предельная теорема (с симуляциями)
+    - id: prob.info
+      title: Правдоподобие и информация
+      requires: [prob.limits]
+      used_by: [linear.logistic, nn.training]
+      why: Функции потерь выводятся из правдоподобия; кросс-энтропия — главная потеря классификации
+      topics:
+      - Правдоподобие; MLE и MAP
+      - Энтропия, кросс-энтропия, KL-дивергенция
+      - Сэмплирование — обратная функция распределения, отбор с отклонением, идея MCMC
+
+  - id: stats
+    title: Статистика
+    hours: 45
+    unlocks: [SciPy]
+    sections:
+    - id: stats.descriptive
+      title: Описательная статистика
+      requires: [prob.info]
+      used_by: [datawork.eda]
+      topics:
+      - Среднее, медиана, мода, квантили, дисперсия
+      - Выбросы; гистограмма и boxplot своими руками
+    - id: stats.sampling
+      title: Выборки и оценки
+      requires: [stats.descriptive]
+      used_by: [abtest.design]
+      topics:
+      - Генеральная совокупность и выборка; стандартная ошибка
+      - Доверительные интервалы
+      - Бутстрап — своя реализация
+    - id: stats.testing
+      title: Проверка гипотез
+      requires: [stats.sampling]
+      used_by: [abtest.analysis]
+      topics:
+      - Нулевая и альтернативная гипотезы; p-value
+      - Ошибки I и II рода; мощность
+      - t-тест, z-тест для долей, хи-квадрат; множественные сравнения
+    - id: stats.regression
+      title: Связь величин
+      requires: [stats.testing]
+      used_by: [linear.regression, abtest.causal]
+      topics:
+      - Корреляция и причинность
+      - Простая линейная регрессия как статистическая модель
+      - Предпосылки МНК, остатки, гетероскедастичность, мультиколлинеарность
+      - Непараметрические тесты; байесовский взгляд на A/B (обзор)
+
+# ═══════════════════════════════════════════════════════════════════
+- id: III
+  title: Данные
+  tagline: Как данные хранятся, добываются, чистятся и показываются — сначала своими руками, потом библиотеками
+  project: >-
+    «Данные от сырья до отчёта»: реальный датасет с Kaggle или публичного API → очистка → своя SQL-база → EDA-отчёт
+    с графиками. Claude проверяет, что данные реальные (по метаданным Kaggle/API), и принимает устную защиту отчёта.
+  disciplines:
+
+  - id: numpy
+    title: NumPy
+    hours: 20
+    sections:
+    - id: numpy.core
+      title: Как устроен ndarray
+      requires: [linalg.numpy_unlock]
+      topics:
+      - dtype, shape, strides; расположение в памяти
+      - Копии и представления
+    - id: numpy.indexing
+      title: Индексация
+      requires: [numpy.core]
+      topics:
+      - Срезы, маски, fancy-индексация
+    - id: numpy.vectorize
+      title: Векторизация
+      requires: [numpy.indexing]
+      topics:
+      - Broadcasting в деталях; векторизация против циклов
+      - Линейная алгебра в NumPy — переписываем свою библиотеку
+    - id: numpy.random
+      title: Случайность
+      requires: [numpy.vectorize, prob.limits]
+      topics:
+      - Генераторы случайных чисел и воспроизводимость (seed)
+
+  - id: viz
+    title: Визуализация
+    hours: 20
+    unlocks: [matplotlib, seaborn, plotly]
+    sections:
+    - id: viz.fromscratch
+      title: График своими руками
+      requires: [numpy.vectorize, linalg.matrices]
+      topics:
+      - Системы координат и преобразования — это линейная алгебра
+      - Шкалы и оси; рисуем свой график в SVG из Python
+    - id: viz.matplotlib
+      title: Открытие matplotlib
+      requires: [viz.fromscratch]
+      topics:
+      - Модель Figure и Axes
+      - Основные типы графиков; подписи, легенды, несколько графиков
+    - id: viz.choose
+      title: Выбор и честность графиков
+      requires: [viz.matplotlib]
+      topics:
+      - Какой график для какой задачи
+      - Как графики обманывают
+      - seaborn и plotly (обзор)
+
+  - id: pandas
+    title: Табличные данные
+    hours: 35
+    unlocks: [pandas]
+    sections:
+    - id: pandas.fromscratch
+      title: Своя мини-таблица
+      requires: [numpy.vectorize, sql1.joins]
+      topics:
+      - Колонки, фильтрация, groupby через словари, join — и связь с SQL
+    - id: pandas.core
+      title: Открытие pandas
+      requires: [pandas.fromscratch]
+      topics:
+      - Series, DataFrame, индекс
+      - Чтение и запись; выбор и фильтрация; типы
+    - id: pandas.transform
+      title: Преобразования
+      requires: [pandas.core]
+      topics:
+      - groupby и agg; merge; pivot и melt
+      - apply и почему он медленный
+    - id: pandas.time
+      title: Время
+      requires: [pandas.transform]
+      topics:
+      - Даты и время; ресемплинг; скользящие окна
+    - id: pandas.modern
+      title: Polars и DuckDB
+      requires: [pandas.time]
+      topics:
+      - Polars — ленивые вычисления и выражения; когда он быстрее pandas
+      - DuckDB — SQL прямо по файлам и DataFrame
+
+  - id: sql2
+    title: SQL II — аналитика и устройство БД
+    hours: 35
+    unlocks: [SQLAlchemy]
+    sections:
+    - id: sql2.windows
+      title: Оконные функции
+      requires: [sql1.modify]
+      topics:
+      - ROW_NUMBER, RANK, LAG, LEAD
+      - Скользящие агрегаты; рамки окна
+    - id: sql2.analytics
+      title: Аналитические запросы
+      requires: [sql2.windows]
+      topics:
+      - CTE и рекурсивные CTE
+      - Ретеншн, когорты, воронки, DAU/MAU
+      - Задачи в формате собеседования
+    - id: sql2.design
+      title: Проектирование и производительность
+      requires: [sql2.analytics, algo1.sorting]
+      topics:
+      - Нормализация и денормализация
+      - Индексы (B-дерево) и EXPLAIN
+      - Транзакции, уровни изоляции, ACID
+    - id: sql2.python
+      title: Базы данных из Python
+      requires: [sql2.design, py2.project]
+      topics:
+      - Драйвер и SQL-инъекции
+      - Своё мини-ORM — класс ↔ таблица
+      - SQLAlchemy Core и ORM; миграции Alembic
+    - id: sql2.olap
+      title: Аналитические СУБД
+      requires: [sql2.python]
+      topics:
+      - OLTP и OLAP; колоночное хранение
+      - ClickHouse — MergeTree, ключ сортировки, партиции, материализованные представления
+      - Формат Parquet
+
+  - id: algo2
+    title: Алгоритмы и структуры данных II
+    hours: 35
+    sections:
+    - id: algo2.trees
+      title: Деревья и кучи
+      requires: [algo1.recursion]
+      topics:
+      - Обходы деревьев; бинарные деревья поиска
+      - Своя куча; очередь с приоритетом; top-k
+    - id: algo2.graphs
+      title: Графы
+      requires: [algo2.trees]
+      topics:
+      - Представление графов; BFS и DFS
+      - Топологическая сортировка; алгоритм Дейкстры
+    - id: algo2.dp
+      title: Динамическое программирование
+      requires: [algo2.graphs]
+      topics:
+      - Мемоизация и таблица
+      - Рюкзак, наибольшая общая подпоследовательность, редакционное расстояние
+    - id: algo2.interview
+      title: Контест на время
+      requires: [algo2.dp]
+      topics:
+      - Паттерны задач собеседований
+      - Решение в формате онлайн-контеста
+
+  - id: datawork
+    title: Сбор и подготовка данных
+    hours: 40
+    sections:
+    - id: datawork.sources
+      title: Источники данных
+      requires: [pandas.modern, sql2.olap]
+      topics:
+      - Форматы — CSV, JSON, Parquet
+      - Как устроен HTTP — запрос, ответ, коды, заголовки; REST API; пагинация и лимиты
+      - Веб-скрапинг и его этика; Kaggle API
+    - id: datawork.cleaning
+      title: Очистка
+      requires: [datawork.sources]
+      topics:
+      - Типы и парсинг; дубликаты; согласование категорий
+      - Пропуски — виды и стратегии
+      - Выбросы; проверки качества данных
+    - id: datawork.eda
+      title: Разведочный анализ (EDA)
+      requires: [datawork.cleaning, viz.choose]
+      topics:
+      - Вопросы к данным; распределения, связи, срезы
+      - Отчёт EDA
+    - id: datawork.features
+      title: Признаки
+      requires: [datawork.eda]
+      topics:
+      - Масштабирование и нормализация
+      - Кодирование категорий; признаки из дат и текста
+      - Утечки данных на этапе подготовки
+    - id: datawork.augmentation
+      title: Увеличение и синтез данных
+      requires: [datawork.features]
+      topics:
+      - Зачем расширять данные; аугментация таблиц, текстов и изображений (обзор)
+      - Дисбаланс классов и пересэмплирование
+
+# ═══════════════════════════════════════════════════════════════════
+- id: IV
+  title: Машинное обучение
+  tagline: Каждый алгоритм сначала пишем сами — и только потом берём scikit-learn и бустинги
+  project: >-
+    «Реальные данные и реальный эксперимент»: грязный предметный датасет (отзывы, объявления, транзакции) с аудитом
+    утечек, валидацией по времени, анализом ошибок и одностраничной запиской для бизнеса + разбор настоящего
+    A/B-датасета (Hillstrom или Criteo uplift) с проверкой SRM и CUPED + небольшая рекомендательная система с офлайн-
+    оценкой NDCG. Kaggle-разминки (House Prices, Spaceship Titanic) — внутри дисциплин, не в портфолио.
+  disciplines:
+
+  - id: mlbase
+    title: Основы машинного обучения
+    hours: 30
+    sections:
+    - id: mlbase.framing
+      title: Постановка задачи
+      requires: [datawork.augmentation, calc.multivar]
+      topics:
+      - Обучение по данным; типы задач
+      - Объекты, признаки, целевая переменная; модель, функция потерь, оптимизация
+    - id: mlbase.validation
+      title: Валидация
+      requires: [mlbase.framing]
+      topics:
+      - Обучающая, валидационная и тестовая выборки; своя кросс-валидация
+      - Переобучение и недообучение; bias-variance; кривые обучения
+    - id: mlbase.metrics
+      title: Метрики
+      requires: [mlbase.validation]
+      topics:
+      - Метрики регрессии — MSE, MAE, R²
+      - Метрики классификации — precision, recall, F1, ROC-AUC, PR-AUC (свои реализации)
+      - Метрики ранжирования — NDCG, MAP, MRR
+      - Выбор метрики под задачу бизнеса
+    - id: mlbase.baselines
+      title: Простые модели-ориентиры
+      requires: [mlbase.metrics, linalg.vectors, prob.conditional]
+      topics:
+      - kNN и метрики расстояния — с нуля
+      - Наивный Байес — с нуля
+      - Зачем нужен baseline и как его выбрать
+
+  - id: linear
+    title: Линейные модели
+    hours: 35
+    unlocks: [scikit-learn]
+    sections:
+    - id: linear.regression
+      title: Линейная регрессия
+      requires: [mlbase.baselines]
+      topics:
+      - Нормальное уравнение и градиентный спуск — с нуля
+      - Интерпретация весов; полиномиальные признаки
+    - id: linear.regularization
+      title: Регуляризация
+      requires: [linear.regression]
+      topics:
+      - L2 (Ridge) и L1 (Lasso); почему L1 зануляет веса — геометрия
+      - Elastic Net
+    - id: linear.logistic
+      title: Логистическая регрессия
+      requires: [linear.regularization]
+      topics:
+      - Сигмоида; log-loss из правдоподобия; вывод градиента
+      - Реализация с нуля; многоклассовый случай (softmax)
+    - id: linear.sklearn_unlock
+      title: Открытие scikit-learn
+      requires: [linear.logistic]
+      topics:
+      - API fit/predict; Pipeline
+      - Сравнение со своей реализацией
+
+  - id: trees
+    title: Деревья и ансамбли
+    hours: 45
+    unlocks: [XGBoost, LightGBM, CatBoost]
+    sections:
+    - id: trees.tree
+      title: Дерево решений
+      requires: [linear.sklearn_unlock, algo2.trees]
+      topics:
+      - Критерии разбиения — Gini, энтропия, MSE
+      - Дерево с нуля; глубина и обрезка; визуализация разбиений
+    - id: trees.bagging
+      title: Бэггинг и случайный лес
+      requires: [trees.tree]
+      topics:
+      - Бутстрап и бэггинг; out-of-bag
+      - Случайный лес; важность признаков
+    - id: trees.boosting
+      title: Градиентный бустинг
+      requires: [trees.bagging]
+      topics:
+      - Бустинг на остатках — с нуля; визуализация шагов
+      - Learning rate и число деревьев
+    - id: trees.gbdt
+      title: Промышленные бустинги
+      requires: [trees.boosting]
+      topics:
+      - XGBoost, LightGBM, CatBoost — отличия
+      - Категориальные признаки, тюнинг, ранняя остановка
+
+  - id: otherml
+    title: Другие методы
+    hours: 35
+    sections:
+    - id: otherml.svm
+      title: Метод опорных векторов
+      requires: [trees.gbdt, calc.optim_multi]
+      topics:
+      - Максимальный зазор; ядра (интуиция)
+    - id: otherml.unsupervised
+      title: Обучение без учителя
+      requires: [otherml.svm]
+      topics:
+      - K-Means с нуля; DBSCAN; иерархическая кластеризация
+      - Мост — повторение SVD из Курса II
+      - PCA через SVD с нуля; t-SNE и UMAP (обзор)
+
+  - id: mlpractice
+    title: Практика ML
+    hours: 40
+    sections:
+    - id: mlpractice.pipeline
+      title: Полный цикл
+      requires: [otherml.unsupervised]
+      topics:
+      - Постановка → baseline → итерации → анализ ошибок
+    - id: mlpractice.pitfalls
+      title: Ловушки
+      requires: [mlpractice.pipeline]
+      topics:
+      - Утечки; дисбаланс классов; сдвиг распределений
+      - Калибровка вероятностей
+    - id: mlpractice.tuning
+      title: Подбор гиперпараметров
+      requires: [mlpractice.pitfalls]
+      topics:
+      - Grid, random, Optuna; учёт экспериментов
+    - id: mlpractice.interpret
+      title: Интерпретация
+      requires: [mlpractice.tuning]
+      topics:
+      - Важности признаков; permutation importance; SHAP
+    - id: mlpractice.kaggle
+      title: Соревнования
+      requires: [mlpractice.interpret]
+      topics:
+      - Схема валидации; ансамблирование
+      - Как читать чужие решения
+
+  - id: timeseries
+    title: Временные ряды
+    hours: 20
+    sections:
+    - id: timeseries.basics
+      title: Основы временных рядов
+      requires: [mlpractice.kaggle, pandas.time]
+      topics:
+      - Тренд, сезонность, автокорреляция; простые ориентиры
+      - ETS и ARIMA — интуиция
+    - id: timeseries.ml
+      title: Прогноз с помощью ML
+      requires: [timeseries.basics]
+      topics:
+      - Бустинг на лагах и календарных признаках
+      - Бэктестинг — валидация во времени
+      - Поиск аномалий
+
+  - id: recsys
+    title: Рекомендации и ранжирование
+    hours: 25
+    sections:
+    - id: recsys.collab
+      title: Коллаборативная фильтрация
+      requires: [timeseries.ml, linalg.eigen]
+      topics:
+      - Матрица взаимодействий; явный и неявный отклик
+      - Матричные разложения и ALS — с нуля
+    - id: recsys.ranking
+      title: Ранжирование
+      requires: [recsys.collab]
+      topics:
+      - Генерация кандидатов и ранжирование — двухэтапная схема
+      - Бустинг для ранжирования, LambdaRank — идея
+      - Холодный старт; офлайн- и онлайн-метрики
+
+  - id: abtest
+    title: Эксперименты и продуктовая аналитика
+    hours: 40
+    sections:
+    - id: abtest.design
+      title: Дизайн эксперимента
+      requires: [recsys.ranking, stats.testing]
+      topics:
+      - Продуктовые метрики
+      - Размер выборки и мощность; рандомизация
+    - id: abtest.analysis
+      title: Анализ эксперимента
+      requires: [abtest.design]
+      topics:
+      - t-тест, бутстрап, дельта-метод, CUPED; метрики-отношения
+      - Проверка корректности — SRM (несовпадение долей групп), A/A-тесты
+      - Подглядывание и последовательное тестирование; множественные метрики
+      - Многорукие бандиты
+    - id: abtest.causal
+      title: Причинность
+      requires: [abtest.analysis]
+      topics:
+      - Конфаундеры; uplift-моделирование; difference-in-differences (база)
+
+# ═══════════════════════════════════════════════════════════════════
+- id: V
+  title: Глубокое обучение и LLM
+  tagline: От одного нейрона до своего мини-GPT и RAG-ассистента
+  project: >-
+    «Свой RAG-ассистент» — флагман портфолио: русскоязычный корпус (законы или документация open-source проекта),
+    золотой набор из 100+ вопросов, метрики поиска и достоверности, сравнение BM25, векторного и гибридного поиска и
+    реранкинга, таблица стоимости и задержек, публичное демо, разбор ошибок. Плюс дообучение трансформера.
+  disciplines:
+
+  - id: nn
+    title: Нейросети с нуля
+    hours: 40
+    unlocks: [PyTorch]
+    sections:
+    - id: nn.perceptron
+      title: Нейрон и перцептрон
+      requires: [linear.logistic, calc.matrix]
+      topics:
+      - Нейрон, перцептрон, функции активации
+      - MLP как композиция преобразований; визуализация разделяющей поверхности
+    - id: nn.backprop
+      title: Обратное распространение
+      requires: [nn.perceptron]
+      topics:
+      - Вычислительный граф
+      - Свой autograd (по мотивам micrograd)
+      - Численная проверка градиентов
+    - id: nn.training
+      title: Обучение сети
+      requires: [nn.backprop]
+      topics:
+      - Функции потерь; SGD, momentum, Adam — свои реализации
+      - Инициализация; затухающие и взрывающиеся градиенты
+      - Устойчивые вычисления — log-sum-exp, стабильный softmax; float16 и bfloat16
+    - id: nn.torch_unlock
+      title: Открытие PyTorch
+      requires: [nn.training]
+      topics:
+      - Тензоры, autograd, nn.Module, DataLoader
+      - Цикл обучения; перенос своей сети на PyTorch
+
+  - id: dlpractice
+    title: Практика обучения сетей
+    hours: 30
+    sections:
+    - id: dlpractice.regularization
+      title: Регуляризация и нормализация
+      requires: [nn.torch_unlock]
+      topics:
+      - Dropout, weight decay, batch norm и layer norm, ранняя остановка
+    - id: dlpractice.debug
+      title: Отладка обучения
+      requires: [dlpractice.regularization]
+      topics:
+      - Переобучение на одном батче; графики loss; подбор learning rate
+      - Типичные ошибки
+    - id: dlpractice.infra
+      title: Железо и эксперименты
+      requires: [dlpractice.debug]
+      topics:
+      - GPU, смешанная точность; бесплатные GPU Kaggle и Colab
+      - Трекинг экспериментов
+
+  - id: cv
+    title: Компьютерное зрение
+    hours: 35
+    sections:
+    - id: cv.images
+      title: Свёртки
+      requires: [dlpractice.infra]
+      topics:
+      - Изображение как тензор; свёртка с нуля; пулинг
+      - Визуализация фильтров
+    - id: cv.cnn
+      title: Архитектуры CNN
+      requires: [cv.images]
+      topics:
+      - От LeNet до ResNet; skip-connections
+    - id: cv.augment
+      title: Аугментация изображений
+      requires: [cv.cnn, datawork.augmentation]
+      topics:
+      - Повороты, отражения, обрезка, цвет, mixup — своими руками, затем библиотеки
+    - id: cv.transfer
+      title: Перенос обучения
+      requires: [cv.augment]
+      topics:
+      - Transfer learning и дообучение
+      - Детекция и сегментация; ViT (обзор)
+    - id: cv.generative
+      title: Генеративные модели (обзор)
+      requires: [cv.transfer]
+      topics:
+      - Автокодировщики и VAE
+      - GAN — идея
+      - Диффузионные модели — идея
+
+  - id: nlp
+    title: Тексты и последовательности
+    hours: 30
+    sections:
+    - id: nlp.text
+      title: Текст как данные
+      requires: [cv.generative]
+      topics:
+      - Предобработка; своя токенизация BPE
+      - Мешок слов и TF-IDF с нуля
+    - id: nlp.embeddings
+      title: Эмбеддинги
+      requires: [nlp.text]
+      topics:
+      - Идея word2vec; близость векторов
+      - Контрастивное обучение и современные модели эмбеддингов
+    - id: nlp.rnn
+      title: Рекуррентные сети
+      requires: [nlp.embeddings]
+      topics:
+      - RNN и LSTM (база); почему их заменили трансформеры
+
+  - id: transformers
+    title: Трансформеры
+    hours: 40
+    unlocks: [Hugging Face Transformers]
+    sections:
+    - id: transformers.attention
+      title: Внимание
+      requires: [nlp.rnn]
+      topics:
+      - Механизм внимания с нуля; self-attention; multi-head
+      - Позиционное кодирование
+    - id: transformers.gpt
+      title: Свой мини-GPT
+      requires: [transformers.attention]
+      topics:
+      - Мини-GPT на маленьком корпусе на CPU
+      - Генерация; температура и сэмплирование
+    - id: transformers.bert
+      title: Семейство трансформеров
+      requires: [transformers.gpt]
+      topics:
+      - Энкодеры, декодеры, энкодер-декодеры
+      - Предобучение и дообучение
+    - id: transformers.hf_unlock
+      title: Открытие Hugging Face
+      requires: [transformers.bert]
+      topics:
+      - Transformers, Datasets, Tokenizers
+      - Дообучение классификатора; русскоязычные модели
+    - id: transformers.papers
+      title: Как читать научные статьи
+      requires: [transformers.hf_unlock]
+      topics:
+      - Структура статьи и чтение в три прохода
+      - Реализация по статье — воспроизводим результат небольшой работы
+
+  - id: llm
+    title: Большие языковые модели в работе
+    hours: 45
+    sections:
+    - id: llm.rl
+      title: Обучение с подкреплением — основы
+      requires: [transformers.papers]
+      topics:
+      - Агент, среда, награда; бандиты как частный случай
+      - Policy gradient — интуиция
+      - RLHF и DPO — как из языковой модели делают ассистента
+    - id: llm.usage
+      title: Использование LLM
+      requires: [llm.rl]
+      topics:
+      - Как устроены современные LLM — масштаб, обучение с подкреплением от людей (обзор)
+      - API, промптинг, структурированный вывод, вызов инструментов
+    - id: llm.finetune
+      title: Дообучение
+      requires: [llm.usage]
+      topics:
+      - PEFT и LoRA — связь с низкоранговым приближением
+      - Квантование (обзор); когда дообучать, а когда нет
+    - id: llm.eval
+      title: Оценка LLM
+      requires: [llm.finetune]
+      topics:
+      - Золотые наборы и регрессионные тесты; LLM как оценщик и его калибровка
+      - Трассировка и наблюдаемость (Langfuse, Phoenix); версии промптов
+    - id: llm.serving
+      title: Запуск моделей
+      requires: [llm.eval]
+      topics:
+      - Инференс и его оптимизация; vLLM и батчинг
+      - Открытые и русскоязычные LLM (GigaChat, YandexGPT, open weights); стоимость и задержки
+
+  - id: rag
+    title: Поиск и RAG
+    hours: 35
+    sections:
+    - id: rag.search
+      title: Информационный поиск
+      requires: [llm.serving]
+      topics:
+      - Инвертированный индекс; BM25 с нуля
+      - Векторный поиск — точный kNN с нуля, затем приближённый (HNSW, IVF; компромисс точности и скорости)
+      - Двухбашенные модели для поиска и рекомендаций
+      - Гибридный поиск; реранкинг
+      - Векторные базы данных — pgvector, Qdrant
+    - id: rag.pipeline
+      title: RAG с нуля
+      requires: [rag.search]
+      topics:
+      - Загрузка и чанкинг документов; эмбеддинги; хранилище (pgvector)
+      - Сборка контекста; генерация с цитатами
+    - id: rag.eval
+      title: Оценка RAG
+      requires: [rag.pipeline]
+      topics:
+      - recall@k, MRR, достоверность ответа (faithfulness)
+      - Набор вопросов и ответов; анализ ошибок
+    - id: rag.frameworks
+      title: Фреймворки
+      requires: [rag.eval]
+      topics:
+      - LangChain и LlamaIndex — после своей реализации; когда они нужны
+
+  - id: agents
+    title: Агенты
+    hours: 20
+    sections:
+    - id: agents.loop
+      title: Устройство агента
+      requires: [rag.frameworks]
+      topics:
+      - Цикл агента; вызов инструментов; MCP
+      - Память и планирование
+    - id: agents.safety
+      title: Надёжность агентов
+      requires: [agents.loop]
+      topics:
+      - Ограничения и промпт-инъекции
+      - Стоимость, задержки, наблюдаемость
+
+# ═══════════════════════════════════════════════════════════════════
+- id: VI
+  title: Продакшен и большие данные
+  tagline: Как модель становится сервисом и как работать с данными, которые не помещаются в один компьютер
+  project: >-
+    Дипломный проект: end-to-end система — пайплайн данных (Airflow + Spark/ClickHouse) → модель → сервис FastAPI в
+    Docker и Kubernetes → CI → мониторинг дрейфа. Живой деплой, дизайн-документ, контракты данных, постмортем
+    одного инцидента, статья с разбором. Защита в формате ML System Design интервью.
+  disciplines:
+
+  - id: linuxnet
+    title: Linux и сети
+    hours: 20
+    sections:
+    - id: linuxnet.linux
+      title: Linux для инженера
+      requires: [agents.safety]
+      topics:
+      - Процессы, сервисы, логи; ssh; cron; ресурсы
+    - id: linuxnet.net
+      title: Сети
+      requires: [linuxnet.linux]
+      topics:
+      - IP, порты, DNS
+      - HTTP изнутри; REST; JSON-схемы
+
+  - id: docker
+    title: Контейнеры
+    hours: 30
+    sections:
+    - id: docker.basics
+      title: Docker
+      requires: [linuxnet.net]
+      topics:
+      - Образ и контейнер; Dockerfile и слои
+      - Тома и сети
+    - id: docker.compose
+      title: Docker Compose
+      requires: [docker.basics]
+      topics:
+      - Многосервисные приложения; переменные окружения и секреты
+    - id: docker.k8s
+      title: Kubernetes — основы
+      requires: [docker.compose]
+      topics:
+      - Pod, Deployment, Service, ConfigMap; чтение манифестов
+      - Масштабирование; Helm (обзор)
+
+  - id: services
+    title: ML-сервисы
+    hours: 30
+    sections:
+    - id: services.api
+      title: FastAPI
+      requires: [docker.k8s]
+      topics:
+      - Эндпоинты, валидация pydantic, асинхронность
+      - Сервинг модели
+    - id: services.quality
+      title: Качество сервиса
+      requires: [services.api, py2.testing]
+      topics:
+      - Тестирование сервисов; CI/CD на GitHub Actions
+      - Воспроизводимость — uv lock, pre-commit, конфигурация через pydantic-settings
+      - Код-ревью, в том числе кода, написанного ИИ
+    - id: services.perf
+      title: Производительность
+      requires: [services.quality]
+      topics:
+      - Батчинг, кэш, ONNX (обзор); нагрузочное тестирование
+
+  - id: mlops
+    title: MLOps
+    hours: 35
+    sections:
+    - id: mlops.tracking
+      title: Эксперименты и версии
+      requires: [services.perf]
+      topics:
+      - MLflow — эксперименты и реестр моделей
+      - Версионирование данных (DVC)
+    - id: mlops.pipelines
+      title: Пайплайны обучения
+      requires: [mlops.tracking]
+      topics:
+      - Воспроизводимые пайплайны
+    - id: mlops.monitoring
+      title: Мониторинг
+      requires: [mlops.pipelines]
+      topics:
+      - Метрики сервиса и модели; дрейф данных; переобучение
+
+  - id: bigdata
+    title: Большие данные
+    hours: 55
+    unlocks: [Apache Spark]
+    sections:
+    - id: bigdata.distributed
+      title: Распределённые вычисления
+      requires: [mlops.monitoring]
+      topics:
+      - Почему одного компьютера мало; параллелизм и распределённость
+      - MapReduce своими руками (multiprocessing)
+      - Репликация, партиционирование, CAP (база)
+    - id: bigdata.spark
+      title: Spark
+      requires: [bigdata.distributed]
+      topics:
+      - От RDD к DataFrame; ленивые вычисления
+      - Партиции и shuffle; Spark SQL; оптимизация
+    - id: bigdata.storage
+      title: Хранилища
+      requires: [bigdata.spark, sql2.olap]
+      topics:
+      - Data lake, DWH, lakehouse; объектные хранилища (S3, MinIO)
+      - Моделирование — звезда, SCD; ClickHouse
+    - id: bigdata.streaming
+      title: Потоковые данные
+      requires: [bigdata.storage]
+      topics:
+      - Kafka; события и окна
+    - id: bigdata.orchestration
+      title: Оркестрация
+      requires: [bigdata.streaming]
+      topics:
+      - Airflow и DAG
+      - dbt; проверки качества данных; контракты данных; feature store и расхождение офлайн/онлайн
+
+  - id: mlsd
+    title: ML System Design
+    hours: 40
+    sections:
+    - id: mlsd.method
+      title: Метод
+      requires: [bigdata.orchestration]
+      topics:
+      - Формат интервью — требования, данные, метрики, модель, сервинг, мониторинг
+      - Оценка нагрузки, задержек и стоимости
+      - Дизайн-документ — пишем письменно
+    - id: mlsd.cases
+      title: Кейсы
+      requires: [mlsd.method]
+      topics:
+      - Рекомендации; поиск и ранжирование; антифрод
+      - RAG-ассистент; прогноз спроса
+
+  - id: career
+    title: Карьера
+    hours: 20
+    sections:
+    - id: career.communication
+      title: Коммуникация
+      requires: [mlsd.cases]
+      topics:
+      - Презентация результатов людям без технического бэкграунда
+      - Технический текст — README, статья на Хабр или в блог
+    - id: career.jobsearch
+      title: Поиск работы
+      requires: [career.communication]
+      topics:
+      - Резюме и GitHub-профиль; календарь стажировок бигтеха
+      - Поведенческое интервью; разбор своих проектов вслух
+
+graduation:
+  title: Выпуск
+  parts:
+  - Государственный экзамен — мок-собеседование в формате бигтеха — онлайн-контест на время, алгоритмы, ML-теория, вероятности и статистика, SQL, ML System Design (устно с Claude)
+  - Защита дипломного проекта
