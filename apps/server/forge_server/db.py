@@ -1,0 +1,93 @@
+"""SQLite storage with ordered, append-only migrations.
+
+Each migration runs once; the applied version is stored in `schema_version`.
+To change the schema, append a new entry to MIGRATIONS — never edit an applied one.
+"""
+from __future__ import annotations
+
+import sqlite3
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Iterator
+
+from .settings import db_path
+
+MIGRATIONS: list[str] = [
+    # 1 — initial schema
+    """
+    CREATE TABLE topic_progress (
+        topic_id    TEXT PRIMARY KEY,
+        status      TEXT NOT NULL CHECK (status IN ('started', 'done')),
+        page        INTEGER NOT NULL DEFAULT 0,
+        seconds     INTEGER NOT NULL DEFAULT 0,
+        updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE attempt (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        scope       TEXT NOT NULL,              -- topic or section id the test belongs to
+        item_id     TEXT NOT NULL,              -- question id
+        kind        TEXT NOT NULL,              -- single | multi | open
+        answer      TEXT NOT NULL,              -- JSON
+        correct     INTEGER,                    -- 1/0, NULL while waiting for the teacher
+        confidence  INTEGER,                    -- 1..5, learner's self-rating
+        seconds     INTEGER,
+        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX attempt_scope ON attempt(scope);
+    CREATE TABLE note (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic_id    TEXT,
+        term_id     TEXT,
+        text        TEXT NOT NULL,
+        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE feedback (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind        TEXT NOT NULL CHECK (kind IN ('content_issue', 'bug', 'idea', 'question')),
+        source      TEXT NOT NULL CHECK (source IN ('learner', 'teacher', 'system')),
+        topic_id    TEXT,
+        text        TEXT NOT NULL,
+        status      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'triaged', 'fixed', 'wontfix')),
+        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE event (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        level       TEXT NOT NULL,
+        source      TEXT NOT NULL,              -- server | web
+        message     TEXT NOT NULL,
+        context     TEXT,                       -- JSON
+        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    """,
+]
+
+
+def connect(path: Path | None = None) -> sqlite3.Connection:
+    conn = sqlite3.connect(path or db_path(), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    return conn
+
+
+def migrate(conn: sqlite3.Connection) -> int:
+    conn.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
+    row = conn.execute("SELECT version FROM schema_version").fetchone()
+    current = row["version"] if row else 0
+    if row is None:
+        conn.execute("INSERT INTO schema_version (version) VALUES (0)")
+    for version, sql in enumerate(MIGRATIONS[current:], start=current + 1):
+        conn.executescript(sql)
+        conn.execute("UPDATE schema_version SET version = ?", (version,))
+    conn.commit()
+    return len(MIGRATIONS)
+
+
+@contextmanager
+def transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise

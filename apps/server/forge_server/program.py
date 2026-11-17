@@ -1,0 +1,58 @@
+"""Read content/program.yaml and shape it for the UI."""
+from __future__ import annotations
+
+from functools import lru_cache
+from pathlib import Path
+
+import yaml
+
+from .settings import PROGRAM_FILE
+
+ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
+
+
+@lru_cache(maxsize=4)
+def _load(path: str, mtime: float) -> dict:
+    return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+
+
+def load_program(path: Path = PROGRAM_FILE) -> dict:
+    """Parsed program; re-read automatically when the file changes."""
+    raw = _load(str(path), path.stat().st_mtime)
+    subjects = {s["id"]: s["title"] for s in raw["subjects"]}
+    max_level: dict[str, int] = {}
+    for c in raw["courses"]:
+        for d in c["disciplines"]:
+            max_level[d["subject"]] = max(max_level.get(d["subject"], 0), d["level"])
+
+    courses = []
+    for c in raw["courses"]:
+        discs = []
+        for d in c["disciplines"]:
+            name = subjects[d["subject"]] + ("" if max_level[d["subject"]] == 1 else f" {ROMAN[d['level']]}")
+            sections = [
+                {
+                    "id": s["id"],
+                    "title": s["title"],
+                    "topics": [{"id": f"{s['id']}.{i}", "title": t} for i, t in enumerate(s["topics"], 1)],
+                }
+                for s in d["sections"]
+            ]
+            levels = [
+                {"level": x["level"], "title": x["title"], "course": cc["id"]}
+                for cc in raw["courses"] for x in cc["disciplines"] if x["subject"] == d["subject"]
+            ]
+            discs.append({
+                "id": d["id"], "subject": d["subject"], "subjectTitle": subjects[d["subject"]], "level": d["level"],
+                "name": name, "title": d["title"], "hours": d["hours"], "summary": d["summary"],
+                "unlocks": d.get("unlocks", []), "levels": levels if len(levels) > 1 else [], "sections": sections,
+            })
+        courses.append({
+            "id": c["id"], "title": c["title"], "tagline": c["tagline"], "project": c.get("project"),
+            "hours": sum(d["hours"] for d in c["disciplines"]), "disciplines": discs,
+        })
+    return {"title": raw["program"]["title"], "courses": courses}
+
+
+def topic_ids(program: dict) -> list[str]:
+    return [t["id"] for c in program["courses"] for d in c["disciplines"] for s in d["sections"] for t in s["topics"]]

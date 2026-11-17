@@ -16,6 +16,7 @@ Run: uv run --with pyyaml tools/program/build.py [--check]
 """
 from __future__ import annotations
 
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -26,6 +27,9 @@ ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "content" / "program.yaml"
 OUT = ROOT / "docs" / "content" / "curriculum.md"
 TREES = ROOT / "docs" / "dev" / "prerequisite-trees.md"
+README = ROOT / "README.md"
+COURSES = ROOT / "content" / "courses"
+GLOSSARY = ROOT / "content" / "glossary.yaml"
 ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 
@@ -83,6 +87,9 @@ def validate(data: dict) -> list[str]:
 
     for s in sections:
         sid = s["id"]
+        for t in s.get("topics", []):
+            if not isinstance(t, str):
+                errors.append(f"{sid}: topic is not a plain string (quote it if it contains ': '): {t!r}")
         for req in s.get("requires", []) or []:
             if req not in order:
                 errors.append(f"{sid}: requires unknown {req}")
@@ -228,15 +235,84 @@ def render_trees(data: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+def check_content(data: dict) -> tuple[list[str], set[str]]:
+    """Authored topics must exist in the plan; glossary terms must exist; quiz answers must be valid."""
+    errors: list[str] = []
+    sections, *_ = index(data)
+    topic_ids = {f"{s['id']}.{i}" for s in sections for i in range(1, len(s["topics"]) + 1)}
+    section_ids = {s["id"] for s in sections}
+    glossary = {t["id"] for t in yaml.safe_load(GLOSSARY.read_text(encoding="utf-8"))} if GLOSSARY.exists() else set()
+    authored: set[str] = set()
+    for mdx in sorted(COURSES.glob("*/*/*/*/topic.mdx")):
+        _, disc, sec, folder = mdx.relative_to(COURSES).parts[:4]
+        tid = f"{disc}.{sec}.{int(folder.split('-')[0])}"
+        if tid not in topic_ids:
+            errors.append(f"{mdx.relative_to(ROOT)}: topic {tid} is not in program.yaml")
+        authored.add(tid)
+        for term_id in re.findall(r'<Term id="([^"]+)"', mdx.read_text(encoding="utf-8")):
+            if term_id not in glossary:
+                errors.append(f"{mdx.relative_to(ROOT)}: term '{term_id}' missing in glossary.yaml")
+    for qf in sorted(list(COURSES.glob("*/*/*/*/quiz.yaml")) + list(COURSES.glob("*/*/*/test.yaml"))):
+        quiz = yaml.safe_load(qf.read_text(encoding="utf-8"))
+        if qf.name == "test.yaml":
+            _, disc, sec = qf.relative_to(COURSES).parts[:3]
+            if f"{disc}.{sec}" not in section_ids:
+                errors.append(f"{qf.relative_to(ROOT)}: section {disc}.{sec} is not in program.yaml")
+        ids = set()
+        for q in quiz.get("questions", []):
+            where = f"{qf.relative_to(ROOT)}:{q.get('id')}"
+            if q["id"] in ids:
+                errors.append(f"{where}: duplicate question id")
+            ids.add(q["id"])
+            if q["type"] in ("single", "multi"):
+                n = len(q.get("options", []))
+                ans = q.get("answer")
+                ans = ans if isinstance(ans, list) else [ans]
+                if q["type"] == "single" and len(ans) != 1:
+                    errors.append(f"{where}: single-choice needs one answer")
+                if not ans or any(not isinstance(a, int) or not 0 <= a < n for a in ans):
+                    errors.append(f"{where}: answer index out of range")
+            elif q["type"] == "open" and not q.get("rubric"):
+                errors.append(f"{where}: open question needs a rubric for the teacher")
+    return errors, authored
+
+
+def render_progress(data: dict, authored: set[str]) -> str:
+    sections, *_ = index(data)
+    total = sum(len(s["topics"]) for s in sections)
+    pct = 100 * len(authored) / total if total else 0
+    per_course = []
+    for c in data["courses"]:
+        ids = [f"{s['id']}.{i}" for d in c["disciplines"] for s in d["sections"] for i in range(1, len(s["topics"]) + 1)]
+        done = len([i for i in ids if i in authored])
+        per_course.append(f"| Курс {c['id']}. {c['title']} | {done} / {len(ids)} |")
+    return "\n".join([
+        "<!-- progress:start -->",
+        f"**Готовность учебных материалов: {pct:.1f} %** — написано тем: {len(authored)} из {total}.",
+        "",
+        "| Курс | Темы |",
+        "|---|---|",
+        *per_course,
+        "<!-- progress:end -->",
+    ])
+
+
 def main() -> int:
     data = load()
     errors = validate(data)
+    content_errors, authored = check_content(data)
+    errors += content_errors
     if errors:
         print("program.yaml: FAILED", file=sys.stderr)
         for e in errors:
             print("  -", e, file=sys.stderr)
         return 1
     outputs = {OUT: render_curriculum(data), TREES: render_trees(data)}
+    readme = README.read_text(encoding="utf-8")
+    if "<!-- progress:start -->" in readme:
+        head, rest = readme.split("<!-- progress:start -->", 1)
+        tail = rest.split("<!-- progress:end -->", 1)[1]
+        outputs[README] = head + render_progress(data, authored) + tail
     if "--check" in sys.argv:
         stale = [str(p.relative_to(ROOT)) for p, text in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
         if stale:
