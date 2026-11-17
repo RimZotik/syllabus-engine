@@ -16,3 +16,9 @@
 
 ## Стек
 React + TS + Vite + CodeMirror 6 · FastAPI + SQLite · Pyodide / PGlite / isomorphic-git в браузере · Jupyter-ядро для тяжёлого ML · FSRS · MCP (streamable HTTP на localhost) · uv + pnpm.
+
+## Работа с контентом курса
+- Любая новая тема, раздел или дисциплина проходит пайплайн из `docs/dev/review-protocol.md`: написание → логика → факты и определения → понятность и язык → `npm run check` и скриншоты → коммит.
+- Определения — общепринятые, с источником (`formal` + `source` в `<Theorem>`), рядом — простыми словами (`docs/content/style-guide.md`, раздел 13).
+- Замечания ученика и преподавателя — `npm run feedback`; разбирать их до написания следующего блока.
+- Структурные решения и отклонённые советы ревьюеров — в `docs/dev/decisions.md`.

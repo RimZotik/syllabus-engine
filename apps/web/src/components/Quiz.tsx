@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { api } from "../api";
+import { useApp } from "../state";
 import type { Question, QuizData } from "../content/registry";
 
 type Answer = number | number[] | string | undefined;
@@ -20,6 +21,8 @@ function isRight(q: Question, a: Answer): boolean | null {
 
 /** Topic test or section test. Auto-graded questions are checked here; open answers wait for the teacher. */
 export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData; onPassed?: () => void }) {
+  const { claude } = useApp();
+  const teacher = !!claude?.installed;
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [conf, setConf] = useState<Record<string, number>>({});
   const [done, setDone] = useState(false);
@@ -30,12 +33,13 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
 
   const auto = data.questions.filter((q) => q.type !== "open");
   const score = useMemo(() => (auto.length ? auto.filter((q) => isRight(q, answers[q.id])).length / auto.length : 1), [answers, auto]);
-  const complete = data.questions.every((q) => q.type === "open" ? String(answers[q.id] ?? "").trim().length > 0 : answers[q.id] !== undefined && (q.type !== "multi" || (answers[q.id] as number[]).length > 0));
+  // Open answers are checked by the teacher (Claude) later and never block passing the test.
+  const complete = data.questions.every((q) => q.type === "open" ? !teacher || String(answers[q.id] ?? "").trim().length > 0 : answers[q.id] !== undefined && (q.type !== "multi" || (answers[q.id] as number[]).length > 0));
 
   async function submit() {
     setDone(true);
     const seconds = Math.round((Date.now() - started.current) / 1000);
-    await api.saveAttempts(data.questions.map((q) => ({
+    await api.saveAttempts(data.questions.filter((q) => q.type !== "open" || teacher).map((q) => ({
       scope, item_id: q.id, kind: q.type, answer: answers[q.id] ?? null, correct: isRight(q, answers[q.id]), confidence: conf[q.id] ?? null, seconds,
     }))).catch(() => {});
     if (score >= pass) onPassed?.();
@@ -59,7 +63,11 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
           <div className="qitem" key={q.id}>
             <div className="qtitle"><b>{n + 1}. {q.q}</b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : "развёрнутый ответ"}</span></div>
             {q.type === "open" ? (
-              <textarea value={(answers[q.id] as string) ?? ""} disabled={done} placeholder="Ответьте своими словами" onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
+              teacher ? (
+                <textarea value={(answers[q.id] as string) ?? ""} disabled={done} placeholder="Ответьте своими словами — ответ проверит преподаватель" onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
+              ) : (
+                <div className="needs-claude"><b>Нужен Claude.</b> Этот вопрос проверяет преподаватель Claude. Установите Claude Code на компьютер и войдите в него — вопрос станет доступен. На прохождение проверки он не влияет.</div>
+              )
             ) : perm.map((i) => {
               const o = q.options![i];
               const chosen = q.type === "single" ? answers[q.id] === i : ((answers[q.id] as number[]) ?? []).includes(i);
@@ -70,12 +78,12 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
                 </button>
               );
             })}
-            {!done && (
+            {!done && q.type === "open" && teacher && (
               <div className="conf">Насколько вы уверены?
                 {[1, 2, 3, 4, 5].map((v) => <button key={v} className={conf[q.id] === v ? "on" : ""} onClick={() => setConf({ ...conf, [q.id]: v })}>{v}</button>)}
               </div>
             )}
-            {done && q.type === "open" && <div className="explain">Ответ сохранён. Его проверит преподаватель по критериям: {(q.rubric ?? []).join("; ")}.{q.explain ? ` Подсказка для самопроверки: ${q.explain}` : ""}</div>}
+            {done && q.type === "open" && teacher && <div className="explain">Ответ сохранён. Его проверит преподаватель по критериям: {(q.rubric ?? []).join("; ")}.{q.explain ? ` Подсказка для самопроверки: ${q.explain}` : ""}</div>}
             {done && q.type !== "open" && <div className="explain">{verdict ? "Верно. " : "Неверно. "}{q.explain}</div>}
           </div>
         );

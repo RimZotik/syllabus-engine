@@ -48,13 +48,15 @@ export function Callout({ kind = "remember", title, children }: { kind?: keyof t
   );
 }
 
-/** Definitions, theorems and rules get their own visual block. */
-export function Theorem({ kind = "definition", title, children }: { kind?: "definition" | "theorem" | "rule"; title: string; children: ReactNode }) {
+/** Definitions, theorems and rules get their own visual block.
+ *  `formal` — the generally accepted wording (with `source`); children — the same in plain words. */
+export function Theorem({ kind = "definition", title, formal, source, children }: { kind?: "definition" | "theorem" | "rule"; title: string; formal?: string; source?: string; children: ReactNode }) {
   const label = { definition: "Определение", theorem: "Теорема", rule: "Правило" }[kind];
   return (
     <div className={`theorem ${kind}`}>
-      <div className="head">{label}<b>{title}</b></div>
-      {children}
+      <div className="head"><span className="kind">{label}</span><b>{title}</b></div>
+      {formal && <blockquote className="formal">{formal}{source && <cite>{source}</cite>}</blockquote>}
+      {formal ? <div className="plain"><span className="eyebrow">Простыми словами</span>{children}</div> : children}
     </div>
   );
 }
