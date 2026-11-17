@@ -30,11 +30,11 @@ function TopBar() {
       </nav>
       <div className="top-right">
         <div style={{ position: "relative" }}>
-          <button className={`claude${claude?.installed ? " on" : ""}`} onClick={() => setPop(!pop)} aria-expanded={pop} title={title}><span className="dot" /><span className="lbl">{claude?.installed ? "Claude" : "Claude не найден"}</span></button>
+          <button className={`claude${claude?.installed ? " on" : ""}`} onClick={() => setPop(!pop)} aria-expanded={pop} title={title}><span className="dot" /><span className="lbl">{!claude ? "Claude…" : claude.installed ? "Claude" : "Claude не найден"}</span></button>
           {pop && (
             <div className="claude-pop" role="dialog">
               {claude?.installed ? (<><b>Claude Code найден{claude.version ? ` · ${claude.version}` : ""}</b><p>Преподаватель проверит развёрнутые ответы и проведёт устные экзамены. Убедитесь, что вы вошли в Claude Code: команда <code>claude</code> в терминале не должна просить входа. Лимиты подписки появятся здесь на этапе подключения преподавателя.</p></>)
-                : (<><b>Claude не найден</b><p>Курс полностью проходится без него: теория, тесты, контрольные, заметки и прогресс работают. Без Claude недоступны только развёрнутые ответы и устные экзамены — они не блокируют прохождение.</p><p>Чтобы подключить преподавателя: установите Claude Code (<code>npm install -g @anthropic-ai/claude-code</code>), выполните <code>claude</code> и войдите в свой аккаунт, затем перезапустите платформу.</p></>)}
+                : (<><b>Claude не найден</b><p>Курс полностью проходится без него: теория, тесты, контрольные, заметки и прогресс работают. Без Claude недоступны только развёрнутые ответы и устные экзамены — они не блокируют прохождение.</p><p>Чтобы подключить преподавателя: установите Claude Code (<code>npm install -g @anthropic-ai/claude-code</code>), выполните <code>claude</code> и войдите в свой аккаунт, — платформа заметит это сама в течение полуминуты, перезапускать ничего не нужно.</p></>)}
             </div>
           )}
         </div>

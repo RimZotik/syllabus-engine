@@ -1,6 +1,7 @@
 """HTTP API of the platform. The web app talks only to these endpoints."""
 
 import json
+import threading
 import logging
 import logging.handlers
 import sqlite3
@@ -51,6 +52,9 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     @app.get("/api/program")
     def program() -> dict:
         return load_program()
+
+    # Warm the Claude check in the background so the first page load does not wait for `claude --version`.
+    threading.Thread(target=claude.status, daemon=True).start()
 
     @app.get("/api/claude/status")
     def claude_status() -> dict:

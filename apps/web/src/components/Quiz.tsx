@@ -172,7 +172,9 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
           <div className="qitem" key={q.id}>
             <div className="qtitle"><b>{n + 1}. {q.q}</b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : "развёрнутый ответ"}</span></div>
             {q.type === "open" ? (
-              teacher || written(q.id) ? (
+              !claude ? (
+                <div className="grading"><LoaderCircle size={18} />Проверяю, установлен ли Claude…</div>
+              ) : teacher || written(q.id) ? (
                 <AutoTextarea value={(a as string) ?? ""} disabled={(st.done && !canRevise) || busy || !teacher}
                   placeholder="Ответьте своими словами — ответ сразу проверит преподаватель"
                   onChange={(e) => edit({ answers: { ...st.answers, [q.id]: e.target.value } })} />
