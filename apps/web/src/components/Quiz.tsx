@@ -12,6 +12,9 @@ type Saved = {
   conf: Record<string, number>;
   done: boolean;
   grades: Record<string, Grade>;
+  /** share of auto-graded questions answered correctly, set on «Сдать» */
+  score?: number;
+  submitted_at?: string;
 };
 
 function shuffled<T>(xs: T[]): T[] {
@@ -130,7 +133,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
 
   async function submit() {
     const seconds = Math.round((Date.now() - started.current) / 1000);
-    const next = { ...stRef.current, done: true };
+    const next = { ...stRef.current, done: true, score, submitted_at: new Date().toISOString() };
     const needsTeacher = teacher && open.some((q) => written(q.id));
     commit(next, score >= pass && !needsTeacher);
     api.saveAttempts(auto.map((q) => ({
@@ -162,7 +165,8 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
         <span className="faint" style={{ fontSize: 14 }}>Порог {Math.round(pass * 100)}% · подсказки недоступны</span>
       </div>
       {st.order.map(({ id, perm }, n) => {
-        const q = byId.get(id)!;
+        const q = byId.get(id);
+        if (!q) return null;
         const a = st.answers[q.id];
         const verdict = st.done ? isRight(q, a) : null;
         const g = st.grades[q.id];

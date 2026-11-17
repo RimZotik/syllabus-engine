@@ -16,14 +16,15 @@ export function Reader() {
   const nav = useNavigate();
   const [search] = useSearchParams();
   const where = place(topicId);
-  const [mod, setMod] = useState<TopicModule | null>(null);
+  const [loadedMod, setLoadedMod] = useState<{ id: string; mod: TopicModule } | null>(null);
+  const mod = loadedMod?.id === topicId ? loadedMod.mod : null;
   const [cur, setCur] = useState(0);
   const [panel, setPanel] = useState<"toc" | "notes" | "feedback" | null>(() => (new URLSearchParams(location.search).has("toc") ? "toc" : null));
   const since = useRef(Date.now());
 
   useEffect(() => {
-    setMod(null); setCur(search.has("p") ? Number(search.get("p")) : progress[topicId]?.page ?? 0);
-    content.loadTopic(topicId)?.then(setMod);
+    setCur(search.has("p") ? Number(search.get("p")) : progress[topicId]?.page ?? 0);
+    content.loadTopic(topicId)?.then((m) => setLoadedMod({ id: topicId, mod: m }));
   }, [topicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nextTopic = useMemo(() => {
@@ -39,7 +40,7 @@ export function Reader() {
       .map((el) => ({ title: el.props.title, minutes: el.props.minutes, node: el }));
     const quiz = content.quiz(topicId);
     const all = [...body];
-    if (quiz) all.push({ title: "Проверка", minutes: quiz.minutes ?? 15, node: <Quiz scope={topicId} data={quiz} onPassed={() => api.setProgress(topicId, "done", all.length - 1, 0).then(refreshProgress)} /> });
+    if (quiz) all.push({ title: "Проверка", minutes: quiz.minutes ?? 15, node: <Quiz key={topicId} scope={topicId} data={quiz} onPassed={() => api.setProgress(topicId, "done", all.length - 1, 0).then(refreshProgress)} /> });
     const plan: PageDef = {
       title: "План урока", node: (
         <>
@@ -132,5 +133,5 @@ export function SectionTest() {
   const { sectionId = "" } = useParams();
   const data = content.sectionTest(sectionId);
   if (!data) return <div className="wrap stub"><h1>Контрольной нет</h1><Link className="btn" to="/learn">К учебному плану</Link></div>;
-  return <div className="page"><div className="read"><Quiz scope={sectionId} data={{ ...data, title: data.title ?? "Контрольная раздела" }} /></div></div>;
+  return <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} data={{ ...data, title: data.title ?? "Контрольная раздела" }} /></div></div>;
 }

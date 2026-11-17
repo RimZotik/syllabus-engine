@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import claude, grader
-from .db import connect, migrate, transaction
+from .db import PerThread, connect, db_file, migrate, transaction
 from .program import load_program, topic_ids
 from .settings import data_dir
 
@@ -29,8 +29,9 @@ def _logger() -> logging.Logger:
 
 
 def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
-    db = conn or connect()
-    migrate(db)
+    first = conn or connect()
+    migrate(first)
+    db = PerThread(db_file(first))
     log = _logger()
     app = FastAPI(title="Syllabus Engine", version="0.1.0")
 
@@ -120,8 +121,8 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
 
     @app.get("/api/attempts")
     def attempts(scope: str) -> list[dict]:
-        rows = db.execute("SELECT item_id, kind, answer, correct, confidence, created_at FROM attempt WHERE scope = ? ORDER BY id", (scope,)).fetchall()
-        return [dict(r) | {"answer": json.loads(r["answer"])} for r in rows]
+        rows = db.execute("SELECT item_id, kind, answer, correct, confidence, feedback, created_at FROM attempt WHERE scope = ? ORDER BY id", (scope,)).fetchall()
+        return [dict(r) | {"answer": json.loads(r["answer"]), "feedback": json.loads(r["feedback"]) if r["feedback"] else None} for r in rows]
 
     # ── teacher check of written answers ────────────────────
     class GradeIn(BaseModel):

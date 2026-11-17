@@ -6,6 +6,7 @@ To change the schema, append a new entry to MIGRATIONS — never edit an applied
 from __future__ import annotations
 
 import sqlite3
+import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -80,6 +81,34 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     return conn
 
 
+class PerThread:
+    """One SQLite connection per server thread (FastAPI runs sync endpoints in a thread pool;
+    sharing one connection between threads corrupts concurrent queries)."""
+
+    def __init__(self, path: Path):
+        self.path = path
+        self._local = threading.local()
+
+    def _conn(self) -> sqlite3.Connection:
+        c = getattr(self._local, "conn", None)
+        if c is None:
+            c = self._local.conn = connect(self.path)
+        return c
+
+    def execute(self, sql: str, params: tuple | list = ()) -> sqlite3.Cursor:
+        return self._conn().execute(sql, params)
+
+    def commit(self) -> None:
+        self._conn().commit()
+
+    def rollback(self) -> None:
+        self._conn().rollback()
+
+
+def db_file(conn: sqlite3.Connection) -> Path:
+    return Path(conn.execute("PRAGMA database_list").fetchone()[2])
+
+
 def migrate(conn: sqlite3.Connection) -> int:
     conn.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
     row = conn.execute("SELECT version FROM schema_version").fetchone()
@@ -94,7 +123,7 @@ def migrate(conn: sqlite3.Connection) -> int:
 
 
 @contextmanager
-def transaction(conn: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
+def transaction(conn: "sqlite3.Connection | PerThread") -> Iterator["sqlite3.Connection | PerThread"]:
     try:
         yield conn
         conn.commit()

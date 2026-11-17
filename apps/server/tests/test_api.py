@@ -103,3 +103,14 @@ def test_rate_limit_event_is_remembered():
     lim = claude.status()["limits"]
     assert lim["five_hour"] == {"used": 0.45, "resets_at": 1794953400, "status": "allowed"}
     assert lim["seven_day"]["used"] == 0.26
+
+
+def test_parallel_requests_do_not_break_the_database(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    c = make_client(tmp_path, monkeypatch)
+    def hit(i):
+        c.put(f"/api/quiz-state/s{i % 5}", json={"state": {"i": i}, "passed": False})
+        c.post("/api/log", json={"message": f"m{i}", "context": {"stack": "x" * 500}})
+        return c.get(f"/api/quiz-state/s{i % 5}").status_code
+    with ThreadPoolExecutor(8) as ex:
+        assert set(ex.map(hit, range(80))) == {200}

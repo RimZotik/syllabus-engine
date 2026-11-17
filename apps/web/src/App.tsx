@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes, Link } from "react-router-dom";
 import { LoaderCircle, Moon, RefreshCw, Sun } from "lucide-react";
-import { useState } from "react";
+import { Component, useState, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { useApp } from "./state";
 import { api, type LimitWindow } from "./api";
 import { Home } from "./pages/Home";
@@ -84,6 +85,25 @@ function TopBar() {
   );
 }
 
+class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(e: Error) {
+    fetch("/api/log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ level: "error", message: `render: ${e.message}`, context: { path: location.pathname, stack: e.stack?.slice(0, 1500) } }) }).catch(() => {});
+  }
+  render() {
+    return this.state.failed
+      ? <div className="wrap stub"><div className="eyebrow">Ошибка</div><h1>Страница не открылась</h1><p>Ошибка уже записана в журнал платформы. Попробуйте открыть страницу ещё раз.</p><button className="btn" onClick={() => location.reload()}>Обновить страницу</button></div>
+      : this.props.children;
+  }
+}
+
+/** Remounts the boundary on every navigation, so one broken page does not break the next one. */
+function Guard({ children }: { children: ReactNode }) {
+  const loc = useLocation();
+  return <Boundary key={loc.pathname}>{children}</Boundary>;
+}
+
 function Stub({ title, text }: { title: string; text: string }) {
   return <div className="wrap stub"><div className="eyebrow">Скоро</div><h1>{title}</h1><p>{text}</p><Link className="btn" to="/learn">К обучению</Link></div>;
 }
@@ -92,7 +112,7 @@ export function App() {
   return (
     <>
       <TopBar />
-      <Routes>
+      <Guard><Routes>
         <Route path="/" element={<Home />} />
         <Route path="/learn" element={<Learn />} />
         <Route path="/learn/:topicId" element={<Reader />} />
@@ -100,7 +120,7 @@ export function App() {
         <Route path="/trainer" element={<Stub title="Тренажёр" text="Ежедневное повторение, билеты и марафон появятся на этапе 2, когда накопятся пройденные темы и вопросы к ним." />} />
         <Route path="/record" element={<Stub title="Зачётная книжка" text="Оценки за контрольные и экзамены появятся вместе с первыми рубежами и подключением преподавателя." />} />
         <Route path="*" element={<Stub title="Страница не найдена" text="Такой страницы нет." />} />
-      </Routes>
+      </Routes></Guard>
       <TermDrawer />
     </>
   );
