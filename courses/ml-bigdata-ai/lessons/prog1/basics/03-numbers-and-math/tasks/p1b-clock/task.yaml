@@ -1,0 +1,52 @@
+id: p1b-clock
+title: Секунды в часы и минуты
+sandbox: python-browser
+difficulty: 2
+statement: |
+  На вход подаётся целое неотрицательное число секунд, меньше суток (меньше 86400). Выведите, сколько это целых часов, минут и секунд, в формате `<ч> ч <мин> мин <с> с`.
+
+  Пример. Ввод: `3725`. Вывод: `1 ч 2 мин 5 с`
+
+  Второй пример. Ввод: `59`. Вывод: `0 ч 0 мин 59 с`
+starter: |
+  seconds = int(input())
+  print(seconds // 3600, "ч")
+stdin: "3725\n"
+solution: |
+  seconds = int(input())
+  hours = seconds // 3600
+  rest = seconds % 3600
+  minutes = rest // 60
+  secs = rest % 60
+  print(hours, "ч", minutes, "мин", secs, "с")
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "3725\n"
+      stdout: "1 ч 2 мин 5 с"
+    - name: Меньше минуты
+      stdin: "59\n"
+      stdout: "0 ч 0 мин 59 с"
+    - name: Ноль секунд
+      stdin: "0\n"
+      stdout: "0 ч 0 мин 0 с"
+      hidden: true
+    - name: Ровно час
+      stdin: "3600\n"
+      stdout: "1 ч 0 мин 0 с"
+      hidden: true
+    - name: Конец суток
+      stdin: "86399\n"
+      stdout: "23 ч 59 мин 59 с"
+      hidden: true
+    - name: Минуты без часов
+      stdin: "754\n"
+      stdout: "0 ч 12 мин 34 с"
+      hidden: true
+hints:
+  - level: 1
+    text: Сколько секунд в одном часе? Какая операция говорит, сколько раз это число целиком помещается в данное?
+  - level: 2
+    text: После того как целые часы «забрали», остаются секунды seconds % 3600. Из них так же получаются минуты и секунды.
+  - level: 3
+    text: minutes = rest // 60, secs = rest % 60, где rest = seconds % 3600. Выводите через print со значениями и словами через запятую.

@@ -7,6 +7,7 @@ import { AlertTriangle, BookMarked, Check as CheckIcon, History, Lightbulb } fro
 import { useApp } from "../state";
 import { term as lookup } from "./glossary";
 import { Sandbox } from "../components/Sandbox";
+import { RichText } from "../components/RichText";
 import { Trace } from "../components/TraceView";
 
 /** One page of a topic. The reader shows pages one at a time. */
@@ -71,13 +72,13 @@ export function Check({ q, options, answer, explain }: { q: string; options: str
   return (
     <div className="check">
       <div className="eyebrow">Проверь себя</div>
-      <div className="q">{q}</div>
+      <div className="q"><RichText text={q} /></div>
       {options.map((o, i) => (
         <button key={i} className={`opt${picked === null ? "" : i === answer ? " right" : i === picked ? " wrong" : ""}`} onClick={() => setPicked(i)} disabled={picked !== null}>
-          <input type="radio" readOnly checked={picked === i} tabIndex={-1} />{o}
+          <input type="radio" readOnly checked={picked === i} tabIndex={-1} /><span className="opt-text"><RichText text={o} /></span>
         </button>
       ))}
-      {picked !== null && <div className="explain">{picked === answer ? "Верно. " : "Не совсем. "}{explain}</div>}
+      {picked !== null && <div className="explain">{picked === answer ? "Верно. " : "Не совсем. "}<RichText text={explain} /></div>}
     </div>
   );
 }

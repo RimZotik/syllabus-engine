@@ -3,6 +3,7 @@ import { CheckCircle2, CircleAlert, LoaderCircle, MessageSquareText, RotateCcw }
 import { api, type Grade } from "../api";
 import { useApp } from "../state";
 import type { Question, QuizData } from "../content/registry";
+import { RichText } from "./RichText";
 
 type Answer = number | number[] | string | undefined;
 /** What is stored on the server, so a finished test stays finished after leaving the page. */
@@ -183,7 +184,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
         const canRevise = st.done && !busy && g?.verdict !== "pass";
         return (
           <div className="qitem" key={q.id}>
-            <div className="qtitle"><b>{n + 1}. {q.q}</b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : "развёрнутый ответ"}</span></div>
+            <div className="qtitle"><b>{n + 1}. <RichText text={q.q} /></b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : "развёрнутый ответ"}</span></div>
             {q.type === "open" ? (
               !claude ? (
                 <div className="grading"><LoaderCircle size={18} />Проверяю, установлен ли Claude…</div>
@@ -199,7 +200,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
               const correct = q.type === "single" ? q.answer === i : (q.answer as number[]).includes(i);
               return (
                 <button key={i} className={`opt${st.done && correct ? " right" : st.done && chosen ? " wrong" : ""}`} onClick={() => toggle(q, i)}>
-                  <input type={q.type === "single" ? "radio" : "checkbox"} readOnly checked={chosen} tabIndex={-1} />{q.options![i]}
+                  <input type={q.type === "single" ? "radio" : "checkbox"} readOnly checked={chosen} tabIndex={-1} /><span className="opt-text"><RichText text={q.options![i]} /></span>
                 </button>
               );
             })}
@@ -225,7 +226,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
             {st.done && q.type === "open" && teacher && written(q.id) && canRevise && (
               <div className="qactions"><button className="btn sm" disabled={!written(q.id)} onClick={() => { commit(stRef.current, false); void grade(q); }}>Сдать ответ снова</button></div>
             )}
-            {st.done && q.type !== "open" && <div className="explain">{verdict ? "Верно. " : "Неверно. "}{q.explain}</div>}
+            {st.done && q.type !== "open" && <div className="explain">{verdict ? "Верно. " : "Неверно. "}<RichText text={q.explain ?? ""} /></div>}
             {st.done && (q.traps ?? []).some((t) => (Array.isArray(a) ? a.includes(t) : a === t)) && (
               <div className="explain trap">Это ловушка: вариант звучит почти как фраза из лекции, но смысл в нём другой. Читайте каждый вариант до конца.</div>
             )}

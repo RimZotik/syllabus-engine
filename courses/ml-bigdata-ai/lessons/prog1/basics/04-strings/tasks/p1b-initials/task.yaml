@@ -1,0 +1,44 @@
+id: p1b-initials
+title: Фамилия и инициалы
+sandbox: python-browser
+difficulty: 2
+statement: |
+  На вход подаются три строки: фамилия, имя и отчество. Пользователь мог случайно поставить пробелы в начале или в конце строки. Выведите фамилию и инициалы в формате `<Фамилия> <И>. <О>.`
+
+  Пример. Ввод — три строки: `Иванова`, `Анна`, `Сергеевна`. Вывод: `Иванова А. С.`
+
+  Стартовый код выводит неверные буквы. Исправьте его и не забудьте про лишние пробелы.
+starter: |
+  surname = input()
+  name = input()
+  patronymic = input()
+  print(f"{surname} {name[1]}. {patronymic[1]}.")
+stdin: "Иванова\nАнна\nСергеевна\n"
+solution: |
+  surname = input().strip()
+  name = input().strip()
+  patronymic = input().strip()
+  print(f"{surname} {name[0]}. {patronymic[0]}.")
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "Иванова\nАнна\nСергеевна\n"
+      stdout: "Иванова А. С."
+    - name: Другое имя
+      stdin: "Петров\nИгорь\nНиколаевич\n"
+      stdout: "Петров И. Н."
+    - name: Пробелы по краям
+      stdin: "  Ким \n Ян\n  Ильич  \n"
+      stdout: "Ким Я. И."
+      hidden: true
+    - name: Короткое имя
+      stdin: "Лю\nЮ\nОлегович\n"
+      stdout: "Лю Ю. О."
+      hidden: true
+hints:
+  - level: 1
+    text: С какого номера начинаются индексы в строке? Какой символ даёт name[1]?
+  - level: 2
+    text: Первая буква — индекс 0. А если перед именем стоит пробел, то name[0] — это пробел. Какой метод убирает пробелы по краям?
+  - level: 3
+    text: Вызывайте strip сразу после input — name = input().strip() — и берите name[0] и patronymic[0].

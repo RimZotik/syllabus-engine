@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CheckCircle2, CircleAlert, CircleX, Footprints, Lightbulb, LoaderCircle, Play, RotateCcw, ListChecks } from "lucide-react";
 import { TraceView } from "./TraceView";
+import { RichText } from "./RichText";
 import { EditorView, basicSetup } from "codemirror";
 import { python } from "@codemirror/lang-python";
 import { keymap } from "@codemirror/view";
@@ -21,13 +22,6 @@ const theme = EditorView.theme({
   "&.cm-focused": { outline: "none" },
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": { backgroundColor: "var(--lav-soft) !important" },
 });
-
-/** Inline `code` in task statements. */
-function Text({ text }: { text: string }) {
-  return <>{text.trim().split(/\n\s*\n/).map((para, i) => (
-    <p key={i}>{para.split(/(`[^`]+`)/).map((s, j) => (s.startsWith("`") ? <code key={j}>{s.slice(1, -1)}</code> : s))}</p>
-  ))}</>;
-}
 
 function ErrorBox({ e }: { e: PyError }) {
   return (
@@ -129,7 +123,7 @@ function TaskView({ task }: { task: Task }) {
         <div><div className="eyebrow">Задача</div><h3>{task.title}</h3></div>
         {st.passed ? <span className="chip green"><CheckCircle2 size={14} />Решено</span> : task.difficulty ? <span className="chip">сложность {task.difficulty} из 5</span> : null}
       </div>
-      <div className="sb-statement"><Text text={task.statement} /></div>
+      <div className="sb-statement"><RichText text={task.statement} block /></div>
       {!loaded ? <div className="faint">Загружаю задачу…</div> : <div className="sb-editor" ref={host} />}
       {task.stdin !== undefined && (
         <label className="sb-stdin"><span>Ввод для запуска — каждая строка отдаётся одному input()</span>
@@ -146,7 +140,7 @@ function TaskView({ task }: { task: Task }) {
       </div>
       {busy && <div className="grading"><LoaderCircle size={18} />{busy === "run" ? "Выполняю…" : "Проверяю на тестах…"} Первый запуск загружает Python — несколько секунд.</div>}
       {notice && <div className="verdict error"><CircleAlert size={22} /><div>{notice}</div></div>}
-      {hints.slice(0, st.hints).map((h, i) => <div key={i} className="sb-hint"><Lightbulb size={16} /><div><b>Подсказка {i + 1}.</b> {h.text}</div></div>)}
+      {hints.slice(0, st.hints).map((h, i) => <div key={i} className="sb-hint"><Lightbulb size={16} /><div><b>Подсказка {i + 1}.</b> <RichText text={h.text} /></div></div>)}
       {traceCode !== null && <TraceView code={traceCode} stdin={stdin} />}
       {run && (
         <div className="sb-out">

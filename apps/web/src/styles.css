@@ -385,3 +385,9 @@ input[type=range]{accent-color:var(--green)}
 /* a fence without a language = what the program printed (output, error message) */
 .read pre:not(:has(code[class*="language-"])){position:relative;margin-top:-6px;padding-top:26px;background:color-mix(in srgb,var(--fill) 55%,var(--paper));box-shadow:inset 3px 0 0 var(--ink-3)}
 .read pre:not(:has(code[class*="language-"]))::before{content:"Вывод";position:absolute;top:8px;left:16px;font:600 11px/1 var(--f-text);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+
+/* code inside questions, options, explanations and task statements */
+.rt-pre{margin:8px 0;padding:10px 12px;border-radius:var(--r-s);background:var(--paper);box-shadow:inset 0 0 0 1px var(--line);font:14px/1.55 var(--f-mono);font-weight:400;overflow-x:auto;max-width:100%;text-align:left;white-space:pre}
+.rt-pre code{background:none;padding:0;font:inherit;white-space:pre}
+.qtitle b code,.opt code,.explain code,.check .q code,.sb-hint code{font-family:var(--f-mono);font-size:.9em;background:var(--code);padding:1px 6px;border-radius:6px}
+.opt-text{min-width:0;flex:1}

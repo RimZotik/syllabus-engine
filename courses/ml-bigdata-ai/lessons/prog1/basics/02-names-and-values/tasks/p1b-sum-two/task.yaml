@@ -1,0 +1,50 @@
+id: p1b-sum-two
+title: Сумма двух чисел
+sandbox: python-browser
+difficulty: 1
+statement: |
+  На вход подаются два целых числа, каждое в отдельной строке. Выведите их сумму.
+
+  Пример. Ввод — две строки: `2` и `3`. Вывод: `5`.
+
+  Стартовый код написан с ошибкой: на этом примере он выводит `23`. Исправьте его.
+starter: |
+  a = input()
+  b = input()
+  print(a + b)
+stdin: "2\n3\n"
+solution: |
+  a = int(input())
+  b = int(input())
+  print(a + b)
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "2\n3\n"
+      stdout: "5"
+    - name: Двузначные числа
+      stdin: "10\n25\n"
+      stdout: "35"
+    - name: Ноль
+      stdin: "0\n0\n"
+      stdout: "0"
+      hidden: true
+    - name: Отрицательное число
+      stdin: "-7\n4\n"
+      stdout: "-3"
+      hidden: true
+    - name: Пробелы вокруг чисел
+      stdin: " 12 \n 30\n"
+      stdout: "42"
+      hidden: true
+    - name: Очень большие числа
+      stdin: "99999999999999999999\n1\n"
+      stdout: "100000000000000000000"
+      hidden: true
+hints:
+  - level: 1
+    text: Какого типа значения возвращает input()? Что делает + с такими значениями?
+  - level: 2
+    text: Строки из цифр нужно превратить в целые числа — для этого есть функция с именем типа.
+  - level: 3
+    text: Оберните каждый вызов в int(...) — a = int(input()).

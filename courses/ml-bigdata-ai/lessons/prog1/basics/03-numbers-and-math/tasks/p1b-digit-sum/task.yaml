@@ -1,0 +1,49 @@
+id: p1b-digit-sum
+title: Сумма цифр трёхзначного числа
+sandbox: python-browser
+difficulty: 2
+statement: |
+  На вход подаётся трёхзначное положительное целое число. Выведите сумму его цифр.
+
+  Пример. Ввод: `345`. Вывод: `12`
+
+  Решите задачу арифметикой: прочитайте число через `int(input())` и достаньте цифры операциями `//` и `%`. Функция `str` в этой задаче запрещена проверкой.
+starter: |
+  n = int(input())
+  last = n % 10
+  print(last)
+stdin: "345\n"
+solution: |
+  n = int(input())
+  last = n % 10
+  middle = n // 10 % 10
+  first = n // 100
+  print(first + middle + last)
+tests:
+  forbid: [str]
+  io:
+    - name: Пример из условия
+      stdin: "345\n"
+      stdout: "12"
+    - name: Все девятки
+      stdin: "999\n"
+      stdout: "27"
+    - name: Нули в середине и в конце
+      stdin: "100\n"
+      stdout: "1"
+      hidden: true
+    - name: Ноль в середине
+      stdin: "101\n"
+      stdout: "2"
+      hidden: true
+    - name: Ноль в конце
+      stdin: "120\n"
+      stdout: "3"
+      hidden: true
+hints:
+  - level: 1
+    text: Последнюю цифру даёт n % 10. А что даёт n // 10?
+  - level: 2
+    text: n // 10 отбрасывает последнюю цифру — от 345 остаётся 34. Последняя цифра этого числа — средняя цифра исходного.
+  - level: 3
+    text: Средняя цифра — n // 10 % 10, первая — n // 100. Сложите три цифры.
