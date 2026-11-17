@@ -158,3 +158,46 @@
   en: hyperparameter
   short: Настройка модели, которую выбирает человек до обучения (например, число соседей k). Параметры подбирает обучение, гиперпараметры — мы.
   introduced_in: intro1.what.4
+
+- id: object
+  term: объект
+  en: object, sample, instance
+  short: То, о чём модель делает предсказание, — квартира, письмо, клиент. В таблице данных это одна строка.
+  introduced_in: intro1.what.2
+
+- id: training-set
+  term: обучающая выборка
+  en: training set
+  short: Часть данных с известными ответами, на которой модель обучается.
+  introduced_in: intro1.what.2
+
+- id: holdout
+  term: отложенные данные
+  en: hold-out set, test set
+  short: Часть данных, которую заранее откладывают и не показывают модели при обучении, чтобы честно проверить её на новых примерах.
+  introduced_in: intro1.what.2
+
+- id: underfitting
+  term: недообучение
+  en: underfitting
+  short: Модель слишком простая и плохо отвечает даже на обучающих примерах — она не уловила закономерность.
+  introduced_in: intro1.what.2
+
+- id: labeling
+  term: разметка данных
+  en: data labeling, annotation
+  short: Расстановка правильных ответов для примеров — обычно людьми. Без разметки нельзя обучать с учителем.
+  introduced_in: intro1.what.3
+
+- id: agent
+  term: агент
+  en: agent
+  short: В обучении с подкреплением — тот, кто действует в среде, получает награду или штраф и учится действовать лучше.
+  introduced_in: intro1.what.3
+
+- id: ranking
+  term: ранжирование
+  en: ranking
+  short: Задача упорядочить объекты по тому, насколько они подходят запросу или конкретному человеку, — как выдача поисковика.
+  introduced_in: intro1.what.3
+
