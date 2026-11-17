@@ -1,5 +1,5 @@
 {
-  "name": "forge-ml",
+  "name": "syllabus-engine",
   "private": true,
   "workspaces": ["apps/web"],
   "scripts": {
