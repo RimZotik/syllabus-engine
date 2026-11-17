@@ -17,9 +17,9 @@ export default defineConfig({
   ],
   server: {
     host: "127.0.0.1",
-    port: 5173,
+    port: Number(process.env.FORGE_WEB_PORT ?? 5173),
     strictPort: true,
     fs: { allow: [repoRoot] },
-    proxy: { "/api": "http://127.0.0.1:8765" },
+    proxy: { "/api": `http://127.0.0.1:${process.env.FORGE_API_PORT ?? 8765}` },
   },
 });
