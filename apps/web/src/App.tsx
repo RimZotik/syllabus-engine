@@ -19,9 +19,9 @@ function TopBar() {
   const title = !claude ? "Проверяю Claude…" : claude.installed ? `Claude Code ${claude.version ?? ""} найден. Лимиты подписки появятся на этапе подключения преподавателя.` : "Claude Code не найден — платформа работает, устные ответы ждут проверки в очереди.";
   return (
     <header className="top"><div className="wrap">
-      <Link className="brand" to="/" aria-label="Forge ML — главная">
+      <Link className="brand" to="/" aria-label="Syllabus Engine — главная">
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 L9 8 L13 14 L16 9 L21 20" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" /><circle cx="16" cy="9" r="2.4" fill="var(--green)" /></svg>
-        <span>Forge ML</span>
+        <span>Syllabus Engine</span>
       </Link>
       <nav className="nav">
         <NavLink to="/learn">Обучение</NavLink>

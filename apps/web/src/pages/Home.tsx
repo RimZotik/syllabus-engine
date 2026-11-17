@@ -63,7 +63,7 @@ export function Home() {
   return (
     <main>
       <section className="hero"><Landscape /><div className="wrap">
-        <div className="eyebrow">Учебная программа · {program?.courses.length ?? 7} курсов · {subjects.size || 23} предмета · {discCount || 61} дисциплина</div>
+        <div className="eyebrow">Курс Forge ML · {program?.courses.length ?? 7} курсов · {subjects.size || 23} предмета · {discCount || 61} дисциплина</div>
         <h1>От первой строки кода до <em>собственного GPT</em></h1>
         <p className="lead">Строгий курс машинного обучения и работы с данными с нуля. Каждую библиотеку вы сначала пишете сами, каждый экзамен защищаете у преподавателя, а забытое возвращается тогда, когда начинает стираться.</p>
         <div className="row" style={{ gap: 14, flexWrap: "wrap" }}><Link className="btn" to="/learn">Начать с введения <ArrowRight size={16} /></Link></div>

@@ -21,7 +21,7 @@ const procs = [
   spawn("uv", ["run", "--project", "apps/server", "uvicorn", "forge_server.app:app", "--port", "8765", "--reload", "--reload-dir", "apps/server/forge_server"], { stdio: "inherit", shell: true, env }),
   spawn("npm", ["run", "dev", "-w", "apps/web"], { stdio: "inherit", shell: true, env }),
 ];
-console.log("Forge ML: http://127.0.0.1:5173  (Ctrl+C — остановить)");
+console.log("Syllabus Engine: http://127.0.0.1:5173  (Ctrl+C — остановить)");
 
 const stop = () => { for (const p of procs) p.kill(); process.exit(0); };
 process.on("SIGINT", stop);

@@ -30,7 +30,7 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     db = conn or connect()
     migrate(db)
     log = _logger()
-    app = FastAPI(title="Forge ML", version="0.1.0")
+    app = FastAPI(title="Syllabus Engine", version="0.1.0")
 
     def record_event(level: str, source: str, message: str, context: Any = None) -> None:
         with transaction(db):

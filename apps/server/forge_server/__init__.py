@@ -1,1 +1,1 @@
-"""Forge ML platform server."""
+"""Syllabus Engine platform server."""

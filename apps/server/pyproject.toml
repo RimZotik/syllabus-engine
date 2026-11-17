@@ -1,7 +1,7 @@
 [project]
 name = "forge-server"
 version = "0.1.0"
-description = "Forge ML platform server: progress, attempts, notes, course feedback, Claude status"
+description = "Syllabus Engine platform server: progress, attempts, notes, course feedback, Claude status"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
