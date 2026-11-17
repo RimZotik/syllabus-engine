@@ -400,3 +400,137 @@
   short: Повторение пройденного через растущие промежутки времени — сначала часто, потом всё реже. Так знания держатся в памяти
     при небольшой ежедневной нагрузке.
   introduced_in: intro1.map.3
+
+# ── prog1.basics
+
+- id: python
+  term: Python
+  en: Python
+  decode: назван в честь британского комедийного шоу «Летающий цирк Монти Пайтона»; автор — Гвидо ван Россум, первая версия
+    — 1991 год
+  short: Язык программирования общего назначения, созданный так, чтобы код было легко читать. Широко используется в машинном
+    обучении и анализе данных.
+  introduced_in: prog1.basics.1
+
+- id: test-case
+  term: тест
+  en: test case
+  short: Одна автоматическая проверка программы — заранее подготовленный ввод (или вызов функции) вместе с ответом, который
+    программа обязана выдать.
+  example: «Ввод Аня — ожидаемый вывод Привет, Аня!» или assert square(3) == 9.
+  introduced_in: prog1.basics.1
+
+- id: value
+  term: значение
+  en: value
+  short: Данные, с которыми работает программа, — число, строка, True/False и т. д. В сообщениях об ошибках и документации
+    Python значение называют объектом; к «объекту» из машинного обучения (строке таблицы данных) это отношения не имеет.
+  example: 5, 3.5, "кот", True.
+  introduced_in: prog1.basics.2
+
+- id: expression
+  term: выражение
+  en: expression
+  short: Комбинация значений, имён, операций и вызовов функций, которую Python вычисляет, получая одно значение.
+  example: price * count + 10
+  introduced_in: prog1.basics.2
+
+- id: variable
+  term: переменная
+  en: variable
+  short: Имя, которое указывает на значение. Это ярлык, а не коробка — на одно значение могут указывать несколько имён.
+  example: после price = 250 имя price указывает на число 250.
+  introduced_in: prog1.basics.2
+
+- id: assignment
+  term: присваивание
+  en: assignment
+  short: Инструкция со знаком =, которая привязывает имя к значению. Сначала вычисляется правая часть, потом имя слева привязывается
+    к результату.
+  example: x = x + 1 — вычислить x + 1 и привязать имя x к результату.
+  introduced_in: prog1.basics.2
+
+- id: data-type
+  term: тип данных
+  en: data type
+  short: Вид значения — целое число, дробное число, строка и т. д. Тип определяет, какие значения возможны и какие операции
+    с ними разрешены. Узнать тип можно функцией type().
+  example: type(5) — int, type("5") — str.
+  introduced_in: prog1.basics.2
+
+- id: int
+  term: int (целое число)
+  en: integer
+  decode: сокращение от integer — «целое»
+  short: Тип целых чисел в Python. Целые числа точные и не переполняются — растут, пока хватает памяти.
+  example: 7, -12, 2 ** 100
+  introduced_in: prog1.basics.3
+
+- id: float
+  term: float (число с плавающей точкой)
+  en: floating-point number
+  decode: от floating point — «плавающая точка»
+  short: Тип дробных чисел в Python. Хранится в двоичном виде с ограниченной точностью, поэтому результаты вычислений бывают
+    чуть неточными.
+  example: 0.1 + 0.2 даёт 0.30000000000000004
+  introduced_in: prog1.basics.3
+
+- id: module
+  term: модуль
+  en: module
+  short: Набор готового кода — функций и значений, — который подключают к программе инструкцией import.
+  example: import math, затем math.sqrt(16)
+  introduced_in: prog1.basics.3
+
+- id: string
+  term: строка
+  en: string
+  short: Тип str — неизменяемая последовательность символов, то есть текст. Записывается в одинарных или двойных кавычках.
+  example: Строки "Привет", "" (пустая) и "42" (строка из цифр, а не число).
+  introduced_in: prog1.basics.4
+
+- id: index
+  term: индекс
+  en: index
+  short: Номер элемента в последовательности. В Python нумерация начинается с 0; отрицательные индексы считают с конца, -1
+    — последний элемент.
+  example: s = "Python"; s[0] — "P", s[-1] — "n".
+  introduced_in: prog1.basics.4
+
+- id: f-string
+  term: f-строка
+  en: f-string, formatted string literal
+  short: Строка с буквой f перед кавычками; выражения в фигурных скобках внутри неё вычисляются и подставляются в текст.
+  example: 'f"Итого: {total:.2f} руб."'
+  introduced_in: prog1.basics.4
+
+- id: method
+  term: метод
+  en: method
+  short: Функция, привязанная к значению определённого типа. Вызывается через точку после значения.
+  example: '"кот".upper() даёт "КОТ".'
+  introduced_in: prog1.basics.4
+
+- id: syntax-error
+  term: синтаксическая ошибка
+  en: syntax error
+  short: Ошибка в записи программы — нарушены правила языка (скобки, кавычки, двоеточия, отступы). Python находит её до запуска,
+    поэтому программа не выполняется вовсе.
+  example: 'print("Привет" — SyntaxError: ''('' was never closed'
+  introduced_in: prog1.basics.5
+
+- id: exception
+  term: исключение
+  en: exception
+  short: Ошибка, возникшая во время выполнения программы, когда действие выполнить нельзя. У исключения есть тип (TypeError,
+    ValueError, NameError…) и текст.
+  example: int("abc") — ValueError.
+  introduced_in: prog1.basics.5
+
+- id: traceback
+  term: traceback
+  en: traceback
+  decode: «обратная трассировка», или трассировка стека, — путь, который прошла программа до ошибки
+  short: Сообщение Python об исключении. Читается снизу вверх — последняя строка содержит тип и текст ошибки, строки над ней
+    — файл и номер строки кода, где она произошла.
+  introduced_in: prog1.basics.5
