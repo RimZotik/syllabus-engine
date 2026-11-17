@@ -6,7 +6,7 @@ questions:
   type: single
   q: Python вывел длинное сообщение об ошибке из нескольких строк. С какой строки сообщения начинать чтение?
   options:
-  - С первой — Traceback (most recent call last)
+  - С первой — `Traceback (most recent call last)`
   - С последней — там тип и текст ошибки
   - С середины — там строка кода
   - С любой, они повторяют одно и то же
@@ -14,92 +14,145 @@ questions:
   explain: Traceback читают снизу вверх — последняя строка говорит, что случилось, строки над ней — где.
 - id: name-typo
   type: single
-  q: "Последняя строка сообщения: NameError: name 'totl' is not defined. Какая причина наиболее вероятна?"
+  q: |
+    Последняя строка сообщения:
+    ```
+    NameError: name 'totl' is not defined
+    ```
+    Какая причина наиболее вероятна?
   options:
-  - Опечатка в имени — где-то написано totl вместо total
-  - Значение total слишком большое
+  - Опечатка в имени — где-то написано `totl` вместо `total`
+  - Значение `total` слишком большое
   - Не хватает закрывающей скобки
-  - В имени total есть буква, которую Python не понимает
+  - В имени `total` есть буква, которую Python не понимает
   answer: 0
-  explain: NameError значит, что Python не знает такого имени. Чаще всего это опечатка или имя использовано раньше, чем создано.
+  explain: '`NameError` значит, что Python не знает такого имени. Чаще всего это опечатка или имя использовано раньше, чем создано.'
 - id: syntax-nothing-runs
   type: single
-  q: 'В программе пять строк кода. В первой — print("Старт"), в четвёртой не закрыта скобка. Что увидит пользователь?'
+  q: |
+    Что увидит пользователь, запустив эту программу?
+    ```python
+    print("Старт")
+    a = 1
+    b = 2
+    print(a + b
+    print("Конец")
+    ```
   options:
-  - Старт, а потом сообщение SyntaxError
-  - Только сообщение SyntaxError — программа не запустится
-  - Старт и ничего больше
+  - '`Старт`, а потом сообщение `SyntaxError`'
+  - Только сообщение `SyntaxError` — программа не запустится
+  - '`Старт` и ничего больше'
   - Программа выполнится, пропустив строку 4
   answer: 1
   explain: Синтаксические ошибки Python находит, прежде чем выполнить первую строку кода, поэтому не выполняется ничего.
   traps: [0]
 - id: type-concat
   type: single
-  q: 'Какая ошибка случится в print("Вам " + 18 + " лет")?'
+  q: |
+    Какая ошибка случится?
+    ```python
+    print("Вам " + 18 + " лет")
+    ```
   options:
-  - SyntaxError
-  - NameError
-  - TypeError
-  - ValueError
+  - '`SyntaxError`'
+  - '`NameError`'
+  - '`TypeError`'
+  - '`ValueError`'
   answer: 2
   explain: Строку нельзя склеить с числом — это операция, не подходящая к типам значений.
 - id: value-int
   type: single
-  q: 'Пользователь ввёл 12a. Что случится в n = int(input())?'
+  q: |
+    Пользователь ввёл `12a`. Что случится?
+    ```python
+    n = int(input())
+    ```
   options:
-  - n будет указывать на 12
-  - ValueError — строку 12a нельзя разобрать как целое число
-  - TypeError — input вернул неправильный тип
-  - NameError — имени 12a нет
+  - '`n` будет указывать на `12`'
+  - '`ValueError` — строку `12a` нельзя разобрать как целое число'
+  - '`TypeError` — `input` вернул неправильный тип'
+  - '`NameError` — имени `12a` нет'
   answer: 1
-  explain: Тип правильный — строка, — но значение не годится для int. Это ValueError.
+  explain: Тип правильный — строка, — но значение не годится для `int`. Это `ValueError`.
 - id: eof-cause
   type: single
-  q: При проверке задачи программа упала с EOFError. Что это почти наверняка значит?
+  q: При проверке задачи программа упала с `EOFError`. Что это почти наверняка значит?
   options:
-  - В программе опечатка в имени input
-  - Программа вызывает input() больше раз, чем строк ввода в тесте
+  - В программе опечатка в имени `input`
+  - Программа вызывает `input()` больше раз, чем строк ввода в тесте
   - Пользователь ввёл буквы вместо цифр
-  - Тест подал пустую строку, а int её не понимает
+  - Тест подал пустую строку, а `int` её не понимает
   answer: 1
-  explain: EOFError — ввод закончился, а программа ждёт ещё строку. Обычно это значит, что ввод читается не так, как сказано в условии.
+  explain: '`EOFError` — ввод закончился, а программа ждёт ещё строку. Обычно это значит, что ввод читается не так, как сказано в условии.'
 - id: run-time-errors
   type: multi
   q: Какие из этих ошибок возникают во время работы программы, когда часть строк кода уже выполнилась? Выберите все.
   options:
-  - NameError
-  - "SyntaxError: '(' was never closed"
-  - TypeError
-  - 'IndentationError: unexpected indent'
-  - ValueError
+  - '`NameError`'
+  - "`SyntaxError: '(' was never closed`"
+  - '`TypeError`'
+  - '`IndentationError: unexpected indent`'
+  - '`ValueError`'
   answer:
   - 0
   - 2
   - 4
-  explain: SyntaxError и IndentationError находятся при чтении программы, до запуска. Остальные — исключения во время работы.
+  explain: '`SyntaxError` и `IndentationError` находятся при чтении программы, до запуска. Остальные — исключения во время работы.'
 - id: hint-guess
   type: single
-  q: "Программа: total = price * 3, затем price = 100. Python пишет NameError: name 'price' is not defined. Did you mean: 'print'? Что делать?"
+  q: |
+    Программа:
+    ```python
+    total = price * 3
+    price = 100
+    ```
+    Python пишет:
+    ```
+    NameError: name 'price' is not defined. Did you mean: 'print'?
+    ```
+    Что делать?
   options:
-  - Заменить price на print, как советует Python
-  - Понять, что подсказка — догадка; настоящая причина в порядке строк кода, price нужно создать раньше
-  - Переименовать price в Price
-  - Добавить import price
+  - Заменить `price` на `print`, как советует Python
+  - Понять, что подсказка — догадка; настоящая причина в порядке строк кода, `price` нужно создать раньше
+  - Переименовать `price` в `Price`
+  - Добавить `import price`
   answer: 1
-  explain: Подсказка лишь нашла похожее по написанию имя. Программа идёт сверху вниз, и в первой строке кода имени price ещё нет.
+  explain: Подсказка лишь нашла похожее по написанию имя. Программа идёт сверху вниз, и в первой строке кода имени `price` ещё нет.
 - id: line-number
   type: single
-  q: "В сообщении: File \"main.py\", line 3, in <module>, а ниже — TypeError: can only concatenate str (not \"int\") to str. Где искать ошибку?"
+  q: |
+    Сообщение об ошибке:
+    ```
+    Traceback (most recent call last):
+      File "main.py", line 3, in <module>
+        print("Итого: " + total)
+    TypeError: can only concatenate str (not "int") to str
+    ```
+    Где искать ошибку?
   options:
   - В строке кода 3 — там строку складывают с целым числом
   - В строке кода 1, потому что ошибки всегда в начале
-  - В модуле module — его нужно переустановить
+  - В модуле `module` — его нужно переустановить
   - В последней строке программы
   answer: 0
-  explain: line 3 — номер строки кода, где случилась ошибка. <module> значит основную программу, а не какой-то модуль.
+  explain: '`line 3` — номер строки кода, где случилась ошибка. `<module>` значит основную программу, а не какой-то модуль.'
 - id: open-traceback
   type: open
-  q: "Программа читает возраст через age = input() и выводит age + 1. Python сообщает: TypeError: can only concatenate str (not \"int\") to str, line 2. Расскажите по шагам, как вы читаете это сообщение, в чём причина и как исправить."
+  q: |
+    Программа:
+    ```python
+    age = input()
+    print(age + 1)
+    ```
+    Python сообщает:
+    ```
+    Traceback (most recent call last):
+      File "main.py", line 2, in <module>
+        print(age + 1)
+              ~~~~^~~
+    TypeError: can only concatenate str (not "int") to str
+    ```
+    Расскажите по шагам, как вы читаете это сообщение, в чём причина и как исправить.
   rubric:
   - начинает с последней строки — тип TypeError и текст о склеивании строки с целым числом
   - находит место — строка кода 2, выражение age + 1
