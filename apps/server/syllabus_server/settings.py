@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -17,6 +18,12 @@ CONFIG_FILE = REPO_ROOT / "syllabus.yaml"
 
 # Before packages existed, Forge ML progress lived here. It is copied (never moved) on first start.
 LEGACY_DB = {"forge-ml": Path.home() / ".forge-ml" / "forge.sqlite3"}
+
+
+# A package id is a plain folder name (it also names the learner database), never a path.
+PACKAGE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
+# `active: <id>` in syllabus.yaml; the value may be quoted.
+ACTIVE_LINE = re.compile(r"""^active:[ \t]*["']?([A-Za-z0-9_.-]+)""", re.M)
 
 
 class PackageError(RuntimeError):
@@ -31,10 +38,12 @@ def _env(name: str) -> str | None:
 def active_package() -> str:
     pkg = os.environ.get("SYLLABUS_PACKAGE")
     if not pkg:
-        m = re.search(r"^active:\s*([\w.-]+)", CONFIG_FILE.read_text(encoding="utf-8"), re.M) if CONFIG_FILE.exists() else None
+        m = ACTIVE_LINE.search(CONFIG_FILE.read_text(encoding="utf-8")) if CONFIG_FILE.exists() else None
         if not m:
             raise PackageError(f"не выбрано обучение: укажите active: <папка> в {CONFIG_FILE.name}")
         pkg = m.group(1)
+    if not PACKAGE_ID.fullmatch(pkg):
+        raise PackageError(f"недопустимое имя пакета обучения {pkg!r}: только латиница, цифры, '-', '_', '.'")
     if not (CONTENT_ROOT / pkg / "package.yaml").is_file():
         raise PackageError(f"пакет обучения content/{pkg}/ не найден (нет package.yaml)")
     return pkg
@@ -67,6 +76,14 @@ def db_path(pkg: str | None = None) -> Path:
 
 
 def copy_db(src: Path, dst: Path) -> None:
-    """Consistent copy of a live SQLite database (WAL included); the source stays untouched."""
-    with sqlite3.connect(src) as s, sqlite3.connect(dst) as d:
-        s.backup(d)
+    """Consistent copy of a live SQLite database (WAL included); the source stays untouched.
+
+    The copy is written to a temporary file and renamed into place only when complete, so an
+    interrupted copy never leaves a half-written `dst` that would block the next attempt."""
+    tmp = dst.with_name(f"{dst.name}.copy-{os.getpid()}.tmp")
+    try:
+        with closing(sqlite3.connect(src)) as s, closing(sqlite3.connect(tmp)) as d:
+            s.backup(d)
+        os.replace(tmp, dst)
+    finally:
+        tmp.unlink(missing_ok=True)

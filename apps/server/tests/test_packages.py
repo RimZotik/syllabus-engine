@@ -184,8 +184,75 @@ def test_validator_applies_package_rules(tmp_path, monkeypatch):
     assert any("no level of color" in e for e in b.validate(b.load()))
 
 
+def test_broken_yaml_is_reported_not_a_traceback(tmp_path, monkeypatch, capsys):
+    croot = tmp_path / "content"
+    d = make_package(croot)
+    (d / "courses" / "I" / "draw1" / "line").mkdir(parents=True)
+    (d / "courses" / "I" / "draw1" / "line" / "test.yaml").write_text("questions:\n- q: Что это: линия?\n  x: : y\n", encoding="utf-8")
+    b = load_build(monkeypatch, croot)
+    b.use_package("drawing")
+    errors, _ = b.check_content(b.load())
+    assert any("invalid YAML" in e for e in errors)
+    (d / "program.yaml").write_text("courses: [\n", encoding="utf-8")
+    assert b.safe_check("drawing", check=True, readme=False) == 1
+    assert "drawing: FAILED" in capsys.readouterr().err
+
+
 def test_every_package_in_the_repo_is_valid():
     """The same check CI runs: all packages in content/ pass the validator."""
     import subprocess
-    r = subprocess.run([sys.executable, str(ROOT / "tools" / "program" / "build.py"), "--check", "--all"], capture_output=True, text=True, encoding="utf-8")
+    import os
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}  # the child prints Cyrillic
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "program" / "build.py"), "--check", "--all"], capture_output=True, text=True, encoding="utf-8", env=env)
     assert r.returncode == 0, r.stderr
+
+
+def test_package_id_is_a_folder_name_not_a_path(content, monkeypatch):
+    # a package outside content/ (or a db file outside the data dir) must never be reachable
+    outside = content.parent / "evil"
+    make_package(content.parent, "evil")
+    assert (outside / "package.yaml").is_file()
+    for bad in ("../evil", r"..\evil", "..", "/abs", "a/b", ".hidden"):
+        monkeypatch.setenv("SYLLABUS_PACKAGE", bad)
+        with pytest.raises(settings.PackageError, match="недопустимое"):
+            settings.active_package()
+    monkeypatch.delenv("SYLLABUS_PACKAGE")
+    settings.CONFIG_FILE.write_text("active: ../evil\n", encoding="utf-8")
+    with pytest.raises(settings.PackageError):
+        settings.active_package()
+
+
+def test_active_value_may_be_quoted(content):
+    settings.CONFIG_FILE.write_text('active: "drawing"  # comment\n', encoding="utf-8")
+    assert settings.active_package() == "drawing"
+
+
+def test_interrupted_legacy_copy_leaves_nothing_behind(tmp_path, monkeypatch):
+    legacy = tmp_path / "forge.sqlite3"
+    with sqlite3.connect(legacy) as db:
+        db.execute("CREATE TABLE t (x)")
+        db.execute("INSERT INTO t VALUES (7)")
+    dst = tmp_path / "data" / "forge-ml.sqlite3"
+    dst.parent.mkdir()
+
+    class Boom(sqlite3.Connection):
+        def backup(self, *a, **k):
+            raise KeyboardInterrupt  # e.g. the learner closes the terminal mid-copy
+
+    real_connect = sqlite3.connect
+    monkeypatch.setattr(settings.sqlite3, "connect", lambda p, *a, **k: real_connect(p, *a, factory=Boom, **k) if Path(p) == legacy else real_connect(p, *a, **k))
+    with pytest.raises(KeyboardInterrupt):
+        settings.copy_db(legacy, dst)
+    assert list(dst.parent.iterdir()) == []  # no half-written database that would block the next copy
+    monkeypatch.setattr(settings.sqlite3, "connect", real_connect)
+    settings.copy_db(legacy, dst)
+    assert sqlite3.connect(dst).execute("SELECT x FROM t").fetchone() == (7,)
+    assert sqlite3.connect(legacy).execute("SELECT x FROM t").fetchone() == (7,)
+
+
+def test_tests_never_see_the_real_home():
+    """conftest.py points the data dir and the home directory into a temp folder."""
+    import tempfile
+    tmp = Path(tempfile.gettempdir()).resolve()
+    assert tmp in Path.home().resolve().parents
+    assert tmp in Path(settings._env("DATA_DIR")).resolve().parents

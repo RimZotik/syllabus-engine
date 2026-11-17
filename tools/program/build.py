@@ -40,7 +40,8 @@ def active_package() -> str:
     import os
     if os.environ.get("SYLLABUS_PACKAGE"):
         return os.environ["SYLLABUS_PACKAGE"]
-    m = re.search(r"^active:\s*([\w.-]+)", (ROOT / "syllabus.yaml").read_text(encoding="utf-8"), re.M)
+    cfg = ROOT / "syllabus.yaml"
+    m = re.search(r"""^active:[ \t]*["']?([A-Za-z0-9_.-]+)""", cfg.read_text(encoding="utf-8"), re.M) if cfg.exists() else None
     if not m:
         raise SystemExit("syllabus.yaml: не указано active: <папка пакета>")
     return m.group(1)
@@ -69,6 +70,14 @@ def use_package(pkg: str) -> list[str]:
         errors.append(f"content/{pkg}: нет program.yaml")
     return errors
 ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
+
+
+def rel(p: Path) -> Path:
+    """Path for messages: relative to the repo when possible (packages under test may live elsewhere)."""
+    try:
+        return p.relative_to(ROOT)
+    except ValueError:
+        return p
 
 
 def load() -> dict:
@@ -299,20 +308,24 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
         _, disc, sec, folder = mdx.relative_to(COURSES).parts[:4]
         tid = f"{disc}.{sec}.{int(folder.split('-')[0])}"
         if tid not in topic_ids:
-            errors.append(f"{mdx.relative_to(ROOT)}: topic {tid} is not in program.yaml")
+            errors.append(f"{rel(mdx)}: topic {tid} is not in program.yaml")
         authored.add(tid)
         for term_id in re.findall(r'<Term id="([^"]+)"', mdx.read_text(encoding="utf-8")):
             if term_id not in glossary:
-                errors.append(f"{mdx.relative_to(ROOT)}: term '{term_id}' missing in glossary.yaml")
+                errors.append(f"{rel(mdx)}: term '{term_id}' missing in glossary.yaml")
     for qf in sorted(list(COURSES.glob("*/*/*/*/quiz.yaml")) + list(COURSES.glob("*/*/*/test.yaml"))):
-        quiz = yaml.safe_load(qf.read_text(encoding="utf-8"))
+        try:
+            quiz = yaml.safe_load(qf.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as e:
+            errors.append(f"{rel(qf)}: invalid YAML: {e}")
+            continue
         if qf.name == "test.yaml":
             _, disc, sec = qf.relative_to(COURSES).parts[:3]
             if f"{disc}.{sec}" not in section_ids:
-                errors.append(f"{qf.relative_to(ROOT)}: section {disc}.{sec} is not in program.yaml")
+                errors.append(f"{rel(qf)}: section {disc}.{sec} is not in program.yaml")
         ids = set()
         for q in quiz.get("questions", []):
-            where = f"{qf.relative_to(ROOT)}:{q.get('id')}"
+            where = f"{rel(qf)}:{q.get('id')}"
             if q["id"] in ids:
                 errors.append(f"{where}: duplicate question id")
             ids.add(q["id"])
@@ -351,14 +364,18 @@ def check_tasks() -> list[str]:
     errors: list[str] = []
     ids: dict[str, Path] = {}
     for tf in sorted(COURSES.glob("**/tasks/*/task.yaml")):
-        where = tf.relative_to(ROOT)
-        t = yaml.safe_load(tf.read_text(encoding="utf-8"))
+        where = rel(tf)
+        try:
+            t = yaml.safe_load(tf.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as e:
+            errors.append(f"{where}: invalid YAML: {e}")
+            continue
         missing = [k for k in ("id", "title", "sandbox", "statement", "solution", "tests") if not t.get(k)]
         if missing:
             errors.append(f"{where}: missing {', '.join(missing)}")
             continue
         if t["id"] in ids:
-            errors.append(f"{where}: duplicate task id {t['id']} (also {ids[t['id']].relative_to(ROOT)})")
+            errors.append(f"{where}: duplicate task id {t['id']} (also {rel(ids[t['id']])})")
         ids[t["id"]] = tf
         if t["sandbox"] != "python-browser":
             continue
@@ -380,7 +397,7 @@ def check_tasks() -> list[str]:
     for mdx in COURSES.glob("**/topic.mdx"):
         for tid in re.findall(r'<Sandbox task="([^"]+)"', mdx.read_text(encoding="utf-8")):
             if tid not in ids:
-                errors.append(f"{mdx.relative_to(ROOT)}: task '{tid}' not found")
+                errors.append(f"{rel(mdx)}: task '{tid}' not found")
     return errors
 
 
@@ -428,7 +445,7 @@ def check_package(pkg: str, check: bool, readme: bool) -> int:
             tail = rest.split("<!-- progress:end -->", 1)[1]
             outputs[README] = head + render_progress(data, authored) + tail
     if check:
-        stale = [str(p.relative_to(ROOT)) for p, text in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
+        stale = [str(rel(p)) for p, text in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
         if stale:
             print(f"{pkg}: stale generated files: " + ", ".join(stale) + " — run without --check", file=sys.stderr)
             return 1
@@ -449,7 +466,20 @@ def main() -> int:
         pkgs = [args[args.index("--package") + 1]]
     else:
         pkgs = [active]
-    return max(check_package(p, "--check" in args, readme=p == active) for p in pkgs)
+    if not pkgs:
+        print("content/: no learning packages (folders with package.yaml)", file=sys.stderr)
+        return 1
+    return max(safe_check(p, "--check" in args, readme=p == active) for p in pkgs)
+
+
+def safe_check(pkg: str, check: bool, readme: bool) -> int:
+    """One broken package (bad YAML, missing keys) is reported as FAILED, not as a traceback."""
+    try:
+        return check_package(pkg, check, readme)
+    except (yaml.YAMLError, KeyError, TypeError, ValueError, OSError) as e:
+        print(f"{pkg}: FAILED", file=sys.stderr)
+        print(f"  - {type(e).__name__}: {e}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
