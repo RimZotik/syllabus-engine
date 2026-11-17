@@ -1,16 +1,23 @@
-"""Validate content/program.yaml and generate docs/content/curriculum.md.
+"""Validate content/program.yaml and generate the curriculum documents.
 
 Checks:
-  * ids are unique;
+  * ids are unique; every discipline references a known subject;
+  * subject levels go 1, 2, 3... in order of appearance (a level never repeats or skips);
+  * Algorithms (algo) has a level in every course I–VI;
   * every `requires` points to a section defined EARLIER (no forward dependencies);
-  * every `used_by` points to a section defined LATER (fundamentals must be used downstream);
-  * every math section (math1/linalg/calc/prob/stats) declares `used_by` — no math "just because".
+  * every `used_by` points to a section defined LATER;
+  * every section of a math subject declares `used_by` — no math "just because".
+
+Outputs:
+  docs/content/curriculum.md      — the full plan for people
+  docs/dev/prerequisite-trees.md  — what each key topic transitively rests on (for authors and reviewers)
 
 Run: uv run --with pyyaml tools/program/build.py [--check]
 """
 from __future__ import annotations
 
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import yaml
@@ -18,108 +25,199 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "content" / "program.yaml"
 OUT = ROOT / "docs" / "content" / "curriculum.md"
-MATH = {"math1", "linalg", "calc", "prob", "stats"}
+TREES = ROOT / "docs" / "dev" / "prerequisite-trees.md"
+ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 
 def load() -> dict:
     return yaml.safe_load(SRC.read_text(encoding="utf-8"))
 
 
-def validate(data: dict) -> list[str]:
-    errors: list[str] = []
-    order: dict[str, int] = {}
-    sections: list[tuple[str, dict, str]] = []
+def index(data: dict):
+    """Flatten the plan: ordered sections with their discipline and course."""
+    sections, disc_of, course_of, order = [], {}, {}, {}
     for course in data["courses"]:
         for disc in course["disciplines"]:
             for sec in disc["sections"]:
-                sid = sec["id"]
-                if sid in order:
-                    errors.append(f"duplicate id: {sid}")
-                order[sid] = len(order)
-                sections.append((sid, sec, disc["id"]))
-    for sid, sec, disc_id in sections:
-        for req in sec.get("requires", []) or []:
+                order.setdefault(sec["id"], len(order))
+                sections.append(sec)
+                disc_of[sec["id"]] = disc
+                course_of[sec["id"]] = course
+    return sections, disc_of, course_of, order
+
+
+def disc_name(data: dict, disc: dict) -> str:
+    subj = {s["id"]: s["title"] for s in data["subjects"]}[disc["subject"]]
+    levels = [d["level"] for c in data["courses"] for d in c["disciplines"] if d["subject"] == disc["subject"]]
+    if max(levels) == 1:
+        return subj
+    return f"{subj} {ROMAN[disc['level']]}"
+
+
+def validate(data: dict) -> list[str]:
+    errors: list[str] = []
+    subjects = {s["id"] for s in data["subjects"]}
+    math = set(data.get("math_subjects", []))
+    sections, disc_of, course_of, order = index(data)
+
+    seen = set()
+    for s in sections:
+        if s["id"] in seen:
+            errors.append(f"duplicate section id: {s['id']}")
+        seen.add(s["id"])
+
+    last_level: dict[str, int] = defaultdict(int)
+    for course in data["courses"]:
+        for disc in course["disciplines"]:
+            if disc["subject"] not in subjects:
+                errors.append(f"{disc['id']}: unknown subject {disc['subject']}")
+            lvl = disc.get("level")
+            if lvl != last_level[disc["subject"]] + 1:
+                errors.append(f"{disc['id']}: level {lvl} after level {last_level[disc['subject']]} of {disc['subject']}")
+            last_level[disc["subject"]] = lvl or 0
+            if not disc.get("summary"):
+                errors.append(f"{disc['id']}: missing summary")
+    for course in data["courses"]:
+        if course["id"] != "0" and not any(d["subject"] == "algo" for d in course["disciplines"]):
+            errors.append(f"course {course['id']}: no Algorithms level")
+
+    for s in sections:
+        sid = s["id"]
+        for req in s.get("requires", []) or []:
             if req not in order:
                 errors.append(f"{sid}: requires unknown {req}")
             elif order[req] >= order[sid]:
                 errors.append(f"{sid}: requires {req}, which comes later")
-        for use in sec.get("used_by", []) or []:
+        for use in s.get("used_by", []) or []:
             if use not in order:
                 errors.append(f"{sid}: used_by unknown {use}")
             elif order[use] <= order[sid]:
                 errors.append(f"{sid}: used_by {use}, which comes earlier")
-        if disc_id in MATH and not sec.get("used_by") and not sid.endswith("_unlock"):
+        if disc_of[sid]["subject"] in math and not s.get("used_by") and not sid.endswith("_unlock"):
             errors.append(f"{sid}: math section without used_by")
     return errors
 
 
-def render(data: dict) -> str:
-    titles = {}
-    for c in data["courses"]:
-        for d in c["disciplines"]:
-            for s in d["sections"]:
-                titles[s["id"]] = s["title"]
+def closure(sid: str, req: dict[str, list[str]]) -> set[str]:
+    out, stack = set(), list(req.get(sid, []))
+    while stack:
+        x = stack.pop()
+        if x not in out:
+            out.add(x)
+            stack.extend(req.get(x, []))
+    return out
 
-    total = sum(d["hours"] for c in data["courses"] for d in c["disciplines"])
-    n_sec = len(titles)
-    n_top = sum(len(s["topics"]) for c in data["courses"] for d in c["disciplines"] for s in d["sections"])
-    lines = [
-        "# 02. Учебный план",
+
+def plural(n: int, one: str, few: str, many: str) -> str:
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return few
+    return many
+
+
+def render_curriculum(data: dict) -> str:
+    sections, disc_of, course_of, order = index(data)
+    titles = {s["id"]: s["title"] for s in sections}
+    discs = [d for c in data["courses"] for d in c["disciplines"]]
+    total = sum(d["hours"] for d in discs)
+    n_top = sum(len(s["topics"]) for s in sections)
+    L = [
+        "# Учебный план",
         "",
         "> **Файл сгенерирован** из `content/program.yaml` скриптом `tools/program/build.py` — правьте YAML, не этот файл.",
-        f"> Объём: {len(data['courses'])} курсов, {sum(len(c['disciplines']) for c in data['courses'])} дисциплин, "
-        f"разделов: {n_sec}, тем: {n_top}; около {total} ч учёбы + курсовые проекты (~30 ч каждый).",
+        "> " + ", ".join(f"{n} {plural(n, *w)}" for n, w in [
+            (len(data['courses']), ("курс", "курса", "курсов")), (len(data['subjects']), ("предмет", "предмета", "предметов")),
+            (len(discs), ("дисциплина", "дисциплины", "дисциплин")), (len(sections), ("раздел", "раздела", "разделов")),
+            (n_top, ("тема", "темы", "тем"))]) + f"; около {total} ч учёбы + курсовые проекты (~30 ч каждый).",
         "",
-        "## Иерархия",
+        "## Как устроено",
         "",
-        "| Уровень | Чем заканчивается |",
-        "|---|---|",
+        "- **Предмет** — сквозная линия (Программирование, Алгоритмы, Линейная алгебра…). У предмета есть уровни: I, II, III…",
+        "- **Дисциплина** — один уровень предмета на конкретном курсе («Программирование III»). Уровень растёт, когда в предмете появляются новые темы; повторение уровень не повышает.",
+        "- Внутри курса дисциплины идут строго друг за другом, без чередования.",
+        f"- Рубежи: " + "; ".join(f"{l['title'].lower()} — {l['gate'][0].lower()}{l['gate'][1:]}" for l in data["program"]["levels"]) + ".",
+        f"- Дополнительно: {data['program']['residual_check']}.",
+        "- Библиотека «открывается» только после того, как её идея реализована своими руками.",
+        "",
+        "## Предметы по курсам",
+        "",
     ]
-    for lvl in data["program"]["levels"]:
-        lines.append(f"| {lvl['title']} | {lvl['gate']} |")
-    lines += [
-        "",
-        f"Дополнительно: {data['program']['residual_check']}.",
-        "",
-        "Правила порядка: дисциплины внутри курса идут **строго последовательно**, без чередования. "
-        "Одна и та же область может вернуться в следующем курсе на более высоком уровне (Python I → Python II, SQL I → SQL II). "
-        "Библиотека «открывается» только после сдачи дисциплины, где ученик реализовал её идею сам.",
-        "",
-        "## Обзор",
-        "",
-        "| Курс | Дисциплины | Часы | Открываемые библиотеки |",
-        "|---|---|---|---|",
-    ]
-    for c in data["courses"]:
-        hours = sum(d["hours"] for d in c["disciplines"])
-        discs = " → ".join(d["title"] for d in c["disciplines"])
-        libs = ", ".join(lib for d in c["disciplines"] for lib in d.get("unlocks", [])) or "—"
-        lines.append(f"| **{c['id']}. {c['title']}** | {discs} | {hours} | {libs} |")
-    lines.append(f"| **{data['graduation']['title']}** | " + "; ".join(data["graduation"]["parts"]) + " | | |")
+    course_ids = [c["id"] for c in data["courses"]]
+    L.append("| Предмет | " + " | ".join(f"Курс {c}" for c in course_ids) + " |")
+    L.append("|---|" + "---|" * len(course_ids))
+    for subj in data["subjects"]:
+        cells = []
+        for c in data["courses"]:
+            lv = [d for d in c["disciplines"] if d["subject"] == subj["id"]]
+            single = max([d["level"] for cc in data["courses"] for d in cc["disciplines"] if d["subject"] == subj["id"]]) == 1
+            cells.append(", ".join("•" if single else ROMAN[d["level"]] for d in lv))
+        L.append(f"| {subj['title']} | " + " | ".join(cells) + " |")
 
     for c in data["courses"]:
         hours = sum(d["hours"] for d in c["disciplines"])
-        lines += ["", "---", "", f"## Курс {c['id']}. {c['title']} · {hours} ч", "", f"*{c['tagline']}*", ""]
-        for di, d in enumerate(c["disciplines"], 1):
+        L += ["", "---", "", f"## Курс {c['id']}. {c['title']} · {hours} ч", "", f"*{c['tagline']}*", ""]
+        L.append("| # | Дисциплина | Часы | Что вас ждёт |")
+        L.append("|---|---|---|---|")
+        for i, d in enumerate(c["disciplines"], 1):
+            L.append(f"| {i} | **{disc_name(data, d)}**" + (f" — {d['title']}" if d['title'] != disc_name(data, d) else "") + f" | {d['hours']} | {d['summary']} |")
+        for i, d in enumerate(c["disciplines"], 1):
             unlock = f" · открывает: {', '.join(d['unlocks'])}" if d.get("unlocks") else ""
-            lines += ["", f"### {c['id']}.{di}. {d['title']} · {d['hours']} ч{unlock}", ""]
+            L += ["", f"### {c['id']}.{i}. {disc_name(data, d)}" + (f" — {d['title']}" if d['title'] != disc_name(data, d) else "") + f" · {d['hours']} ч{unlock}", ""]
             for si, s in enumerate(d["sections"], 1):
-                lines.append(f"**{di}.{si}. {s['title']}**")
+                L.append(f"**{si}. {s['title']}**")
                 if s.get("why"):
-                    lines.append(f"<br>*Зачем:* {s['why']}")
-                ext = [r for r in s.get("requires", []) or [] if r.split(".")[0] != d["id"]]
+                    L.append(f"<br>*Зачем:* {s['why']}")
+                ext = [r for r in s.get("requires", []) or [] if disc_of[r]["id"] != d["id"]]
                 if ext:
-                    lines.append("<br>*Опирается на:* " + ", ".join(titles[r] for r in ext))
+                    L.append("<br>*Опирается на:* " + ", ".join(f"{titles[r]} ({disc_name(data, disc_of[r])})" for r in ext))
                 if s.get("used_by"):
-                    lines.append("<br>*Пригодится в:* " + ", ".join(titles[u] for u in s["used_by"]))
-                lines.append("")
-                for ti, t in enumerate(s["topics"], 1):
-                    lines.append(f"{ti}. {t}")
-                lines.append("")
-        lines += [f"**Курсовой проект.** {c['project']}", ""]
-    lines += ["---", "", f"## {data['graduation']['title']}", ""]
-    lines += [f"- {p}" for p in data["graduation"]["parts"]]
-    return "\n".join(lines) + "\n"
+                    L.append("<br>*Пригодится в:* " + ", ".join(f"{titles[u]} ({disc_name(data, disc_of[u])})" for u in s["used_by"]))
+                L.append("")
+                L += [f"{ti}. {t}" for ti, t in enumerate(s["topics"], 1)]
+                L.append("")
+        if c.get("project"):
+            L += [f"**Курсовой проект.** {c['project']}", ""]
+    L += ["---", "", f"## {data['graduation']['title']}", ""] + [f"- {p}" for p in data["graduation"]["parts"]]
+    return "\n".join(L) + "\n"
+
+
+def render_trees(data: dict) -> str:
+    sections, disc_of, course_of, order = index(data)
+    titles = {s["id"]: s["title"] for s in sections}
+    req = {s["id"]: list(s.get("requires", []) or []) for s in sections}
+    L = [
+        "# Деревья предпосылок",
+        "",
+        "> Сгенерировано `tools/program/build.py`. Для каждой ключевой темы — всё, на что она опирается (транзитивно),",
+        "> сгруппировано по предметам в порядке прохождения. Используется авторами и ревьюерами, чтобы проверить:",
+        "> к моменту темы всё нужное уже пройдено, и ничего лишнего в цепочке нет.",
+        "",
+    ]
+    subj_order = [s["id"] for s in data["subjects"]]
+    for target in data.get("trees", []):
+        deps = closure(target, req)
+        d = disc_of[target]
+        L += [f"## {titles[target]} — {disc_name(data, d)}, курс {course_of[target]['id']}", ""]
+        L.append(f"Опирается на {len(deps)} {plural(len(deps), 'раздел', 'раздела', 'разделов')}:")
+        L.append("")
+        by_subj = defaultdict(list)
+        for x in deps:
+            by_subj[disc_of[x]["subject"]].append(x)
+        for subj in subj_order:
+            if subj in by_subj:
+                items = sorted(by_subj[subj], key=order.get)
+                name = {s["id"]: s["title"] for s in data["subjects"]}[subj]
+                L.append(f"- **{name}:** " + " → ".join(f"{titles[x]} ({ROMAN[disc_of[x]['level']] if subj != 'intro' else ''})".replace(" ()", "") for x in items))
+        L.append("")
+    # sections nothing later depends on (outside the final course) — candidates to review
+    used = {r for rs in req.values() for r in rs}
+    last_course = data["courses"][-1]["id"]
+    dangling = [s["id"] for s in sections if s["id"] not in used and course_of[s["id"]]["id"] != last_course]
+    L += ["## Разделы, на которые ничто не опирается явно", "",
+          "Это не ошибка, а список для проверки: либо добавить явную связь, либо убедиться, что раздел нужен сам по себе.", ""]
+    L += [f"- {titles[x]} ({disc_name(data, disc_of[x])})" for x in dangling]
+    return "\n".join(L) + "\n"
 
 
 def main() -> int:
@@ -130,13 +228,16 @@ def main() -> int:
         for e in errors:
             print("  -", e, file=sys.stderr)
         return 1
-    text = render(data)
+    outputs = {OUT: render_curriculum(data), TREES: render_trees(data)}
     if "--check" in sys.argv:
-        if OUT.read_text(encoding="utf-8") != text:
-            print("docs/content/curriculum.md is stale", file=sys.stderr)
+        stale = [str(p.relative_to(ROOT)) for p, text in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != text]
+        if stale:
+            print("stale generated files: " + ", ".join(stale), file=sys.stderr)
             return 1
     else:
-        OUT.write_text(text, encoding="utf-8", newline="\n")
+        for p, text in outputs.items():
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding="utf-8", newline="\n")
     print("program.yaml: OK")
     return 0
 
