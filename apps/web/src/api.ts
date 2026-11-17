@@ -46,7 +46,8 @@ export const api = {
   notes: (q: { topic_id?: string; term_id?: string }) =>
     call<Note[]>("GET", "/api/notes?" + new URLSearchParams(q as Record<string, string>)),
   addNote: (n: { topic_id?: string; term_id?: string; text: string }) => call("POST", "/api/notes", n),
-  feedback: (kind: FeedbackKind, text: string, topic_id?: string) => call("POST", "/api/feedback", { kind, source: "learner", text, topic_id }),
+  feedback: (kind: FeedbackKind, text: string, topic_id?: string, quote?: string, page?: number) =>
+    call("POST", "/api/feedback", { kind, source: "learner", text, topic_id, quote: quote || null, page: page ?? null }),
 };
 
 /** Every client-side error goes to the server journal (events table + server.log). */

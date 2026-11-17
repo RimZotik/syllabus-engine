@@ -193,12 +193,14 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
         source: Literal["learner", "teacher", "system"] = "learner"
         topic_id: str | None = None
         text: str = Field(min_length=1, max_length=5000)
+        quote: str | None = Field(None, max_length=10000)   # fragments the learner highlighted
+        page: int | None = Field(None, ge=0)
 
     @app.post("/api/feedback")
     def add_feedback(body: FeedbackIn) -> dict:
         with transaction(db):
-            cur = db.execute("INSERT INTO feedback (kind, source, topic_id, text) VALUES (?, ?, ?, ?)",
-                             (body.kind, body.source, body.topic_id, body.text))
+            cur = db.execute("INSERT INTO feedback (kind, source, topic_id, text, quote, page) VALUES (?, ?, ?, ?, ?, ?)",
+                             (body.kind, body.source, body.topic_id, body.text, body.quote, body.page))
         log.info("feedback %s from %s on %s", body.kind, body.source, body.topic_id)
         return {"id": cur.lastrowid}
 

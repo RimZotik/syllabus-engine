@@ -128,7 +128,7 @@ export function Reader() {
         </Drawer>
       )}
       {panel === "notes" && <NotesDrawer topicId={topicId} onClose={() => setPanel(null)} />}
-      {panel === "feedback" && <FeedbackDrawer topicId={topicId} onClose={() => setPanel(null)} />}
+      {panel === "feedback" && <FeedbackDrawer topicId={topicId} page={cur} onClose={() => setPanel(null)} />}
     </div>
   );
 }

@@ -24,7 +24,12 @@ def main() -> int:
         return 0
     print(f"# Замечания к курсу ({len(rows)})\n")
     for r in rows:
-        print(f"- **#{r['id']} · {LABELS[r['kind']]}** · {r['source']} · тема `{r['topic_id'] or '—'}` · {r['created_at']}\n  {r['text']}")
+        page = f" · страница {r['page'] + 1}" if r["page"] is not None else ""
+        print(f"- **#{r['id']} · {LABELS[r['kind']]}** · {r['source']} · тема `{r['topic_id'] or '—'}`{page} · {r['created_at']}")
+        if r["quote"]:
+            for q in r["quote"].split("\n\n"):
+                print(f"  > {q}")
+        print(f"  {r['text']}")
     return 0
 
 

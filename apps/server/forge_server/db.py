@@ -70,6 +70,11 @@ MIGRATIONS: list[str] = [
         updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
     """,
+    # 3 — feedback remembers the highlighted fragments and the page of the topic
+    """
+    ALTER TABLE feedback ADD COLUMN quote TEXT;
+    ALTER TABLE feedback ADD COLUMN page INTEGER;
+    """,
 ]
 
 

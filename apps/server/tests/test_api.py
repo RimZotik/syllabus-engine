@@ -114,3 +114,10 @@ def test_parallel_requests_do_not_break_the_database(tmp_path, monkeypatch):
         return c.get(f"/api/quiz-state/s{i % 5}").status_code
     with ThreadPoolExecutor(8) as ex:
         assert set(ex.map(hit, range(80))) == {200}
+
+
+def test_feedback_keeps_quote_and_page(tmp_path, monkeypatch):
+    c = make_client(tmp_path, monkeypatch)
+    c.post("/api/feedback", json={"kind": "content_issue", "topic_id": "intro1.what.2", "text": "перефразировать", "quote": "главная ловушка", "page": 3})
+    row = c.get("/api/feedback").json()[0]
+    assert row["quote"] == "главная ловушка" and row["page"] == 3

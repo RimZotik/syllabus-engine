@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Highlighter, X } from "lucide-react";
 import { api, type FeedbackKind, type Note } from "../api";
 import { useApp } from "../state";
 import { term } from "../content/glossary";
 
-export function Drawer({ side = "right", label, onClose, children }: { side?: "right" | "left"; label: string; onClose: () => void; children: ReactNode }) {
+/** `open` = no dimming backdrop, so the page under the drawer stays usable (e.g. to select text). */
+export function Drawer({ side = "right", label, onClose, children, open = false }: { side?: "right" | "left"; label: string; onClose: () => void; children: ReactNode; open?: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     addEventListener("keydown", onKey);
@@ -12,7 +13,7 @@ export function Drawer({ side = "right", label, onClose, children }: { side?: "r
   }, [onClose]);
   return (
     <>
-      <div className="scrim" onClick={onClose} />
+      {!open && <div className="scrim" onClick={onClose} />}
       <aside className={`drawer${side === "left" ? " left" : ""}`} aria-label={label}>
         <div className="drawer-h"><span className="eyebrow">{label}</span><button className="icon-btn" onClick={onClose} aria-label="Закрыть"><X size={18} /></button></div>
         {children}
@@ -70,20 +71,81 @@ export function NotesDrawer({ topicId, onClose }: { topicId: string; onClose: ()
 const KINDS: [FeedbackKind, string][] = [["content_issue", "Непонятно или ошибка в материале"], ["idea", "Идея, как сделать лучше"], ["bug", "Что-то не работает"]];
 
 /** Problems with the COURSE itself go to the feedback inbox the author works through. */
-export function FeedbackDrawer({ topicId, onClose }: { topicId?: string; onClose: () => void }) {
+// Highlighted fragments are drawn with the CSS Custom Highlight API: nothing in the lesson DOM changes,
+// and removing the highlight is just deleting it from the registry.
+type HighlightRegistry = { set(name: string, h: unknown): void; delete(name: string): void };
+const registry = (): HighlightRegistry | null => (typeof CSS !== "undefined" && "highlights" in CSS ? (CSS as unknown as { highlights: HighlightRegistry }).highlights : null);
+const HL = "fb-mark";
+function paint(ranges: Range[]) {
+  const reg = registry();
+  if (!reg) return;
+  if (ranges.length) reg.set(HL, new (window as unknown as { Highlight: new (...r: Range[]) => unknown }).Highlight(...ranges));
+  else reg.delete(HL);
+}
+
+export function FeedbackDrawer({ topicId, page, onClose }: { topicId?: string; page?: number; onClose: () => void }) {
   const [kind, setKind] = useState<FeedbackKind>("content_issue");
   const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [marks, setMarks] = useState<{ range: Range; text: string }[]>([]);
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
+
+  useEffect(() => { paint(marks.map((m) => m.range)); }, [marks]);
+  useEffect(() => () => paint([]), []); // closing or sending removes the marker
+  // while highlighting, the lesson moves out from under the drawer so all of its text can be selected
+  const side = picking || marks.length > 0;
+  useEffect(() => {
+    document.body.classList.toggle("drawer-side", side);
+    return () => document.body.classList.remove("drawer-side");
+  }, [side]);
+
+  useEffect(() => {
+    if (!picking) return;
+    const onUp = () => {
+      const sel = getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const host = (range.commonAncestorContainer instanceof Element ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement)?.closest(".read");
+      const quote = sel.toString().replace(/\s+/g, " ").trim();
+      if (!host || !quote) return;
+      setMarks([...marksRef.current, { range: range.cloneRange(), text: quote }]);
+      sel.removeAllRanges();
+      setPicking(false);
+    };
+    document.addEventListener("mouseup", onUp);
+    document.addEventListener("touchend", onUp);
+    return () => { document.removeEventListener("mouseup", onUp); document.removeEventListener("touchend", onUp); };
+  }, [picking]);
+
+  const canSend = !!text.trim();
+  async function send() {
+    await api.feedback(kind, text, topicId, marks.map((m) => m.text).join("\n\n"), page);
+    setMarks([]);
+    setSent(true);
+  }
+
   return (
-    <Drawer label="Предложить правку" onClose={onClose}>
+    <Drawer label="Предложить правку" onClose={onClose} open={picking || marks.length > 0}>
       {sent ? <p>Спасибо — замечание записано. Оно попадёт в список доработок курса.</p> : (
         <>
           <p className="muted">Это сообщение о самом курсе: где непонятно объяснено, где ошибка, чего не хватает. Вопросы по теме лучше задавать преподавателю.</p>
           {KINDS.map(([k, label]) => (
             <button key={k} className={`opt${kind === k ? " right" : ""}`} onClick={() => setKind(k)}><input type="radio" readOnly checked={kind === k} tabIndex={-1} />{label}</button>
           ))}
-          <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Что именно и где" style={{ marginTop: 6 }} />
-          <button className="btn sm" style={{ marginTop: 10 }} disabled={!text.trim()} onClick={async () => { await api.feedback(kind, text, topicId); setSent(true); }}>Отправить</button>
+          <div className="fb-marks">
+            <button className={`btn soft sm${picking ? " active" : ""}`} onClick={() => setPicking(!picking)}><Highlighter size={16} />{picking ? "Выделите текст в уроке…" : marks.length ? "Выделить ещё фрагмент" : "Выделить фрагмент"}</button>
+            {picking && <p className="faint">Выделите мышью нужное место на странице — оно подсветится маркером.</p>}
+            {marks.map((m, i) => (
+              <div key={i} className="fb-quote">
+                <span>«{m.text.length > 160 ? `${m.text.slice(0, 160)}…` : m.text}»</span>
+                <button className="icon-btn" aria-label="Убрать выделение" onClick={() => setMarks(marks.filter((_, j) => j !== i))}><X size={15} /></button>
+              </div>
+            ))}
+          </div>
+          <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Что не так и как лучше" style={{ marginTop: 6 }} />
+          <button className="btn sm" style={{ marginTop: 10 }} disabled={!canSend} onClick={send}>Отправить</button>
         </>
       )}
     </Drawer>
