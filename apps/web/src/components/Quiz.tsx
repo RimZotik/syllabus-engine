@@ -119,6 +119,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
       const next = { ...stRef.current, grades: { ...stRef.current.grades, [q.id]: g } };
       const allOk = open.every((o) => !String(next.answers[o.id] ?? "").trim() || next.grades[o.id]?.verdict === "pass");
       commit(next, score >= pass && allOk);
+      refreshClaude(); // the check spent some of the subscription: show fresh limits
     } catch (e) {
       setGradeErr((x) => ({ ...x, [q.id]: e instanceof Error ? e.message : "Преподаватель недоступен" }));
       refreshClaude();

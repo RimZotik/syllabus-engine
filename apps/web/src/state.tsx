@@ -8,6 +8,7 @@ type Ctx = {
   progress: Progress;
   claude: ClaudeStatus | null;
   refreshClaude: () => void;
+  setClaude: (s: ClaudeStatus) => void;
   error: string | null;
   refreshProgress: () => Promise<void>;
   place: (topicId: string) => TopicPlace | null;
@@ -42,8 +43,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("focus", refreshClaude);
   }, [refreshClaude]);
   useEffect(() => {
-    if (claude?.installed) return;
-    const t = window.setInterval(refreshClaude, 30_000);
+    // While Claude is installed, a slower poll picks up limits updated by teacher checks.
+    const t = window.setInterval(refreshClaude, claude?.installed ? 60_000 : 30_000);
     return () => window.clearInterval(t);
   }, [claude?.installed, refreshClaude]);
 
@@ -56,7 +57,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [program]);
 
   const value: Ctx = {
-    program, progress, claude, refreshClaude, error, refreshProgress,
+    program, progress, claude, refreshClaude, setClaude, error, refreshProgress,
     place: (id) => index.m.get(id) ?? null,
     allTopics: index.all,
     openTerm: setTermId, termId, closeTerm: () => setTermId(null),

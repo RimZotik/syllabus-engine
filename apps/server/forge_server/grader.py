@@ -9,7 +9,7 @@ import json
 import os
 import subprocess
 
-from .claude import find_exe
+from .claude import find_exe, run_stream
 
 SYSTEM = """Ты — строгий, но справедливый преподаватель курса машинного обучения. Ты проверяешь развёрнутый ответ ученика по рубрике.
 Правила:
@@ -47,21 +47,19 @@ def build_prompt(question: str, rubric: list[str], wrong_answers: list[str], ans
 
 
 def grade(question: str, rubric: list[str], wrong_answers: list[str], answer: str, attempt: int = 1, timeout: int = 150) -> dict:
-    exe = find_exe()
-    if not exe:
+    if not find_exe():
         raise GraderUnavailable("Claude Code не найден")
-    cmd = [exe, "-p", "--output-format", "json", "--json-schema", json.dumps(SCHEMA, ensure_ascii=False),
-           "--tools", "", "--model", os.environ.get("FORGE_GRADER_MODEL", "sonnet"),
-           "--no-session-persistence", "--strict-mcp-config", "--system-prompt", SYSTEM]
+    # stream-json so that every check also refreshes the subscription limits shown in the top bar
+    args = ["--json-schema", json.dumps(SCHEMA, ensure_ascii=False), "--tools", "", "--model", os.environ.get("FORGE_GRADER_MODEL", "sonnet"),
+            "--no-session-persistence", "--strict-mcp-config", "--system-prompt", SYSTEM]
     try:
-        proc = subprocess.run(cmd, input=build_prompt(question, rubric, wrong_answers, answer, attempt),
-                              capture_output=True, text=True, encoding="utf-8", timeout=timeout)
+        out = run_stream(args, build_prompt(question, rubric, wrong_answers, answer, attempt), timeout)
     except subprocess.TimeoutExpired as e:
         raise GraderUnavailable("Преподаватель не ответил вовремя") from e
-    try:
-        out = json.loads(proc.stdout)
-    except json.JSONDecodeError as e:
-        raise GraderUnavailable("Не удалось прочитать ответ Claude — возможно, нужно войти: выполните claude в терминале") from e
+    except OSError as e:
+        raise GraderUnavailable("Не удалось запустить Claude Code") from e
+    if not out:
+        raise GraderUnavailable("Не удалось прочитать ответ Claude — возможно, нужно войти: выполните claude в терминале")
     result = out.get("structured_output")
     if out.get("is_error") or not isinstance(result, dict):
         raise GraderUnavailable(str(out.get("result") or "Claude вернул ошибку"))

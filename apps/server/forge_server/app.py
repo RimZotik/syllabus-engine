@@ -1,6 +1,7 @@
 """HTTP API of the platform. The web app talks only to these endpoints."""
 
 import json
+import os
 import threading
 import logging
 import logging.handlers
@@ -53,11 +54,22 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     def program() -> dict:
         return load_program()
 
-    # Warm the Claude check in the background so the first page load does not wait for `claude --version`.
-    threading.Thread(target=claude.status, daemon=True).start()
+    # Warm the Claude check (and read the subscription limits) in the background,
+    # so the first page load does not wait for `claude --version`.
+    def warm() -> None:
+        if claude.status()["installed"] and os.environ.get("FORGE_NO_LIMITS_PROBE") != "1":
+            claude.refresh_limits()
+    threading.Thread(target=warm, daemon=True).start()
 
     @app.get("/api/claude/status")
     def claude_status() -> dict:
+        return claude.status()
+
+    @app.post("/api/claude/limits/refresh")
+    def claude_limits_refresh() -> dict:
+        """Re-read limits with a tiny call, unless they are under 5 minutes old."""
+        if claude.status()["installed"]:
+            claude.refresh_limits()
         return claude.status()
 
     # ── progress ────────────────────────────────────────────

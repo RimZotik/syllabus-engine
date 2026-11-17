@@ -1,22 +1,57 @@
 import { NavLink, Route, Routes, Link } from "react-router-dom";
-import { Moon, Sun } from "lucide-react";
+import { LoaderCircle, Moon, RefreshCw, Sun } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "./state";
+import { api, type LimitWindow } from "./api";
 import { Home } from "./pages/Home";
 import { Learn } from "./pages/Learn";
 import { Reader, SectionTest } from "./pages/Reader";
 import { TermDrawer } from "./components/Drawers";
 
+const limColor = (used: number) => (used >= 0.9 ? "var(--bad)" : used >= 0.7 ? "var(--amber)" : "var(--green)");
+
+function resetText(w: LimitWindow, week: boolean): string {
+  if (!w.resets_at) return "";
+  const ms = w.resets_at * 1000 - Date.now();
+  if (ms <= 0) return "Уже сбросился";
+  const h = Math.floor(ms / 3_600_000), m = Math.round((ms % 3_600_000) / 60_000);
+  if (!week || h < 24) return `Сброс через ${h ? `${h} ч ` : ""}${m} мин`;
+  const d = new Date(w.resets_at * 1000);
+  return `Сброс ${d.toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "long" })}, ${d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function LimitRow({ label, w, week }: { label: string; w: LimitWindow | null; week: boolean }) {
+  if (!w) return null;
+  const pct = Math.round(w.used * 100);
+  return (
+    <div className="lim">
+      <div className="lim-row"><span>{label}</span><span className="tnum">{pct}%</span></div>
+      <div className="lim-bar"><b style={{ width: `${Math.min(100, pct)}%`, background: limColor(w.used) }} /></div>
+      <div className="lim-reset">{resetText(w, week)}</div>
+    </div>
+  );
+}
+
+function ago(ts: number): string {
+  const min = Math.round((Date.now() / 1000 - ts) / 60);
+  return min < 1 ? "только что" : `${min} мин назад`;
+}
+
 function TopBar() {
-  const { claude } = useApp();
+  const { claude, setClaude } = useApp();
   const [dark, setDark] = useState(() => document.documentElement.dataset.theme === "dark");
   const [pop, setPop] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const lim = claude?.limits ?? null;
+  const refresh = () => { setBusy(true); api.refreshLimits().then(setClaude).catch(() => {}).finally(() => setBusy(false)); };
+  const open = () => { const next = !pop; setPop(next); if (next && claude?.installed) refresh(); };
   const toggle = () => {
     const next = !dark; setDark(next);
     document.documentElement.dataset.theme = next ? "dark" : "light";
     try { localStorage.setItem("theme", next ? "dark" : "light"); } catch { /* storage unavailable */ }
   };
-  const title = !claude ? "Проверяю Claude…" : claude.installed ? `Claude Code ${claude.version ?? ""} найден. Лимиты подписки появятся на этапе подключения преподавателя.` : "Claude Code не найден — платформа работает, устные ответы ждут проверки в очереди.";
+  const title = !claude ? "Проверяю Claude…" : !claude.installed ? "Claude Code не найден — платформа работает, развёрнутые ответы недоступны."
+    : lim ? `Лимиты Claude: 5 часов — ${Math.round((lim.five_hour?.used ?? 0) * 100)}%, неделя — ${Math.round((lim.seven_day?.used ?? 0) * 100)}%` : `Claude Code ${claude.version ?? ""} найден`;
   return (
     <header className="top"><div className="wrap">
       <Link className="brand" to="/" aria-label="Syllabus Engine — главная">
@@ -30,10 +65,15 @@ function TopBar() {
       </nav>
       <div className="top-right">
         <div style={{ position: "relative" }}>
-          <button className={`claude${claude?.installed ? " on" : ""}`} onClick={() => setPop(!pop)} aria-expanded={pop} title={title}><span className="dot" /><span className="lbl">{!claude ? "Claude…" : claude.installed ? "Claude" : "Claude не найден"}</span></button>
+          <button className={`claude${claude?.installed ? " on" : ""}`} onClick={open} aria-expanded={pop} title={title}><span className="dot" /><span className="lbl">{!claude ? "Claude…" : claude.installed ? "Claude" : "Claude не найден"}</span>
+            {lim && <span className="mini" aria-hidden="true">{[lim.five_hour, lim.seven_day].map((w, i) => <i key={i}><b style={{ width: `${Math.min(100, Math.round((w?.used ?? 0) * 100))}%`, background: limColor(w?.used ?? 0) }} /></i>)}</span>}</button>
           {pop && (
             <div className="claude-pop" role="dialog">
-              {claude?.installed ? (<><b>Claude Code найден{claude.version ? ` · ${claude.version}` : ""}</b><p>Преподаватель проверит развёрнутые ответы и проведёт устные экзамены. Убедитесь, что вы вошли в Claude Code: команда <code>claude</code> в терминале не должна просить входа. Лимиты подписки появятся здесь на этапе подключения преподавателя.</p></>)
+              {claude?.installed ? (<><b>Claude Code найден{claude.version ? ` · ${claude.version}` : ""}</b><p>Проверяет развёрнутые ответы и проводит устные экзамены. Нужно быть залогиненным в Claude Code: команда <code>claude</code> в терминале не должна просить входа.</p>
+                {lim ? (<><LimitRow label="Лимит на 5 часов" w={lim.five_hour} week={false} /><LimitRow label="Лимит на неделю" w={lim.seven_day} week={true} /></>)
+                  : <p>{busy ? "Узнаю лимиты подписки…" : "Лимиты подписки пока неизвестны."}</p>}
+                <div className="lim-foot"><span>{lim ? `Обновлено ${ago(lim.updated_at)}` : ""}</span>
+                  <button onClick={refresh} disabled={busy}>{busy ? <LoaderCircle size={13} className="spin" /> : <RefreshCw size={13} />}Обновить</button></div></>)
                 : (<><b>Claude не найден</b><p>Курс полностью проходится без него: теория, тесты, контрольные, заметки и прогресс работают. Без Claude недоступны только развёрнутые ответы и устные экзамены — они не блокируют прохождение.</p><p>Чтобы подключить преподавателя: установите Claude Code (<code>npm install -g @anthropic-ai/claude-code</code>), выполните <code>claude</code> и войдите в свой аккаунт, — платформа заметит это сама в течение полуминуты, перезапускать ничего не нужно.</p></>)}
             </div>
           )}

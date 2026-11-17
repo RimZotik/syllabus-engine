@@ -4,7 +4,7 @@
   --ink:#27231d; --ink-2:#5c564c; --ink-3:#686154;
   --green:#3d7c5e; --green-2:#4a8c6c; --green-soft:#e1ebdd; --green-ink:#2f6249;
   --lav:#6a5a9e; --lav-soft:#ebe5f2; --mark:#f5e3a3;
-  --warn:#7d4a0c; --warn-soft:#f6ead2; --bad:#b4483a; --bad-soft:#f6e1dc; --code:#f2ece1;
+  --warn:#7d4a0c; --amber:#b9821c; --warn-soft:#f6ead2; --bad:#b4483a; --bad-soft:#f6e1dc; --code:#f2ece1;
   --sh-soft:0 1px 2px rgba(39,35,29,.05),0 10px 26px -16px rgba(39,35,29,.25);
   --sh-pop:0 24px 48px -20px rgba(39,35,29,.35),0 2px 6px rgba(39,35,29,.06);
   --f-head:"Rubik","Nunito",system-ui,sans-serif; --f-text:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
@@ -13,7 +13,7 @@
 :root[data-theme="dark"]{
   --bg:#1d1b17; --paper:#22201b; --card:#28251f; --fill:#2e2b24; --line:#37332b; --line-2:#443f35;
   --ink:#ece6da; --ink-2:#bcb4a5; --ink-3:#a39b8c; --green:#7fbf9d; --green-2:#8fcaa9; --green-soft:#2b3a31; --green-ink:#9fd3b6;
-  --lav:#b3a6de; --lav-soft:#332f42; --mark:#5a4d22; --warn:#e0a85a; --warn-soft:#3a2f1e; --bad:#e28a7c; --bad-soft:#3d2622; --code:#2a2721;
+  --lav:#b3a6de; --lav-soft:#332f42; --mark:#5a4d22; --warn:#e0a85a; --amber:#d9b25e; --warn-soft:#3a2f1e; --bad:#e28a7c; --bad-soft:#3d2622; --code:#2a2721;
   --sh-soft:0 10px 26px -16px rgba(0,0,0,.7); --sh-pop:0 24px 48px -20px rgba(0,0,0,.8); color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -259,3 +259,17 @@ input[type=range]{accent-color:var(--green)}
 .result.wait{background:var(--lav-soft);color:var(--lav)}
 .result svg{display:block;flex:none}
 .spin{animation:spin 1s linear infinite}
+
+/* Claude subscription limits */
+.claude .mini{display:flex;flex-direction:column;gap:3px;width:34px}
+.claude .mini i{display:block;height:4px;border-radius:2px;background:var(--fill);overflow:hidden}
+.claude .mini i b{display:block;height:100%;border-radius:2px}
+.lim{margin-top:14px}
+.lim-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font:600 13px/1.2 var(--f-text);color:var(--ink)}
+.lim-row .tnum{font:500 15px/1 var(--f-head)}
+.lim-bar{margin-top:7px;height:8px;border-radius:4px;background:var(--fill);overflow:hidden}
+.lim-bar b{display:block;height:100%;border-radius:4px;transition:width .4s}
+.lim-reset{margin-top:5px;font-size:12px;color:var(--ink-3)}
+.lim-foot{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--ink-3)}
+.lim-foot button{display:inline-flex;align-items:center;gap:6px;font:600 12px/1 var(--f-text);color:var(--green-ink);padding:6px 10px;border-radius:999px;background:var(--green-soft)}
+.lim-foot svg{display:block}

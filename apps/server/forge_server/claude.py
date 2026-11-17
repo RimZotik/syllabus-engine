@@ -1,17 +1,23 @@
-"""Claude Code presence check (same approach as montage-studio).
+"""Claude Code presence check and subscription limits (same approach as montage-studio).
 
-Only checks that the `claude` CLI exists and reports its version. Subscription limits
-(rate_limit_event from `claude -p` stream-json) are wired in stage 4.
+Checks that the `claude` CLI exists and reports its version. Subscription limits come from the
+`rate_limit_event` that `claude -p --output-format stream-json --verbose` prints on every call:
+utilization of the 5-hour and 7-day windows plus reset times. Every call the platform makes
+(grading, the small refresh probe) updates them; the platform never reads Claude credentials.
 """
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
+import threading
 import time
 from pathlib import Path
 
 _cache: dict = {"at": 0.0, "value": None}
+_limits: dict = {"value": None}
+_probe_lock = threading.Lock()
 
 
 def find_exe() -> str | None:
@@ -30,15 +36,64 @@ def find_exe() -> str | None:
 def status(ttl: float = 300.0, missing_ttl: float = 15.0) -> dict:
     """Cached; when Claude is missing the cache is short, so an install is noticed without restarting."""
     v = _cache["value"]
-    if v is not None and time.time() - _cache["at"] < (ttl if v["installed"] else missing_ttl):
-        return v
+    if v is None or time.time() - _cache["at"] >= (ttl if v["installed"] else missing_ttl):
+        exe = find_exe()
+        v = {"installed": False, "version": None}
+        if exe:
+            try:
+                out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=10).stdout.strip()
+                v = {"installed": True, "version": out.split()[0] if out else None}
+            except (OSError, subprocess.TimeoutExpired):
+                v = {"installed": True, "version": None}
+        _cache.update(at=time.time(), value=v)
+    return v | {"limits": _limits["value"]}
+
+
+def _window(w: dict | None) -> dict | None:
+    if not isinstance(w, dict) or "utilization" not in w:
+        return None
+    return {"used": float(w["utilization"]), "resets_at": w.get("resetsAt"), "status": w.get("status")}
+
+
+def note_rate_limit(info: dict) -> None:
+    """Remember the latest limits from a `rate_limit_event`."""
+    win = info.get("unifiedWindows") or {}
+    five, week = _window(win.get("five_hour")), _window(win.get("seven_day"))
+    if five or week:
+        _limits["value"] = {"five_hour": five, "seven_day": week, "updated_at": time.time()}
+
+
+def run_stream(args: list[str], prompt: str, timeout: int) -> dict:
+    """Run `claude -p` with stream-json output; record limits; return the final `result` event (or {})."""
     exe = find_exe()
-    value: dict = {"installed": False, "version": None, "limits": None}
-    if exe:
+    if not exe:
+        raise FileNotFoundError("claude")
+    proc = subprocess.run([exe, "-p", "--output-format", "stream-json", "--verbose", *args], input=prompt,
+                          capture_output=True, text=True, encoding="utf-8", timeout=timeout)
+    result: dict = {}
+    for line in proc.stdout.splitlines():
         try:
-            out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=10).stdout.strip()
-            value = {"installed": True, "version": out.split()[0] if out else None, "limits": None}
-        except (OSError, subprocess.TimeoutExpired):
-            value = {"installed": True, "version": None, "limits": None}
-    _cache.update(at=time.time(), value=value)
-    return value
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("type") == "rate_limit_event":
+            note_rate_limit(ev.get("rate_limit_info") or {})
+        elif ev.get("type") == "result":
+            result = ev
+    return result
+
+
+def refresh_limits(max_age: float = 300.0) -> dict | None:
+    """Tiny haiku call just to read the limits; skipped while they are fresh. Costs a negligible share of the quota."""
+    cur = _limits["value"]
+    if cur and time.time() - cur["updated_at"] < max_age:
+        return cur
+    if not _probe_lock.acquire(blocking=False):
+        return cur
+    try:
+        run_stream(["--tools", "", "--model", "haiku", "--no-session-persistence", "--strict-mcp-config"], "Ответь одним словом: ок", 60)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    finally:
+        _probe_lock.release()
+    return _limits["value"]
