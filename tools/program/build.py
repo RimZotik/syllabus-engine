@@ -16,7 +16,9 @@ Run: uv run --with pyyaml tools/program/build.py [--check]
 """
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -277,7 +279,59 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
                         errors.append(f"{where}: trap {t} must be a wrong option index")
             elif q["type"] == "open" and not q.get("rubric"):
                 errors.append(f"{where}: open question needs a rubric for the teacher")
+    errors += check_tasks()
     return errors, authored
+
+
+def run_task(code: str, tests: dict) -> list[dict] | str:
+    """Results of the shared sandbox driver for this code, or an error string."""
+    try:
+        p = subprocess.run([sys.executable, str(Path(__file__).with_name("taskcheck.py"))], input=json.dumps({"code": code, "tests": tests}, ensure_ascii=False).encode("utf-8"),
+                           capture_output=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        return "timed out (endless loop?)"
+    if p.returncode:
+        return p.stderr.decode("utf-8", "replace")[-500:]
+    return json.loads(p.stdout.decode("utf-8"))["results"]
+
+
+def check_tasks() -> list[str]:
+    """Coding tasks: required fields, unique ids, every <Sandbox task> exists, the reference solution
+    passes all tests and the starter code does not."""
+    errors: list[str] = []
+    ids: dict[str, Path] = {}
+    for tf in sorted(COURSES.glob("**/tasks/*/task.yaml")):
+        where = tf.relative_to(ROOT)
+        t = yaml.safe_load(tf.read_text(encoding="utf-8"))
+        missing = [k for k in ("id", "title", "sandbox", "statement", "solution", "tests") if not t.get(k)]
+        if missing:
+            errors.append(f"{where}: missing {', '.join(missing)}")
+            continue
+        if t["id"] in ids:
+            errors.append(f"{where}: duplicate task id {t['id']} (also {ids[t['id']].relative_to(ROOT)})")
+        ids[t["id"]] = tf
+        if t["sandbox"] != "python-browser":
+            continue
+        tests = t["tests"]
+        if not (tests.get("io") or tests.get("asserts")):
+            errors.append(f"{where}: no tests")
+            continue
+        res = run_task(t["solution"], tests)
+        if isinstance(res, str):
+            errors.append(f"{where}: reference solution crashed: {res}")
+        else:
+            for r in res:
+                if not r["ok"]:
+                    errors.append(f"{where}: reference solution fails test '{r['name']}': {r.get('error') or r.get('message') or ('got ' + repr(r.get('got')))}")
+        if t.get("starter"):
+            res = run_task(t["starter"], tests)
+            if isinstance(res, list) and res and all(r["ok"] for r in res):
+                errors.append(f"{where}: starter code already passes all tests")
+    for mdx in COURSES.glob("**/topic.mdx"):
+        for tid in re.findall(r'<Sandbox task="([^"]+)"', mdx.read_text(encoding="utf-8")):
+            if tid not in ids:
+                errors.append(f"{mdx.relative_to(ROOT)}: task '{tid}' not found")
+    return errors
 
 
 def render_progress(data: dict, authored: set[str]) -> str:

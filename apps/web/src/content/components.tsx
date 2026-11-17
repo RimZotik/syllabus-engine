@@ -8,6 +8,7 @@ import { useApp } from "../state";
 import { term as lookup } from "./glossary";
 import { KnnDemo } from "../viz/KnnDemo";
 import { LineFitDemo } from "../viz/LineFitDemo";
+import { Sandbox } from "../components/Sandbox";
 
 /** One page of a topic. The reader shows pages one at a time. */
 export function Page({ children }: { title: string; minutes?: number; children: ReactNode }) {
@@ -95,4 +96,4 @@ export function Wide({ children }: { children: ReactNode }) {
   return <div className="wide">{children}</div>;
 }
 
-export const mdxComponents = { Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, KnnDemo, LineFitDemo };
+export const mdxComponents = { Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, KnnDemo, LineFitDemo, Sandbox };

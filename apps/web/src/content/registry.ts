@@ -3,6 +3,7 @@
  *   content/courses/<course>/<discipline>/<section>/<NN-slug>/topic.mdx   → topic id  <discipline>.<section>.<NN>
  *   content/courses/<course>/<discipline>/<section>/<NN-slug>/quiz.yaml   → topic test
  *   content/courses/<course>/<discipline>/<section>/test.yaml             → section test (контрольная)
+ *   content/courses/<course>/<discipline>/<section>/<NN-slug>/tasks/<id>/task.yaml → coding task, <Sandbox task="<id>" />
  */
 import type { ComponentType } from "react";
 
@@ -18,6 +19,18 @@ export type Question = {
 };
 export type QuizData = { title?: string; pass?: number; minutes?: number; questions: Question[] };
 
+export type IoCase = { name?: string; stdin?: string; stdout: string; hidden?: boolean };
+export type AssertCase = { name?: string; code: string; message?: string };
+export type Task = {
+  id: string; title: string; sandbox: "python-browser"; difficulty?: number; concepts?: string[];
+  statement: string; starter?: string; solution?: string;
+  /** default input for the «Запустить» button */
+  stdin?: string;
+  tests: { io?: IoCase[]; asserts?: AssertCase[]; stdin?: string };
+  hints?: { level: number; text: string }[];
+  timeout_ms?: number;
+};
+
 const topicFiles = import.meta.glob<TopicModule>("../../../../content/courses/**/topic.mdx");
 const quizFiles = import.meta.glob<{ default: QuizData }>("../../../../content/courses/**/quiz.yaml", { eager: true });
 const testFiles = import.meta.glob<{ default: QuizData }>("../../../../content/courses/*/*/*/test.yaml", { eager: true });
@@ -29,6 +42,10 @@ function topicIdOf(path: string): string {
   const [, disc, section, folder] = parts(path);
   return `${disc}.${section}.${parseInt(folder, 10)}`;
 }
+
+const taskFiles = import.meta.glob<{ default: Task }>("../../../../content/courses/**/tasks/*/task.yaml", { eager: true });
+const tasks = new Map<string, Task>();
+for (const mod of Object.values(taskFiles)) tasks.set(mod.default.id, mod.default);
 
 const topics = new Map<string, () => Promise<TopicModule>>();
 for (const [path, load] of Object.entries(topicFiles)) topics.set(topicIdOf(path), load);
@@ -48,4 +65,5 @@ export const content = {
   quiz: (id: string) => quizzes.get(id),
   sectionTest: (sectionId: string) => sectionTests.get(sectionId),
   authoredCount: () => topics.size,
+  task: (id: string) => tasks.get(id),
 };

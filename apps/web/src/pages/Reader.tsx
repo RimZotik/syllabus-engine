@@ -18,7 +18,7 @@ export function Reader() {
   const where = place(topicId);
   const [loadedMod, setLoadedMod] = useState<{ id: string; mod: TopicModule } | null>(null);
   const mod = loadedMod?.id === topicId ? loadedMod.mod : null;
-  const [cur, setCur] = useState(0);
+  const [rawCur, setCur] = useState(0);
   const [panel, setPanel] = useState<"toc" | "notes" | "feedback" | null>(() => (new URLSearchParams(location.search).has("toc") ? "toc" : null));
   const since = useRef(Date.now());
 
@@ -35,7 +35,8 @@ export function Reader() {
   const pages: PageDef[] = useMemo(() => {
     if (!mod || !where) return [];
     const tree = (mod.default as unknown as (p: object) => ReactElement<{ children?: ReactNode }>)({ components: mdxComponents });
-    const body: PageDef[] = Children.toArray(tree.props.children)
+    // a topic with a single <Page> comes back as that element itself, not as a list of pages
+    const body: PageDef[] = (tree.type === Page ? [tree] : Children.toArray(tree.props.children))
       .filter((el): el is ReactElement<{ title: string; minutes?: number }> => isValidElement(el) && el.type === Page)
       .map((el) => ({ title: el.props.title, minutes: el.props.minutes, node: el }));
     const quiz = content.quiz(topicId);
@@ -54,6 +55,9 @@ export function Reader() {
     };
     return [plan, ...all];
   }, [mod, where, topicId, refreshProgress]);
+
+  // a saved or linked page number can be past the end if the topic got shorter
+  const cur = Math.min(rawCur, Math.max(0, pages.length - 1));
 
   function go(i: number) {
     const next = Math.max(0, Math.min(pages.length - 1, i));
