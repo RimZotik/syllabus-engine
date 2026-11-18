@@ -1,21 +1,23 @@
 """The packaged app (tools/bundle): one .exe with the server, the built web pages and one course inside.
 
-Double-click → the server starts on a free local port and the course opens in its own window
-(Microsoft Edge in app mode, which every Windows 10/11 has; the default browser otherwise).
-Closing the window stops the app. Learner data lives in %LOCALAPPDATA%\\SyllabusEngine.
-The AI teacher works only if Claude Code is installed and logged in; without it the course runs
-without written-answer checks, as in development.
+Double-click → the server starts on the course's own local port and the course opens in the learner's
+default browser (Chrome, Edge, Firefox…). Running it again while it works just opens the course again.
+The app stops by itself a few minutes after the last course tab is closed: open pages poll the server
+(`/api/claude`) every 30–60 seconds, background tabs at least once a minute.
+Learner data lives in %LOCALAPPDATA%/SyllabusEngine. The AI teacher works only if Claude Code is installed
+and logged in; without it the course runs without written-answer checks, as in development.
 """
 from __future__ import annotations
 
+import json
 import os
 import socket
-import subprocess
 import sys
 import threading
 import time
 import urllib.request
 import webbrowser
+import zlib
 from pathlib import Path
 
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -23,7 +25,8 @@ DATA = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "SyllabusEngine"
 os.environ.setdefault("SYLLABUS_CONTENT_ROOT", str(BASE / "courses"))
 os.environ.setdefault("SYLLABUS_WEB_DIST", str(BASE / "web"))
 os.environ.setdefault("SYLLABUS_DATA_DIR", str(DATA))
-NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+IDLE_EXIT = int(os.environ.get("SYLLABUS_IDLE_EXIT", 5 * 60))   # seconds without a request from an open page → the app stops
+FIRST_GRACE = int(os.environ.get("SYLLABUS_FIRST_GRACE", 3 * 60))  # the browser may take a while to open the first page
 
 
 def _log() -> None:
@@ -40,13 +43,23 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
-def _edge() -> str | None:
-    for root in (os.environ.get("ProgramFiles(x86)"), os.environ.get("ProgramFiles"), os.environ.get("LOCALAPPDATA")):
-        if root:
-            p = Path(root) / "Microsoft" / "Edge" / "Application" / "msedge.exe"
-            if p.is_file():
-                return str(p)
-    return None
+def _port_for(pkg: str) -> int:
+    """A fixed port per course: the browser keeps the page's own settings (theme, demo state) between runs."""
+    return 47000 + zlib.crc32(pkg.encode()) % 1000
+
+
+def _ours(url: str, pkg: str) -> bool:
+    """Whether this app with the same course already serves at url."""
+    try:
+        with urllib.request.urlopen(url + "api/package", timeout=1) as r:
+            return json.load(r).get("id") == pkg
+    except (OSError, ValueError):
+        return False
+
+
+def _busy(port: int) -> bool:
+    with socket.socket() as s:
+        return s.connect_ex(("127.0.0.1", port)) == 0
 
 
 def _wait_up(url: str, seconds: float = 30) -> bool:
@@ -66,31 +79,49 @@ def main() -> None:
     from syllabus_server.app import create_app
     from syllabus_server.settings import active_package
 
-    # SYLLABUS_HEADLESS_PORT: serve on that port without a window (checks of a build, no window on screen)
+    pkg = active_package()
+    # SYLLABUS_HEADLESS_PORT: serve on that port without opening a browser (checks of a build)
     headless = os.environ.get("SYLLABUS_HEADLESS_PORT")
-    port = int(headless) if headless else _free_port()
-    server = uvicorn.Server(uvicorn.Config(create_app(), host="127.0.0.1", port=port, log_config=None, access_log=False))
-    threading.Thread(target=server.run, daemon=True).start()
+    port = int(headless) if headless else _port_for(pkg)
     url = f"http://127.0.0.1:{port}/"
+    if not headless and _busy(port):
+        if _ours(url, pkg):
+            print("already running, opening", url + pkg)
+            webbrowser.open(url + pkg)
+            return
+        port = _free_port()  # another program holds the course's port
+        url = f"http://127.0.0.1:{port}/"
+    app = create_app()
+    seen = {"last": time.time(), "any": False}
+
+    @app.middleware("http")
+    async def page_alive(request, call_next):  # every request of an open page counts as "still used"
+        seen["last"], seen["any"] = time.time(), True
+        return await call_next(request)
+
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_config=None, access_log=False))
+    threading.Thread(target=server.run, daemon=True).start()
     if not _wait_up(url):
         print("server did not start")
         return
-    start = url + active_package()
+    start = url + pkg
     print("serving", start)
     if headless:
         while True:
             time.sleep(3600)
-    edge = _edge()
-    if edge:
-        # its own profile makes it a separate Edge process: the window closing ends it, and then the app
-        window = subprocess.Popen([edge, f"--app={start}", f"--user-data-dir={DATA / 'window'}", "--no-first-run",
-                                   "--no-default-browser-check", "--window-size=1280,860"], creationflags=NO_WINDOW)
-        window.wait()
-    else:
-        webbrowser.open(start)
-        while True:  # no window to watch: keep serving until the process is ended
-            time.sleep(3600)
+    webbrowser.open(start)
+    tick = time.time()
+    while True:
+        time.sleep(5)
+        now = time.time()
+        if now - tick > 60:  # the computer slept: the pages had no chance to call, start counting anew
+            seen["last"] = now
+        tick = now
+        if now - seen["last"] > (IDLE_EXIT if seen["any"] else FIRST_GRACE):
+            print("no open pages, stopping")
+            break
     server.should_exit = True
+    time.sleep(1)
 
 
 if __name__ == "__main__":
