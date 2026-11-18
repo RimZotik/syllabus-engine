@@ -15,6 +15,9 @@ import threading
 import time
 from pathlib import Path
 
+# On Windows every call of the claude CLI would otherwise flash a console window and steal the focus.
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
 _cache: dict = {"at": 0.0, "value": None}
 _limits: dict = {"value": None}
 _probe_lock = threading.Lock()
@@ -41,7 +44,7 @@ def status(ttl: float = 300.0, missing_ttl: float = 15.0) -> dict:
         v = {"installed": False, "version": None}
         if exe:
             try:
-                out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=10).stdout.strip()
+                out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=10, creationflags=NO_WINDOW).stdout.strip()
                 v = {"installed": True, "version": out.split()[0] if out else None}
             except (OSError, subprocess.TimeoutExpired):
                 v = {"installed": True, "version": None}
@@ -69,7 +72,7 @@ def run_stream(args: list[str], prompt: str, timeout: int) -> dict:
     if not exe:
         raise FileNotFoundError("claude")
     proc = subprocess.run([exe, "-p", "--output-format", "stream-json", "--verbose", *args], input=prompt,
-                          capture_output=True, text=True, encoding="utf-8", timeout=timeout)
+                          capture_output=True, text=True, encoding="utf-8", timeout=timeout, creationflags=NO_WINDOW)
     result: dict = {}
     for line in proc.stdout.splitlines():
         try:

@@ -41,9 +41,10 @@ const killTree = (p) => {
 
 function start(name) {
   const [cmd, args] = commands[name];
-  // Each part in its own process group (detached): on Windows the API's auto-reload sends Ctrl-C to its whole
-  // console group, which used to take down the web part and this launcher too.
-  const p = spawn(cmd, args, { stdio: "inherit", shell: true, env, detached: process.platform === "win32", windowsHide: true });
+  // The parts share this launcher's console (no `detached`): a detached part has no console, and on Windows every
+  // program it starts (uv → python, the claude CLI) then opens its own visible window that steals the focus.
+  // The API runs without --reload (that sent Ctrl-C to the whole console group); the launcher restarts it instead.
+  const p = spawn(cmd, args, { stdio: "inherit", shell: true, env, windowsHide: true });
   procs.set(name, p);
   p.on("exit", (code) => {
     if (stopping) return;
