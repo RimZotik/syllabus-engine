@@ -272,7 +272,7 @@ def run_taskcheck(code: str, tests: dict) -> list[dict]:
 def test_task_forbid_catches_builtin_use_but_not_comments():
     tests = {"forbid": ["max"], "asserts": [{"name": "works", "code": "assert biggest([1, 3, 2]) == 3"}]}
     cheat = run_taskcheck("def biggest(xs):\n    return max(xs)\n", tests)
-    assert cheat[0]["ok"] is False and "max" in cheat[0]["message"] and cheat[1]["ok"] is True
+    assert cheat[0]["ok"] is False and "max" in cheat[0]["message"] and len(cheat) == 1  # tests are skipped after a violation
     own = run_taskcheck("def biggest(xs):  # no max here\n    m = xs[0]\n    for x in xs:\n        m = x if x > m else m\n    return m\n", tests)
     assert all(r["ok"] for r in own)
     via_import = run_taskcheck("from builtins import max as m\ndef biggest(xs):\n    return m(xs)\n", tests)
@@ -282,8 +282,35 @@ def test_task_forbid_catches_builtin_use_but_not_comments():
 def test_task_forbid_constructs_indexing_and_fstrings():
     tests = {"forbid": ["[]", "f-string", "str"], "io": [{"stdin": "123", "stdout": "6"}]}
     by_index = run_taskcheck("s = input()" + chr(10) + "print(int(s[0]) + int(s[1]) + int(s[2]))", tests)
-    assert by_index[0]["ok"] is False and "[]" in by_index[0]["message"]
+    assert by_index[0]["ok"] is False and "индексы и срезы" in by_index[0]["message"]
     by_fstring = run_taskcheck("n = int(input())" + chr(10) + "s = f'{n}'" + chr(10) + "print(6)", tests)
     assert by_fstring[0]["ok"] is False
     arithmetic = run_taskcheck("n = int(input())" + chr(10) + "print(n // 100 + n // 10 % 10 + n % 10)", tests)
     assert all(r["ok"] for r in arithmetic)
+
+
+def test_task_forbid_ignores_the_learners_own_names_but_not_builtins_or_methods():
+    tests = {"forbid": ["count", "max"], "io": [{"stdin": "", "stdout": "2"}]}
+    own_counter = run_taskcheck("count = 0" + chr(10) + "for x in [1, 5]:" + chr(10) + "    count += 1" + chr(10) + "print(count)", tests)
+    assert all(r["ok"] for r in own_counter)
+    method = run_taskcheck("print([1, 5].count(1) + 1)", tests)
+    assert method[0]["ok"] is False
+    builtin = run_taskcheck("print(max(1, 2))", tests)
+    assert builtin[0]["ok"] is False
+
+
+def test_task_forbid_loops():
+    tests = {"forbid": ["for", "while"], "io": [{"stdin": "3", "stdout": "9"}]}
+    loop = run_taskcheck("n = int(input())" + chr(10) + "t = 0" + chr(10) + "for k in range(n):" + chr(10) + "    t += 2 * k + 1" + chr(10) + "print(t)", tests)
+    assert loop[0]["ok"] is False and "цикл for" in loop[0]["message"]
+    formula = run_taskcheck("n = int(input())" + chr(10) + "print(n * n)", tests)
+    assert all(r["ok"] for r in formula)
+
+
+
+def test_task_forbid_slice_keeps_plain_indexing():
+    tests = {"forbid": ["slice"], "io": [{"stdin": "a b c", "stdout": "c b a"}]}
+    sliced = run_taskcheck("print(*input().split()[::-1])", tests)
+    assert sliced[0]["ok"] is False and "срезы" in sliced[0]["message"]
+    by_index = run_taskcheck("w = input().split()" + chr(10) + "i = len(w) - 1" + chr(10) + "r = []" + chr(10) + "while i >= 0:" + chr(10) + "    r.append(w[i])" + chr(10) + "    i -= 1" + chr(10) + "print(*r)", tests)
+    assert all(x["ok"] for x in by_index)

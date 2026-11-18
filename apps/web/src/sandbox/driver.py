@@ -148,22 +148,36 @@ def _forbidden(code, names):
         tree = ast.parse(code)
     except SyntaxError:
         return []
-    used = set()
+    used, own = set(), set()
     for node in ast.walk(tree):
-        # constructs, not names: "[]" — indexing and slicing, "f-string" — f-strings
+        # constructs, not names: "[]" — indexing and slicing, "f-string" — f-strings, "for"/"while" — loops
         if isinstance(node, ast.Subscript):
             used.add("[]")
         elif isinstance(node, ast.JoinedStr):
             used.add("f-string")
+        elif isinstance(node, (ast.For, ast.comprehension)):
+            used.add("for")
+        elif isinstance(node, ast.While):
+            used.add("while")
+        elif isinstance(node, ast.Slice):
+            used.add("slice")
         if isinstance(node, ast.Name):
-            used.add(node.id)
+            # a name the learner binds themselves (their own `count = 0`) is theirs, not the built-in
+            (own if isinstance(node.ctx, (ast.Store, ast.Del)) else used).add(node.id)
+        elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+            own.add(node.name)
+        elif isinstance(node, ast.arg):
+            own.add(node.arg)
         elif isinstance(node, ast.Attribute):
-            used.add(node.attr)
+            used.add(node.attr)  # methods like lst.count(...) are always the ready-made ones
         elif isinstance(node, (ast.Import, ast.ImportFrom)):
             used.update(a.name.split(".")[0] for a in node.names)
             if isinstance(node, ast.ImportFrom) and node.module:
                 used.add(node.module.split(".")[0])
-    return [n for n in names if n in used]
+    return [n for n in names if n in used and (n not in own or n in ("[]", "f-string", "for", "while", "slice"))]
+
+
+_FORBID_RU = {"[]": "индексы и срезы", "f-string": "f-строки", "for": "цикл for", "while": "цикл while", "slice": "срезы"}
 
 
 def check(code, tests_json):
@@ -171,8 +185,10 @@ def check(code, tests_json):
     results = []
     banned = _forbidden(code, tests.get("forbid") or [])
     if tests.get("forbid"):
-        results.append({"name": "Без готовых функций", "ok": not banned,
-                        "message": ("В этой задаче нужно обойтись без: " + ", ".join(banned) + ". Напишите это сами.") if banned else ""})
+        results.append({"name": "Ограничения задачи", "ok": not banned,
+                        "message": ("В этой задаче нельзя использовать: " + ", ".join(_FORBID_RU.get(b, b) for b in banned) + ".") if banned else ""})
+        if banned:
+            return json.dumps({"results": results}, ensure_ascii=False)  # no point running tests (and no risk of a timeout)
     for i, case in enumerate(tests.get("io") or []):
         out, err, _ = _exec(code, case.get("stdin", ""), False)
         name = case.get("name") or f"Пример {i + 1}"
