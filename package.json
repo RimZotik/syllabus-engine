@@ -7,6 +7,7 @@
     "build": "npm run build -w apps/web",
     "build:docs": "uv run --with pyyaml tools/program/build.py",
     "check": "uv run --with pyyaml tools/program/build.py --check --all && npm run typecheck -w apps/web && npm run test -w apps/web && uv run --project apps/server pytest -q",
-    "feedback": "uv run --project apps/server python -m syllabus_server.feedback"
+    "feedback": "uv run --project apps/server python -m syllabus_server.feedback",
+    "costs": "uv run --with pyyaml tools/costs/costs.py"
   }
 }

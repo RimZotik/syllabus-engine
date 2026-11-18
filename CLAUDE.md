@@ -33,4 +33,5 @@ React + TS + Vite + CodeMirror 6 · FastAPI + SQLite · Pyodide / PGlite / isomo
 - Каждая тема проходит пайплайн оттуда же: написание → логика → факты и определения → понятность и язык → экзаменатор → `npm run check` и скриншоты → коммит.
 - Определения — общепринятые, с источником (`formal` + `source` в `<Theorem>`), рядом — простыми словами (`docs/content/style-guide.md`, раздел 13).
 - Замечания ученика и преподавателя — `npm run feedback`; разбирать их до написания следующего блока.
+- Описание каждого субагента начинается с этапа (`design:`, `theory:`, `theory-review:`, `facts:`, `tests:`, `tasks:`, `platform:`); после раздела — `npm run costs -- --save`, отчёт в `courses/<id>/dev/` коммитится вместе с разделом.
 - Структурные решения и отклонённые советы ревьюеров — в `docs/dev/decisions.md`.
