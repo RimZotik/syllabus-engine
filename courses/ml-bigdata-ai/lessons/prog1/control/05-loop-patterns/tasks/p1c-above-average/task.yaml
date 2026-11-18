@@ -1,0 +1,70 @@
+id: p1c-above-average
+title: Выше среднего
+sandbox: python-browser
+difficulty: 2
+statement: |
+  В строке ввода — баллы учеников, целые числа через пробел (хотя бы одно число). Выведите, сколько учеников набрали **строго больше** среднего балла.
+
+  Сумму и количество посчитайте сами: встроенные `sum`, `max` и `sorted` не используйте.
+
+  ```input
+  1 2 3 4
+  ```
+  ```
+  2
+  ```
+starter: |
+  scores = input().split()
+  # План:
+  # 1. Список чисел
+  # 2. Накопитель: сумма баллов
+  # 3. Среднее
+  # 4. Счётчик: сколько баллов больше среднего
+stdin: "1 2 3 4\n"
+solution: |
+  parts = input().split()
+  scores = []
+  for p in parts:
+      scores.append(int(p))
+  total = 0
+  for s in scores:
+      total += s
+  average = total / len(scores)
+  above = 0
+  for s in scores:
+      if s > average:
+          above += 1
+  print(above)
+tests:
+  forbid: [sum, max, sorted]
+  io:
+    - name: Пример из условия
+      stdin: "1 2 3 4\n"
+      stdout: "2"
+    - name: Один ученик
+      stdin: "5\n"
+      stdout: "0"
+      hidden: true
+    - name: Все равны
+      stdin: "2 2 2\n"
+      stdout: "0"
+      hidden: true
+    - name: Один выделяется
+      stdin: "1 1 1 4\n"
+      stdout: "1"
+      hidden: true
+    - name: Отрицательные баллы
+      stdin: "-1 -2 -3 10\n"
+      stdout: "1"
+      hidden: true
+    - name: Ровно средний не считается
+      stdin: "1 2 3\n"
+      stdout: "1"
+      hidden: true
+hints:
+  - level: 1
+    text: Можно ли узнать, кто выше среднего, за один проход по списку? Что должно быть известно до того, как сравнивать баллы со средним?
+  - level: 2
+    text: 'Два прохода — первый с накопителем считает сумму, потом среднее — сумма делённая на `len(scores)`, второй со счётчиком считает баллы строго больше среднего.'
+  - level: 3
+    text: '`total = 0`, `for s in scores: total += s`, `average = total / len(scores)`; затем `above = 0`, `for s in scores: if s > average: above += 1`.'

@@ -1,0 +1,184 @@
+title: Проверка темы
+pass: 0.85
+minutes: 15
+questions:
+- id: counter-inside
+  type: single
+  q: |
+    Программа должна посчитать слова на букву «к». Что она выведет?
+    ```python
+    words = ["кот", "кит", "пёс"]
+    for w in words:
+        count = 0
+        if w[0] == "к":
+            count += 1
+    print(count)
+    ```
+  options:
+  - '`2`'
+  - '`0`'
+  - '`1`'
+  - '`3`'
+  answer: 1
+  explain: 'Счётчик обнуляется в начале каждой итерации. На последнем слове «пёс» он стал 0 и не увеличился. Начальное значение накопителя — до цикла.'
+- id: max-init-zero
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    temps = [-7, -3, -10]
+    best = 0
+    for t in temps:
+        if t > best:
+            best = t
+    print(best)
+    ```
+  options:
+  - '`-3`'
+  - '`0`'
+  - '`-10`'
+  - '`-7`'
+  answer: 1
+  explain: 'Ни одна температура не больше нуля, поэтому `best` ни разу не обновился. Начинать нужно с первого элемента — `best = temps[0]`.'
+- id: flag-reset
+  type: single
+  q: |
+    Программа проверяет, все ли дни дали больше 500 рублей. Что она выведет?
+    ```python
+    all_ok = True
+    for s in [700, 300, 900]:
+        if s <= 500:
+            all_ok = False
+        else:
+            all_ok = True
+    print(all_ok)
+    ```
+  options:
+  - '`True`'
+  - '`False`'
+  - '`300`'
+  - Ошибку `NameError`
+  answer: 0
+  explain: 'На 300 флаг упал в `False`, но на 900 ветвь `else` вернула `True`. Флаг говорит только о последнем дне. Его переключают в одну сторону — лучше сразу с `break` при первом нарушении.'
+- id: search-break
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    nums = [5, 8, 12, 3, 20]
+    first_big = -1
+    for n in nums:
+        if n > 10:
+            first_big = n
+            break
+    print(first_big)
+    ```
+  options:
+  - '`20`'
+  - '`12`'
+  - '`-1`'
+  - '`3`'
+  answer: 1
+  explain: Поиск останавливается на первой находке — `break` выходит из цикла на 12, и 20 уже не проверяется.
+- id: all-empty
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    nums = []
+    all_positive = True
+    for n in nums:
+        if n <= 0:
+            all_positive = False
+            break
+    print(all_positive)
+    ```
+  options:
+  - '`False`'
+  - '`True`'
+  - Ошибку `IndexError`
+  - Пустую строку вывода
+  answer: 1
+  explain: 'Тело не выполнилось ни разу, контрпример не найден, и флаг остался `True`. Для пустого списка «все ли» по соглашению даёт «да» — так же отвечает встроенная `all([])`.'
+- id: builtins-empty
+  type: multi
+  q: Какие строки кода упадут с ошибкой? Выберите все.
+  options:
+  - '`print(sum([]))`'
+  - '`print(max([]))`'
+  - '`print(min([]))`'
+  - '`print(any([]))`'
+  answer:
+  - 1
+  - 2
+  explain: '`sum([])` даёт 0 — начальное значение накопителя, `any([])` — `False`, ведь находок нет. А у `max` и `min` для пустого списка нет «первого элемента», и они дают `ValueError`.'
+- id: shadow-sum
+  type: single
+  q: |
+    Что произойдёт?
+    ```python
+    sum = 0
+    for x in [1, 2, 3]:
+        sum += x
+    print(sum([4, 5]))
+    ```
+  options:
+  - Выведется `9`
+  - Выведется `15`
+  - Ошибка `TypeError`
+  - Выведется `6`
+  answer: 2
+  explain: "Имя `sum` теперь указывает на число 6, а число нельзя вызвать: `TypeError: 'int' object is not callable`. Называйте накопитель `total`."
+- id: sum-to-counter
+  type: single
+  q: |
+    Этот код считает сумму чисел списка. Как изменить его, чтобы он считал, **сколько** чисел больше 10?
+    ```python
+    total = 0
+    for x in nums:
+        total += x
+    print(total)
+    ```
+  options:
+  - '`total += x` заменить на `if x > 10:` и под ним `total += 1`'
+  - '`total = 0` заменить на `total = 10`'
+  - '`total += x` заменить на `if x > 10:` и под ним `total = x`'
+  - После `total += x` добавить `if x > 10:` и под ним `break`
+  answer: 0
+  explain: 'Счётчик — накопитель, к которому прибавляют единицу, когда выполнено условие. `total = x` просто запомнит последнее подходящее число, а `break` остановит подсчёт.'
+- id: any-all
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    print(any([0, "", 5]), all([1, "a", 0]))
+    ```
+  options:
+  - '`True False`'
+  - '`False False`'
+  - '`True True`'
+  - '`False True`'
+  answer: 0
+  explain: '`any` ищет хоть одно истинное значение — `5` истинно. `all` ищет контрпример — `0` ложен.'
+- id: open-ai-max
+  type: open
+  q: |
+    ИИ-ассистент написал поиск самой низкой цены:
+    ```python
+    prices = input().split()
+    best = 0
+    for p in prices:
+        if int(p) < best:
+            best = int(p)
+    print(best)
+    ```
+    На вводе `120 80 95` программа выводит `0`. Объясните, в чём ошибка, исправьте её и назовите крайний случай, который нужно проверить отдельно.
+  rubric:
+  - начальное значение 0 меньше всех цен, поэтому best ни разу не обновляется — ответ 0, хотя такой цены нет
+  - исправление — начинать с первого элемента, best = int(prices[0])
+  - крайний случай — пустой ввод — prices[0] даст IndexError, его проверяют до цикла
+  wrong_answers:
+  - нужно заменить < на >
+  - нужно использовать встроенную min — тогда ошибки не будет
+  followups:
+  - Как вывести не только цену, но и номер самого дешёвого товара?

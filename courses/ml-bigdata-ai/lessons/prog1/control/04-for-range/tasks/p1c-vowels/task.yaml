@@ -1,0 +1,62 @@
+id: p1c-vowels
+title: Сколько гласных
+sandbox: python-browser
+difficulty: 1
+statement: |
+  Прочитайте строку и выведите, сколько в ней русских гласных букв: а, е, ё, и, о, у, ы, э, ю, я — и маленьких, и больших. Остальные символы, включая латинские буквы, не считаются.
+
+  Переберите символы циклом `for`.
+
+  ```input
+  Привет, мир!
+  ```
+  ```
+  3
+  ```
+starter: |
+  text = input()
+  vowels = 0
+  for ch in text:
+      if ch in "аеиоуыэюя":
+          vowels += 1
+  print(vowels)
+stdin: "Привет, мир!\n"
+solution: |
+  text = input()
+  vowels = 0
+  for ch in text.lower():
+      if ch in "аеёиоуыэюя":
+          vowels += 1
+  print(vowels)
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "Привет, мир!\n"
+      stdout: "3"
+    - name: Большие буквы
+      stdin: "АИСТ\n"
+      stdout: "2"
+      hidden: true
+    - name: Буква ё
+      stdin: "Ёжик ест ёлку\n"
+      stdout: "5"
+      hidden: true
+    - name: Пустая строка
+      stdin: "\n"
+      stdout: "0"
+      hidden: true
+    - name: Латиница не считается
+      stdin: "Python and Java\n"
+      stdout: "0"
+      hidden: true
+    - name: Одни гласные
+      stdin: "аУЕ\n"
+      stdout: "3"
+      hidden: true
+hints:
+  - level: 1
+    text: Стартовый код почти верен. Что он выведет для слова `АИСТ`? А для `ёж`?
+  - level: 2
+    text: Строка гласных в стартовом коде не содержит `ё` и знает только маленькие буквы. Большие можно не перечислять — достаточно перебирать символы строки, приведённой к нижнему регистру.
+  - level: 3
+    text: '`for ch in text.lower():` и в условии — `if ch in "аеёиоуыэюя":`.'

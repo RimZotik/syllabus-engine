@@ -1,0 +1,162 @@
+title: Проверка темы
+pass: 0.85
+minutes: 15
+questions:
+- id: index-ends
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    nums = [4, 8, 15, 16, 23]
+    print(nums[1], nums[-1])
+    ```
+  options:
+  - '`8 23`'
+  - '`4 23`'
+  - '`8 16`'
+  - '`4 16`'
+  answer: 0
+  explain: 'Индексы начинаются с нуля — `nums[1]` это второй элемент, 8. `nums[-1]` — последний, 23.'
+- id: index-error
+  type: single
+  q: |
+    Что произойдёт?
+    ```python
+    nums = [4, 8, 15, 16, 23]
+    print(nums[5])
+    ```
+  options:
+  - Выведется `23`
+  - Ошибка `IndexError`
+  - Выведется `None`
+  - Выведется `[]`
+  answer: 1
+  explain: 'В списке пять элементов, индексы от 0 до 4. Индекса 5 нет — `IndexError: list index out of range`.'
+- id: append-none
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    names = ["Аня"]
+    names = names.append("Борис")
+    print(names)
+    ```
+  options:
+  - "`['Аня', 'Борис']`"
+  - "`['Борис']`"
+  - '`None`'
+  - "`['Аня']`"
+  answer: 2
+  explain: '`append` меняет сам список и возвращает `None`. Присваивание привязало имя `names` к этому `None`, и список потерян. Правильно — просто `names.append("Борис")`.'
+- id: in-list-vs-string
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    print("кот" in ["котик", "пёс"], "кот" in "котик")
+    ```
+  options:
+  - '`True True`'
+  - '`False True`'
+  - '`False False`'
+  - '`True False`'
+  answer: 1
+  explain: 'Для списка `in` ищет элемент, равный `"кот"` целиком, — такого нет. Для строки `in` ищет кусок текста, и `"кот"` в `"котик"` есть.'
+- id: build-with-while
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    items = []
+    n = 3
+    while n > 0:
+        items.append(n)
+        n -= 1
+    print(items, len(items))
+    ```
+  options:
+  - '`[3, 2, 1] 3`'
+  - '`[1, 2, 3] 3`'
+  - '`[3, 2, 1, 0] 4`'
+  - '`[3] 1`'
+  answer: 0
+  explain: '`append` дописывает в конец, поэтому порядок — как добавляли: 3, 2, 1. При `n = 0` условие ложно, и ноль не добавляется.'
+- id: replace-item
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    temps = [5, 7, 9]
+    temps[1] = 0
+    print(temps)
+    ```
+  options:
+  - '`[0, 7, 9]`'
+  - '`[5, 0, 9]`'
+  - Ошибку `TypeError`
+  - '`[5, 7, 9]`'
+  answer: 1
+  explain: 'В отличие от строки, элемент списка можно заменить. `temps[1]` — второй элемент, теперь он указывает на 0.'
+- id: split-strings
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    parts = "10 20".split()
+    print(parts[0] + parts[1])
+    ```
+  options:
+  - '`30`'
+  - '`1020`'
+  - '`10 20`'
+  - Ошибку `TypeError`
+  answer: 1
+  explain: '`split()` возвращает список **строк** `["10", "20"]`. Строки склеиваются. Чтобы сложить числа, нужно `int(parts[0]) + int(parts[1])`.'
+- id: print-list-ways
+  type: multi
+  q: '`nums = [1, 2, 3]`. Какие строки кода выведут ровно `1 2 3`? Выберите все.'
+  options:
+  - '`print(*nums)`'
+  - '`print(" ".join(nums))`'
+  - '`print(nums)`'
+  - '`print(nums[0], nums[1], nums[2])`'
+  answer:
+  - 0
+  - 3
+  explain: '`print(nums)` выводит `[1, 2, 3]` со скобками и запятыми. `join` склеивает только строки, а здесь числа — будет `TypeError`.'
+- id: in-vs-or
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    x = 5
+    print(x in [1, 2, 3], x == 1 or 2)
+    ```
+  options:
+  - '`False False`'
+  - '`False 2`'
+  - '`True 2`'
+  - '`False True`'
+  answer: 1
+  explain: '`x in [1, 2, 3]` ищет 5 среди элементов — его нет, `False`. А `x == 1 or 2` читается как `(x == 1) or 2`: левая часть ложна, и `or` возвращает правый операнд — число `2`. Проверку «одно из нескольких значений» пишут через `in`.'
+- id: open-while-index
+  type: open
+  q: |
+    Программа должна вывести все элементы списка, но падает на последнем шаге:
+    ```python
+    temps = [12, 15, 9]
+    i = 0
+    while i <= len(temps):
+        print(temps[i])
+        i += 1
+    ```
+    Какая будет ошибка и почему? Как исправить? Какие числа программа успеет вывести до ошибки?
+  rubric:
+  - 'программа выведет 12, 15, 9, а потом упадёт с IndexError'
+  - причина — условие i <= len(temps) пропускает i = 3, а последний индекс списка из трёх элементов — 2 (ошибка на единицу)
+  - исправление — условие i < len(temps) (или перебор циклом for)
+  wrong_answers:
+  - нужно начинать с i = 1
+  - ошибка в том, что список нельзя перебирать циклом while
+  followups:
+  - Что выведет программа, если список пуст, — в исходной версии и в исправленной?

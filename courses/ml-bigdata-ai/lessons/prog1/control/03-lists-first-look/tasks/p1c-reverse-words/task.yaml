@@ -1,0 +1,65 @@
+id: p1c-reverse-words
+title: Слова задом наперёд
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Прочитайте строку ввода и выведите её слова в обратном порядке через пробел. Слова в строке разделены пробелами. Если в строке нет ни одного слова, выведите пустую строку вывода.
+
+  Соберите новый список, перебирая индексы исходного от последнего к первому циклом `while`, и выведите его. Готовые способы развернуть список (`reverse`, `reversed`, `sorted`, срезы вроде `words[::-1]`, `insert`, `pop`) не используйте — только индексы и `append`.
+
+  ```input
+  мама мыла раму
+  ```
+  ```
+  раму мыла мама
+  ```
+starter: |
+  words = input().split()
+  result = []
+  i = 0
+  while i < len(words):
+      result.append(words[i])
+      i += 1
+  print(*result)
+stdin: "мама мыла раму\n"
+solution: |
+  words = input().split()
+  result = []
+  i = len(words) - 1
+  while i >= 0:
+      result.append(words[i])
+      i -= 1
+  print(*result)
+tests:
+  forbid: [reverse, reversed, sorted, sort, slice, insert, pop]
+  io:
+    - name: Пример из условия
+      stdin: "мама мыла раму\n"
+      stdout: "раму мыла мама"
+    - name: Одно слово
+      stdin: "привет\n"
+      stdout: "привет"
+      hidden: true
+    - name: Два слова
+      stdin: "один два\n"
+      stdout: "два один"
+      hidden: true
+    - name: Пустая строка
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+    - name: Лишние пробелы
+      stdin: "  a  b   c \n"
+      stdout: "c b a"
+      hidden: true
+    - name: Повторы
+      stdin: "да нет да да\n"
+      stdout: "да да нет да"
+      hidden: true
+hints:
+  - level: 1
+    text: Стартовый код перебирает индексы 0, 1, 2… Какой индекс у последнего слова, если слов `len(words)`? Каким должен быть последний перебранный индекс?
+  - level: 2
+    text: 'Начните с `i = len(words) - 1` и уменьшайте `i` на 1, пока `i >= 0`. Проверьте вручную на одном слове — сколько будет итераций? А на пустой строке?'
+  - level: 3
+    text: '`i = len(words) - 1`, `while i >= 0:` — внутри `result.append(words[i])` и `i -= 1`; вывод — `print(*result)`.'

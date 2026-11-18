@@ -1,0 +1,62 @@
+id: p1c-halving
+title: Делим пополам
+sandbox: python-browser
+difficulty: 1
+statement: |
+  Число делят на 2 нацело (знаком `//`), пока оно не станет равно 1. Например, 10 → 5 → 2 → 1 — три деления.
+
+  Прочитайте целое число n (n ≥ 1) и выведите, сколько делений понадобится. Для n = 1 делить не нужно — ответ 0.
+
+  ```input
+  10
+  ```
+  ```
+  3
+  ```
+starter: |
+  n = int(input())
+  count = 0
+  print(count)
+stdin: "10\n"
+solution: |
+  n = int(input())
+  count = 0
+  while n > 1:
+      n = n // 2
+      count += 1
+  print(count)
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "10\n"
+      stdout: "3"
+    - name: Степень двойки
+      stdin: "8\n"
+      stdout: "3"
+    - name: Уже единица
+      stdin: "1\n"
+      stdout: "0"
+      hidden: true
+    - name: Двойка
+      stdin: "2\n"
+      stdout: "1"
+      hidden: true
+    - name: Три
+      stdin: "3\n"
+      stdout: "1"
+      hidden: true
+    - name: Миллион
+      stdin: "1000000\n"
+      stdout: "19"
+      hidden: true
+    - name: Очень большое число
+      stdin: "1152921504606846975\n"
+      stdout: "59"
+      hidden: true
+hints:
+  - level: 1
+    text: Сколько раз нужно повторить деление, заранее неизвестно. Какой цикл повторяет действие, пока условие верно? Какое это условие?
+  - level: 2
+    text: Повторяйте, пока `n > 1`. В теле — два действия — разделить `n` и прибавить 1 к счётчику. Проверьте вручную, что для n = 1 тело не выполнится ни разу.
+  - level: 3
+    text: 'Тело цикла `while n > 1:` — строки `n = n // 2` и `count += 1`; `print(count)` — после цикла.'

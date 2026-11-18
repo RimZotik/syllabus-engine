@@ -1,0 +1,62 @@
+id: p1c-range-sum
+title: Сумма чисел от a до b
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Прочитайте два целых числа a и b, каждое в отдельной строке, и выведите сумму всех целых чисел от a до b **включительно**. Если a больше b, таких чисел нет — выведите `0`.
+
+  Сложите числа сами циклом `for`; встроенную функцию `sum` не используйте.
+
+  ```input
+  3
+  6
+  ```
+  ```
+  18
+  ```
+starter: |
+  a = int(input())
+  b = int(input())
+  total = 0
+  print(total)
+stdin: "3\n6\n"
+solution: |
+  a = int(input())
+  b = int(input())
+  total = 0
+  for x in range(a, b + 1):
+      total += x
+  print(total)
+tests:
+  forbid: [sum]
+  io:
+    - name: Пример из условия
+      stdin: "3\n6\n"
+      stdout: "18"
+    - name: Одно число
+      stdin: "5\n5\n"
+      stdout: "5"
+      hidden: true
+    - name: Начало больше конца
+      stdin: "7\n2\n"
+      stdout: "0"
+      hidden: true
+    - name: Через ноль
+      stdin: "-3\n2\n"
+      stdout: "-3"
+      hidden: true
+    - name: От 1 до 100
+      stdin: "1\n100\n"
+      stdout: "5050"
+      hidden: true
+    - name: Только отрицательные
+      stdin: "-5\n-1\n"
+      stdout: "-15"
+      hidden: true
+hints:
+  - level: 1
+    text: Какие числа выдаёт `range(3, 6)`? Есть ли среди них 6?
+  - level: 2
+    text: Нужен накопитель — `total = 0` до цикла и `total += x` в теле — и `range(a, b + 1)`. Что выдаст такой `range`, если a больше b?
+  - level: 3
+    text: '`for x in range(a, b + 1):` и в теле `total += x`; если a > b, диапазон пуст, и выводится начальный 0.'

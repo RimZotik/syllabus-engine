@@ -1,0 +1,76 @@
+id: p1c-age-group
+title: Возрастная группа
+sandbox: python-browser
+difficulty: 1
+statement: |
+  Библиотека делит читателей на группы по возрасту. Прочитайте возраст — целое число, не меньше 0 — и выведите группу:
+
+  - младше 7 лет — `дошкольник`;
+  - от 7 до 17 лет включительно — `школьник`;
+  - от 18 до 64 лет включительно — `взрослый`;
+  - 65 лет и старше — `пенсионер`.
+
+  ```input
+  12
+  ```
+  ```
+  школьник
+  ```
+starter: |
+  age = int(input())
+  if age < 7:
+      print("дошкольник")
+stdin: "12\n"
+solution: |
+  age = int(input())
+  if age < 7:
+      print("дошкольник")
+  elif age < 18:
+      print("школьник")
+  elif age < 65:
+      print("взрослый")
+  else:
+      print("пенсионер")
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "12\n"
+      stdout: "школьник"
+    - name: Взрослый
+      stdin: "30\n"
+      stdout: "взрослый"
+    - name: Новорождённый
+      stdin: "0\n"
+      stdout: "дошкольник"
+      hidden: true
+    - name: Граница 6 и 7
+      stdin: "7\n"
+      stdout: "школьник"
+      hidden: true
+    - name: Граница 17
+      stdin: "17\n"
+      stdout: "школьник"
+      hidden: true
+    - name: Граница 18
+      stdin: "18\n"
+      stdout: "взрослый"
+      hidden: true
+    - name: Граница 64
+      stdin: "64\n"
+      stdout: "взрослый"
+      hidden: true
+    - name: Граница 65
+      stdin: "65\n"
+      stdout: "пенсионер"
+      hidden: true
+    - name: Пожилой читатель
+      stdin: "93\n"
+      stdout: "пенсионер"
+      hidden: true
+hints:
+  - level: 1
+    text: Вариантов ответа четыре, а ветвей в стартовом коде одна. Какая инструкция добавляет промежуточные ветви?
+  - level: 2
+    text: Проверяйте пороги по возрастанию — `age < 7`, потом `age < 18`, потом `age < 65`. Почему во второй проверке не нужно писать `age >= 7`?
+  - level: 3
+    text: 'Добавьте `elif age < 18:` — «школьник», `elif age < 65:` — «взрослый» и `else:` — «пенсионер».'
