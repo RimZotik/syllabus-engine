@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePageState } from "@syllabus/sdk";
 import { Play, RotateCcw } from "lucide-react";
 
 /** Price of a flat vs area: the learner tunes the two "knobs" of a linear model and sees the error. */
@@ -10,8 +11,9 @@ const sy = (y: number) => H - PAD - ((y - Y0) / (Y1 - Y0)) * (H - PAD - 16);
 const mse = (a: number, b: number) => DATA.reduce((s, [x, y]) => s + (a * x + b - y) ** 2, 0) / DATA.length;
 
 export function LineFitDemo() {
-  const [a, setA] = useState(0.05);
-  const [b, setB] = useState(5);
+  // the knobs stay where the learner left them
+  const [a, setA] = usePageState("line-a", 0.05);
+  const [b, setB] = usePageState("line-b", 5);
   const [running, setRunning] = useState(false);
   const raf = useRef(0);
   const err = useMemo(() => mse(a, b), [a, b]);

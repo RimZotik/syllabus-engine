@@ -56,7 +56,7 @@ export default defineConfig({
     pyodideAssets(),
     react({ include: /\.(mdx|tsx?)$/ }),
   ],
-  resolve: { alias: { "@pkg": pkgDir } },
+  resolve: { alias: { "@pkg": pkgDir, "@syllabus/sdk": fileURLToPath(new URL("./src/sdk.ts", import.meta.url)) } },
   optimizeDeps: { exclude: ["pyodide"] },
   worker: { format: "es" },
   server: {

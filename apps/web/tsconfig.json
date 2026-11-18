@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "types": ["vite/client"],
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "paths": { "@syllabus/sdk": ["./src/sdk.ts"] }
   },
-  "include": ["src", "../../content/*/components"]
+  "include": ["src", "../../courses/*/components"]
 }

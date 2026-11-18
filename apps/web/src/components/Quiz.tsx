@@ -12,8 +12,13 @@ function AutoTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Measure without a scrollbar: a scrollbar narrows the text, which wraps more and leaves an empty line.
+    el.style.overflowY = "hidden";
     el.style.height = "auto";
-    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+    const max = parseFloat(getComputedStyle(el).maxHeight) || Infinity;
+    const h = el.scrollHeight + el.offsetHeight - el.clientHeight;
+    el.style.height = `${Math.min(h, max)}px`;
+    el.style.overflowY = h > max ? "auto" : "hidden"; // scroll only once the field reached its maximum height
   }, [props.value]);
   return <textarea ref={ref} rows={3} {...props} />;
 }
@@ -173,7 +178,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
                 <div>
                   <b>{g.verdict === "pass" ? "Ответ принят." : "Ответ нужно дополнить или исправить."}</b> {g.feedback}
                   {g.misconception && <> {g.misconception}</>}
-                  <span className="meta">Попытка {g.attempt}{g.verdict === "revise" ? " · отредактируйте ответ выше и сдайте снова" : ""}</span>
+                  <span className="meta">{g.verdict === "pass" ? `Принят с ${g.attempt}-й попытки` : `Попытка ${g.attempt} · отредактируйте ответ выше и сдайте снова`}</span>
                 </div>
               </div>
             )}

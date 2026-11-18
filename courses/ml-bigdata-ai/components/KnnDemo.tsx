@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { usePageState } from "@syllabus/sdk";
 import { Eraser } from "lucide-react";
 
 /** "A model learns from points": click to add examples of two classes; the plane is coloured by k nearest neighbours. */
@@ -10,14 +11,16 @@ const START: P[] = [
 
 export function KnnDemo() {
   const ref = useRef<HTMLCanvasElement>(null);
-  const [pts, setPts] = useState<P[]>(START);
-  const [cls, setCls] = useState<0 | 1>(0);
-  const [k, setK] = useState(3);
+  // remembered for this topic: the learner comes back to the same points and k
+  const [pts, setPts] = usePageState<P[]>("knn-points", START);
+  const [cls, setCls] = usePageState<0 | 1>("knn-class", 0);
+  const [k, setK] = usePageState("knn-k", 3);
 
   useEffect(() => {
     const cv = ref.current; if (!cv) return;
     const css = getComputedStyle(document.documentElement);
     const colors = [css.getPropertyValue("--green").trim(), css.getPropertyValue("--lav").trim()];
+    const ink = css.getPropertyValue("--ink-3").trim();
     const dpr = Math.min(devicePixelRatio || 1, 2), W = cv.clientWidth, H = cv.clientHeight;
     cv.width = W * dpr; cv.height = H * dpr;
     const ctx = cv.getContext("2d")!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
@@ -26,7 +29,7 @@ export function KnnDemo() {
       const x = (px + step / 2) / W, y = (py + step / 2) / H;
       const near = [...pts].sort((p, q) => (p.x - x) ** 2 + (p.y - y) ** 2 - ((q.x - x) ** 2 + (q.y - y) ** 2)).slice(0, Math.min(k, pts.length));
       const vote = near.filter((p) => p.c === 1).length / near.length;
-      ctx.fillStyle = colors[vote > .5 ? 1 : 0]; ctx.globalAlpha = .13 + Math.abs(vote - .5) * .2; ctx.fillRect(px, py, step, step);
+      ctx.fillStyle = vote === .5 ? ink : colors[vote > .5 ? 1 : 0]; ctx.globalAlpha = vote === .5 ? .08 : .13 + Math.abs(vote - .5) * .2; // a tie has no winner ctx.fillRect(px, py, step, step);
     }
     ctx.globalAlpha = 1;
     for (const p of pts) { ctx.beginPath(); if (p.c === 1) ctx.rect(p.x * W - 6.5, p.y * H - 6.5, 13, 13); else ctx.arc(p.x * W, p.y * H, 7, 0, 7); ctx.fillStyle = colors[p.c]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = css.getPropertyValue("--card").trim(); ctx.stroke(); }

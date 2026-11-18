@@ -72,6 +72,21 @@ def test_grade_saves_attempt_and_counts(tmp_path, monkeypatch):
     assert r["verdict"] == "pass" and r["attempt"] == 2 and calls == [1, 2]
 
 
+
+def test_annulled_check_is_not_counted_as_attempt(tmp_path, monkeypatch):
+    """A check the teaching audit annulled (feedback.annulled) is not the learner's attempt."""
+    import json
+    from syllabus_server import grader
+    monkeypatch.setattr(grader, "grade", lambda *a, **k: {"verdict": "revise", "criteria": [], "feedback": "ok", "misconception": None})
+    c = make_client(tmp_path, monkeypatch)
+    body = {"scope": "intro1.what.4", "item_id": "q-open", "question": "?", "rubric": ["a"], "answer": "ответ"}
+    assert c.post("/api/grade", json=body).json()["attempt"] == 1
+    db = connect(tmp_path / "t.sqlite3")
+    row = db.execute("SELECT id, feedback FROM attempt WHERE item_id = 'q-open'").fetchone()
+    db.execute("UPDATE attempt SET feedback = ? WHERE id = ?", (json.dumps(json.loads(row["feedback"]) | {"annulled": True}), row["id"]))
+    db.commit()
+    assert c.post("/api/grade", json=body).json()["attempt"] == 1
+
 def test_grade_unavailable_is_503(tmp_path, monkeypatch):
     from syllabus_server import grader
     def boom(*a, **k): raise grader.GraderUnavailable("нет claude")

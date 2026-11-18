@@ -140,7 +140,8 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
 
     @app.post("/api/grade")
     def grade(body: GradeIn) -> dict:
-        n = db.execute("SELECT COUNT(*) FROM attempt WHERE scope = ? AND item_id = ?", (body.scope, body.item_id)).fetchone()[0] + 1
+        n = db.execute("SELECT COUNT(*) FROM attempt WHERE scope = ? AND item_id = ? AND COALESCE(json_extract(feedback, '$.annulled'), 0) = 0",
+                       (body.scope, body.item_id)).fetchone()[0] + 1  # a check annulled by the teaching audit is not the learner's attempt
         try:
             result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n, course=load_package()["teacher"]["course"])
         except grader.GraderUnavailable as e:

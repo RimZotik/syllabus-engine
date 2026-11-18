@@ -51,7 +51,7 @@ function TaskView({ task }: { task: Task }) {
   const stRef = useRef(st);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState<"run" | "check" | null>(null);
-  const [run, setRun] = useState<RunResult | null>(null);
+  const [run, setRun] = useDraft<RunResult | null>(`draft:run:${task.id}`, null); // last run's output survives leaving the page
   const [notice, setNotice] = useState<string | null>(null);
   const [traceCode, setTraceCode] = useState<string | null>(null);
   const [stdin, setStdin] = useDraft(`draft:stdin:${task.id}`, task.stdin ?? "");
