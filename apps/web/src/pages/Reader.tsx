@@ -1,13 +1,14 @@
 import { Children, isValidElement, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, Check, CircleDashed, Flag, List, NotebookPen, Target } from "lucide-react";
-import { api } from "../api";
+import { api, type Results } from "../api";
 import { load, store } from "../persist";
 import { to } from "../current";
 import { useApp, type TopicPlace } from "../state";
 import { content, type TopicModule } from "../content/registry";
 import { mdxComponents, Page } from "../content/components";
 import { Quiz, type ExamPhase } from "../components/Quiz";
+import { isOpen, nextStep } from "../content/order";
 import { Drawer, FeedbackDrawer, NotesDrawer } from "../components/Drawers";
 
 type PageDef = { title: string; minutes?: number; node: ReactNode };
@@ -133,8 +134,13 @@ export function Reader() {
 
 /** The discipline's table of contents: sections, topics with their state, section tests. `current` — open topic or section test. */
 function TocDrawer({ place: where, current, progress, onClose }: { place: TopicPlace; current: string; progress: Record<string, { status?: string } | undefined>; onClose: () => void }) {
-  const [passed, setPassed] = useState<Record<string, boolean>>({});
-  useEffect(() => { api.results().then((r) => setPassed(Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.passed])))).catch(() => {}); }, []);
+  const { program, progress: prog } = useApp();
+  const [results, setResults] = useState<Results | null>(null);
+  useEffect(() => { api.results().then(setResults).catch(() => setResults({})); }, []);
+  const passed: Record<string, boolean> = Object.fromEntries(Object.entries(results ?? {}).map(([k, v]) => [k, v.passed]));
+  // only what is passed, the next step and the page that is open now can be opened from the contents
+  const step = useMemo(() => nextStep(program, prog, results ?? {}), [program, prog, results]);
+  const canOpen = (kind: "topic" | "test", id: string) => id === current || (!!results && isOpen({ kind, id }, step, prog, results));
   return (
     <Drawer side="left" label="Содержание" onClose={onClose}>
       <div className="toc-head"><span className="eyebrow">Курс {where.course.id} · {where.course.title}</span><h3>{where.discipline.name}</h3>{where.discipline.name !== where.discipline.title && <div className="muted">{where.discipline.title}</div>}</div>
@@ -148,9 +154,13 @@ function TocDrawer({ place: where, current, progress, onClose }: { place: TopicP
               const cls = t.id === current ? "on" : done ? "done" : !written ? "na" : "";
               const icon = done ? <Check size={15} /> : written ? <BookOpen size={15} /> : <CircleDashed size={15} />;
               const label = <><span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span>{t.title}</span></>;
-              return <li key={t.id}>{written ? <Link to={to(`/learn/${t.id}`)} className={cls} onClick={onClose}>{label}</Link> : <span className={`toc-item ${cls}`} title="Тема ещё не написана">{label}</span>}</li>;
+              return <li key={t.id}>{!written ? <span className={`toc-item ${cls}`} title="Тема ещё не написана">{label}</span>
+                : canOpen("topic", t.id) ? <Link to={to(`/learn/${t.id}`)} className={cls} onClick={onClose}>{label}</Link>
+                : <span className="toc-item locked" title="Откроется, когда вы дойдёте до неё по программе">{label}</span>}</li>;
             })}
-            {content.sectionTest(s.id) && <li><Link to={to(`/test/${s.id}`)} className={`test${passed[s.id] ? " passed" : ""}${s.id === current ? " on" : ""}`} onClick={onClose}><span className="toc-num" /><Target size={15} /><span>Контрольная раздела {si + 1}</span></Link></li>}
+            {content.sectionTest(s.id) && <li>{canOpen("test", s.id)
+              ? <Link to={to(`/test/${s.id}`)} className={`test${passed[s.id] ? " passed" : ""}${s.id === current ? " on" : ""}`} onClick={onClose}><span className="toc-num" /><Target size={15} /><span>Контрольная раздела {si + 1}</span></Link>
+              : <span className="toc-item locked" title="Откроется, когда вы пройдёте темы раздела"><span className="toc-num" /><Target size={15} /><span>Контрольная раздела {si + 1}</span></span>}</li>}
           </ol>
         </section>
       ))}</nav>

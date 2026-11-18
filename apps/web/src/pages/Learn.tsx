@@ -5,6 +5,7 @@ import { api, type Discipline, type Results } from "../api";
 import { to } from "../current";
 import { useApp } from "../state";
 import { content } from "../content/registry";
+import { isOpen, nextStep } from "../content/order";
 
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI"];
 
@@ -15,6 +16,9 @@ export function Learn() {
 
   const [results, setResults] = useState<Results | null>(null); // null until loaded: no flash of a wrong «next»
   useEffect(() => { api.results().then(setResults).catch(() => setResults({})); }, []);
+  // the course goes in order: only what is passed, and the next step, can be opened from the plan
+  const step = useMemo(() => nextStep(program, progress, results ?? {}), [program, progress, results]);
+  const canOpen = (kind: "topic" | "test", id: string) => !!results && isOpen({ kind, id }, step, progress, results);
 
   // The next step in order: the first unfinished written topic — or, once a section's written topics are
   // all done, its section test if it is not passed yet (the next section comes after the test).
@@ -90,11 +94,15 @@ export function Learn() {
             <li><span className="topic-link na"><CircleDashed size={15} />0. Вводная лекция — появится вместе с темами дисциплины</span></li>
             {disc.sections.map((s, i) => (
               <li key={s.id}><b>{i + 1}. {s.title}</b>
-                {s.topics.map((t) => content.hasTopic(t.id) ? (
-                  <Link key={t.id} to={to(`/learn/${t.id}`)} className={`topic-link${progress[t.id]?.status === "done" ? " done" : ""}`}>
-                    {progress[t.id]?.status === "done" ? <Check size={15} /> : <Circle size={11} className="mark-todo" />}{t.title}</Link>
-                ) : <span key={t.id} className="topic-link na"><CircleDashed size={15} />{t.title}</span>)}
-                {content.sectionTest(s.id) && <Link to={to(`/test/${s.id}`)} className={`topic-link test${results?.[s.id]?.passed ? " passed" : ""}`}><Target size={15} />Контрольная раздела</Link>}
+                {s.topics.map((t) => !content.hasTopic(t.id)
+                  ? <span key={t.id} className="topic-link na"><CircleDashed size={15} />{t.title}</span>
+                  : canOpen("topic", t.id) ? (
+                    <Link key={t.id} to={to(`/learn/${t.id}`)} className={`topic-link${progress[t.id]?.status === "done" ? " done" : ""}`}>
+                      {progress[t.id]?.status === "done" ? <Check size={15} /> : <Circle size={11} className="mark-todo" />}{t.title}</Link>
+                  ) : <span key={t.id} className="topic-link locked" title="Откроется, когда вы дойдёте до неё по программе"><Circle size={11} className="mark-todo" />{t.title}</span>)}
+                {content.sectionTest(s.id) && (canOpen("test", s.id)
+                  ? <Link to={to(`/test/${s.id}`)} className={`topic-link test${results?.[s.id]?.passed ? " passed" : ""}`}><Target size={15} />Контрольная раздела</Link>
+                  : <span className="topic-link test locked" title="Откроется, когда вы пройдёте темы раздела"><Target size={15} />Контрольная раздела</span>)}
               </li>
             ))}
           </ul>

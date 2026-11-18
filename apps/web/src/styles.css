@@ -449,3 +449,7 @@ input[type=range]{accent-color:var(--green)}
 .topic-link.test{color:var(--ink-3)}
 .topic-link.test.passed{color:var(--green-ink)}
 .topic-link.test.passed svg{color:var(--green)}
+
+/* not reached yet: shown, but not a link (the course goes in order) */
+.topic-link.locked,.toc-topics .toc-item.locked{opacity:.5;cursor:default}
+.topic-link.locked:hover,.toc-topics .toc-item.locked:hover{background:transparent}
