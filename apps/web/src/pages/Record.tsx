@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, Check, CircleDashed, Target } from "lucide-react";
 import { api, type Results, type TimeStats } from "../api";
+import { to } from "../current";
 import { useApp } from "../state";
 import { content } from "../content/registry";
 import { fmtTime } from "../format";
@@ -80,7 +81,7 @@ export function Record() {
                           const done = progress[x.id]?.status === "done";
                           const icon = done ? <Check size={15} /> : progress[x.id] ? <BookOpen size={15} /> : <CircleDashed size={15} />;
                           return (
-                            <Link key={x.id} to={`/learn/${x.id}`} className={`rec-row${done ? " done" : ""}`}>
+                            <Link key={x.id} to={to(`/learn/${x.id}`)} className={`rec-row${done ? " done" : ""}`}>
                               <span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span className="rec-title">{x.title}</span>
                               <span className="rec-score tnum">{r?.done ? pct(r.score) : ""}</span>
                               <span className="rec-time tnum">{t(x.id) ? fmtTime(t(x.id)) : ""}</span>
@@ -88,7 +89,7 @@ export function Record() {
                           );
                         })}
                         {content.sectionTest(s.id) && (
-                          <Link to={`/test/${s.id}`} className={`rec-row${test?.passed ? " done" : ""}`}>
+                          <Link to={to(`/test/${s.id}`)} className={`rec-row${test?.passed ? " done" : ""}`}>
                             <span className="toc-num" />{test?.passed ? <Check size={15} /> : <Target size={15} />}<span className="rec-title">Контрольная раздела</span>
                             <span className="rec-score tnum">{test?.done ? pct(test.score) : ""}</span>
                             <span className="rec-time tnum">{t(s.id) ? fmtTime(t(s.id)) : ""}</span>

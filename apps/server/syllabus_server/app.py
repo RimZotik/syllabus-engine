@@ -15,7 +15,37 @@ from pydantic import BaseModel, Field
 from . import claude, grader
 from .db import PerThread, connect, db_file, migrate, transaction
 from .program import load_package, load_program, topic_ids
-from .settings import data_dir
+from .settings import PackageError, active_package, current_package, data_dir, db_path, installed_packages, use_package
+
+
+class PackageDB:
+    """The learner database of the package the current request is about. Each package has its own
+    file (<data_dir>/<package>.sqlite3), opened and migrated on first use."""
+
+    def __init__(self, default_pkg: str, default_db: PerThread):
+        self._dbs = {default_pkg: default_db}
+        self._lock = threading.Lock()
+
+    def _db(self) -> PerThread:
+        pkg = current_package()
+        db = self._dbs.get(pkg)
+        if db is None:
+            with self._lock:
+                db = self._dbs.get(pkg)
+                if db is None:
+                    first = connect(db_path(pkg))
+                    migrate(first)
+                    db = self._dbs[pkg] = PerThread(db_file(first))
+        return db
+
+    def execute(self, sql: str, params: tuple | list = ()) -> sqlite3.Cursor:
+        return self._db().execute(sql, params)
+
+    def commit(self) -> None:
+        self._db().commit()
+
+    def rollback(self) -> None:
+        self._db().rollback()
 
 
 def _logger() -> logging.Logger:
@@ -31,9 +61,22 @@ def _logger() -> logging.Logger:
 def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     first = conn or connect()
     migrate(first)
-    db = PerThread(db_file(first))
+    db = PackageDB(active_package(), PerThread(db_file(first)))
     log = _logger()
     app = FastAPI(title="Syllabus Engine", version="0.1.0")
+
+    @app.middleware("http")
+    async def package_of_request(request: Request, call_next):
+        """X-Syllabus-Package (or ?package=) names the package; without it — the default one."""
+        pkg = request.headers.get("x-syllabus-package") or request.query_params.get("package")
+        if pkg and pkg not in installed_packages():
+            return JSONResponse({"detail": f"Обучение «{pkg}» не установлено"}, status_code=404)
+        token = use_package(pkg)
+        try:
+            return await call_next(request)
+        finally:
+            from .settings import _current
+            _current.reset(token)
 
     def record_event(level: str, source: str, message: str, context: Any = None) -> None:
         with transaction(db):
@@ -54,6 +97,17 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     @app.get("/api/package")
     def package() -> dict:
         return load_package()
+
+    @app.get("/api/packages")
+    def packages() -> dict:
+        """Catalog: every installed package's passport, and which one opens by default."""
+        items = []
+        for p in installed_packages():
+            try:
+                items.append(load_package(p))
+            except (PackageError, OSError, ValueError) as e:  # a broken package must not hide the others
+                log.warning("package %s skipped: %s", p, e)
+        return {"default": active_package(), "packages": items}
 
     @app.get("/api/program")
     def program() -> dict:

@@ -2,6 +2,14 @@
 id: ml-bigdata-ai
 title: Forge ML
 language: ru
+subtitle: ML, Big Data и AI с нуля до Junior+
+icon: brain-circuit          # иконка lucide (https://lucide.dev/icons): имя через дефис
+color: green                 # цвет карточки в каталоге: green, lav или amber
+level: с нуля до Junior+
+version: 0.3.0
+author: {name: Syllabus Engine}
+license: CC BY-SA 4.0
+tags: [Python, машинное обучение, данные, ИИ]
 summary: Строгое обучение машинному обучению и работе с данными с нуля — до уровня Junior+ ML-инженера, дата-сайентиста или AI-инженера.
 
 # Главная страница

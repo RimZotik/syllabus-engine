@@ -1,4 +1,5 @@
 /** Thin client for the platform server (apps/server). */
+import { currentPackage } from "./current";
 
 export type Topic = { id: string; title: string };
 export type Section = { id: string; title: string; topics: Topic[] };
@@ -13,6 +14,8 @@ export type Program = { title: string; levels: Stage[]; courses: Course[] };
 /** Passport of the active learning package (courses/<id>/package.yaml). */
 export type Package = {
   id: string; title: string; language: string; summary: string;
+  /** catalog card (all optional in package.yaml) */
+  icon: string; color: string; subtitle: string; level: string; version: string; author: { name: string; url: string }; tags: string[]; license: string;
   landing: { headline: string; lead: string; cta: string; subjects_lead: string; highlight_subject: string | null };
 };
 export type Progress = Record<string, { status: "started" | "done"; page: number; seconds: number }>;
@@ -27,10 +30,15 @@ export type TimeStats = { total: number; today: number; week: number; days: { da
 export type Results = Record<string, { passed: boolean; score: number | null; done: boolean; updated_at: string }>;
 export type FeedbackKind = "content_issue" | "bug" | "idea" | "question";
 
+export type Catalog = { default: string; packages: Package[] };
+
 async function call<T>(method: string, url: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (currentPackage()) headers["X-Syllabus-Package"] = currentPackage();
   const res = await fetch(url, {
     method,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!res.ok) {
@@ -41,6 +49,7 @@ async function call<T>(method: string, url: string, body?: unknown): Promise<T> 
 }
 
 export const api = {
+  packages: () => call<Catalog>("GET", "/api/packages"),
   program: () => call<Program>("GET", "/api/program"),
   package: () => call<Package>("GET", "/api/package"),
   progress: () => call<Progress>("GET", "/api/progress"),

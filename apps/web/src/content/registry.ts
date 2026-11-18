@@ -1,13 +1,14 @@
 /**
- * Finds the content of the ACTIVE learning package (`@pkg` = courses/<id>/, set in vite.config.ts).
- * Layout inside the package (docs/template/course-package.md):
+ * Finds the content of every installed learning package (`@courses` = courses/, set in vite.config.ts);
+ * the package of the open page (current.ts) answers. Layout inside a package (docs/template/course-package.md):
  *   lessons/<discipline>/<section>/<NN-slug>/topic.mdx   → topic id  <discipline>.<section>.<NN>
  *   lessons/<discipline>/<section>/<NN-slug>/quiz.yaml   → topic test
  *   lessons/<discipline>/<section>/test.yaml             → section test (контрольная)
  *   lessons/<discipline>/<section>/<NN-slug>/tasks/<id>/task.yaml → coding task, <Sandbox task="<id>" />
  */
 import type { ComponentType } from "react";
-import { sectionIdOf, topicIdOf } from "./paths";
+import { packageOf, sectionIdOf, topicIdOf } from "./paths";
+import { currentPackage } from "../current";
 
 export type TopicMeta = { minutes?: number; lead?: string };
 export type TopicModule = { default: ComponentType<{ components?: Record<string, unknown> }>; meta?: TopicMeta };
@@ -34,28 +35,32 @@ export type Task = {
   timeout_ms?: number;
 };
 
-const topicFiles = import.meta.glob<TopicModule>("@pkg/lessons/*/*/*/topic.mdx");
-const quizFiles = import.meta.glob<{ default: QuizData }>("@pkg/lessons/*/*/*/quiz.yaml", { eager: true });
-const testFiles = import.meta.glob<{ default: QuizData }>("@pkg/lessons/*/*/test.yaml", { eager: true });
+const topicFiles = import.meta.glob<TopicModule>("../../../../courses/*/lessons/*/*/*/topic.mdx");
+const quizFiles = import.meta.glob<{ default: QuizData }>("../../../../courses/*/lessons/*/*/*/quiz.yaml", { eager: true });
+const testFiles = import.meta.glob<{ default: QuizData }>("../../../../courses/*/lessons/*/*/test.yaml", { eager: true });
+const taskFiles = import.meta.glob<{ default: Task }>("../../../../courses/*/lessons/*/*/*/tasks/*/task.yaml", { eager: true });
 
-const taskFiles = import.meta.glob<{ default: Task }>("@pkg/lessons/*/*/*/tasks/*/task.yaml", { eager: true });
-const tasks = new Map<string, Task>();
-for (const mod of Object.values(taskFiles)) tasks.set(mod.default.id, mod.default);
+type Pkg = { topics: Map<string, () => Promise<TopicModule>>; quizzes: Map<string, QuizData>; tests: Map<string, QuizData>; tasks: Map<string, Task> };
+const packages = new Map<string, Pkg>();
+const pkgOf = (path: string): Pkg => {
+  const id = packageOf(path);
+  let p = packages.get(id);
+  if (!p) packages.set(id, (p = { topics: new Map(), quizzes: new Map(), tests: new Map(), tasks: new Map() }));
+  return p;
+};
+for (const [path, load] of Object.entries(topicFiles)) pkgOf(path).topics.set(topicIdOf(path), load);
+for (const [path, mod] of Object.entries(quizFiles)) pkgOf(path).quizzes.set(topicIdOf(path), mod.default);
+for (const [path, mod] of Object.entries(testFiles)) pkgOf(path).tests.set(sectionIdOf(path), mod.default);
+for (const [path, mod] of Object.entries(taskFiles)) pkgOf(path).tasks.set(mod.default.id, mod.default);
 
-const topics = new Map<string, () => Promise<TopicModule>>();
-for (const [path, load] of Object.entries(topicFiles)) topics.set(topicIdOf(path), load);
-
-const quizzes = new Map<string, QuizData>();
-for (const [path, mod] of Object.entries(quizFiles)) quizzes.set(topicIdOf(path), mod.default);
-
-const sectionTests = new Map<string, QuizData>();
-for (const [path, mod] of Object.entries(testFiles)) sectionTests.set(sectionIdOf(path), mod.default);
+const EMPTY: Pkg = { topics: new Map(), quizzes: new Map(), tests: new Map(), tasks: new Map() };
+const cur = () => packages.get(currentPackage()) ?? EMPTY;
 
 export const content = {
-  hasTopic: (id: string) => topics.has(id),
-  loadTopic: (id: string) => topics.get(id)?.(),
-  quiz: (id: string) => quizzes.get(id),
-  sectionTest: (sectionId: string) => sectionTests.get(sectionId),
-  authoredCount: () => topics.size,
-  task: (id: string) => tasks.get(id),
+  hasTopic: (id: string) => cur().topics.has(id),
+  loadTopic: (id: string) => cur().topics.get(id)?.(),
+  quiz: (id: string) => cur().quizzes.get(id),
+  sectionTest: (sectionId: string) => cur().tests.get(sectionId),
+  authoredCount: () => cur().topics.size,
+  task: (id: string) => cur().tasks.get(id),
 };

@@ -51,6 +51,34 @@ def all_packages() -> list[str]:
     return sorted(p.parent.name for p in CONTENT_ROOT.glob("*/package.yaml"))
 
 
+# Package ids become the first segment of every address (/<package>/learn/…), so they must not clash with the platform's own paths.
+RESERVED_IDS = {"learn", "test", "record", "trainer", "api", "assets", "pyodide", "src", "node_modules"}
+PACKAGE_ID = re.compile(r"[a-z0-9][a-z0-9_.-]*")
+COLORS = {"green", "lav", "amber"}
+
+
+def passport_errors(pkg: str, meta: dict) -> list[str]:
+    """Optional catalog fields of package.yaml: types and allowed values (docs/template/course-package.md)."""
+    where = f"courses/{pkg}/package.yaml"
+    errs = []
+    if not PACKAGE_ID.fullmatch(pkg) or pkg in RESERVED_IDS:
+        errs.append(f"{where}: имя папки '{pkg}' — только строчная латиница, цифры, '-', '_', '.', и не одно из {sorted(RESERVED_IDS)}")
+    if "icon" in meta and not (isinstance(meta["icon"], str) and re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", meta["icon"])):
+        errs.append(f"{where}: icon — имя иконки lucide через дефис, например brain-circuit")
+    if "color" in meta and meta["color"] not in COLORS:
+        errs.append(f"{where}: color — одно из {sorted(COLORS)}")
+    for key in ("subtitle", "level", "license", "summary"):
+        if key in meta and not isinstance(meta[key], str):
+            errs.append(f"{where}: {key} — строка")
+    if "version" in meta and not isinstance(meta["version"], (str, int, float)):
+        errs.append(f"{where}: version — строка, например 1.0.0")
+    if "tags" in meta and not (isinstance(meta["tags"], list) and all(isinstance(x, str) for x in meta["tags"])):
+        errs.append(f"{where}: tags — список строк")
+    if "author" in meta and not (isinstance(meta["author"], str) or (isinstance(meta["author"], dict) and isinstance(meta["author"].get("name"), str))):
+        errs.append(f"{where}: author — строка или {{name: …, url: …}}")
+    return errs
+
+
 def use_package(pkg: str) -> list[str]:
     """Point every path at courses/<pkg>/ and read its passport. Returns passport errors."""
     global PKG, PKG_DIR, SRC, OUT, TREES, COURSES, GLOSSARY, META
@@ -66,6 +94,7 @@ def use_package(pkg: str) -> list[str]:
         errors.append(f"courses/{pkg}/package.yaml: id '{META.get('id')}' must equal the folder name '{pkg}'")
     if not META.get("title"):
         errors.append(f"courses/{pkg}/package.yaml: missing title")
+    errors += passport_errors(pkg, META)
     if not SRC.is_file():
         errors.append(f"courses/{pkg}: нет program.yaml")
     return errors

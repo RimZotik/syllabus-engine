@@ -414,3 +414,18 @@ input[type=range]{accent-color:var(--green)}
 .modal-body p{margin:0 0 10px;line-height:1.55}
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
+
+/* catalog of learning packages (front page when several are installed) */
+.catalog{padding-block:48px 64px}
+.catalog h1{margin:10px 0 8px}
+.catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:18px;margin-top:28px}
+.pkg-card{display:flex;flex-direction:column;gap:8px;padding:22px 22px 20px;border-radius:var(--r-l);background:var(--card);box-shadow:var(--sh-soft);color:var(--ink);text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
+.pkg-card:hover{transform:translateY(-2px);box-shadow:var(--sh-pop)}
+.pkg-card b{font:600 20px/1.25 var(--f-head)}
+.pkg-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--green-soft);color:var(--green-ink);margin-bottom:6px}
+.pkg-card.c-lav .pkg-icon{background:var(--lav-soft);color:var(--lav)}
+.pkg-card.c-amber .pkg-icon{background:var(--warn-soft);color:var(--warn)}
+.pkg-sub{color:var(--ink-2);font-size:14px}
+.pkg-summary{color:var(--ink-2);font-size:15px;line-height:1.5}
+.pkg-meta{color:var(--ink-3);font-size:13px;margin-top:auto;padding-top:6px}
+.pkg-tags{display:flex;flex-wrap:wrap;gap:6px}

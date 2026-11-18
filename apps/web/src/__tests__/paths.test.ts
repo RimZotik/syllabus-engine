@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sectionIdOf, topicIdOf } from "../content/paths";
+import { packageOf, sectionIdOf, topicIdOf } from "../content/paths";
 
 describe("topic and section ids from package paths", () => {
   it("reads a topic id from any key prefix", () => {
@@ -15,5 +15,11 @@ describe("topic and section ids from package paths", () => {
   });
   it("explains a topic folder without a number", () => {
     expect(() => topicIdOf("/courses/x/lessons/d/s/intro/topic.mdx")).toThrow(/номера/);
+  });
+  it("reads the package of every kind of lesson file, whatever its sections are called", () => {
+    expect(packageOf("/@fs/B:/repo/courses/ml-bigdata-ai/lessons/intro1/what/02-four-words/topic.mdx")).toBe("ml-bigdata-ai");
+    expect(packageOf("/courses/drawing/lessons/d1/lessons/test.yaml")).toBe("drawing");
+    expect(packageOf("/courses/drawing/lessons/d1/s/01-a/tasks/t-1/task.yaml")).toBe("drawing");
+    expect(packageOf(String.raw`C:\repo\courses\music\lessons\d\s\03-t\quiz.yaml`)).toBe("music");
   });
 });

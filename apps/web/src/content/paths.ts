@@ -12,6 +12,19 @@ export function topicIdOf(path: string): string {
   return `${disc}.${section}.${n}`;
 }
 
+/**
+ * The package folder of a lesson file found by a glob over @courses — again counted from the end:
+ *   <package>/lessons/<d>/<s>/<NN>/topic.mdx | quiz.yaml   → 6th from the end
+ *   <package>/lessons/<d>/<s>/test.yaml                    → 5th
+ *   <package>/lessons/<d>/<s>/<NN>/tasks/<id>/task.yaml    → 8th
+ */
+export function packageOf(path: string): string {
+  const s = segs(path);
+  const file = s[s.length - 1];
+  const depth = file === "test.yaml" ? 5 : file === "task.yaml" ? 8 : 6;
+  return s[s.length - depth] ?? "";
+}
+
 export function sectionIdOf(path: string): string {
   const [disc, section] = segs(path).slice(-3, -1);
   return `${disc}.${section}`;

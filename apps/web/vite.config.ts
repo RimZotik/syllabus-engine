@@ -35,8 +35,9 @@ function pyodideAssets(): Plugin {
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const env = (k: string) => process.env[`SYLLABUS_${k}`] ?? process.env[`FORGE_${k}`];
 
-// The active learning package: courses/<id>/ (courses/active.yaml or $SYLLABUS_PACKAGE). Only it gets bundled.
-// Same rules as apps/server/syllabus_server/settings.py: a plain folder name, the value may be quoted.
+// Every installed learning package (courses/<id>/ with a package.yaml) is bundled; the page's address
+// picks one. The default one (courses/active.yaml or $SYLLABUS_PACKAGE) is still checked here, so a
+// typo there fails at start-up with a clear message. Same rules as apps/server/syllabus_server/settings.py.
 const coursesDir = join(repoRoot, "courses");
 function activePackage(): string {
   const cfg = join(coursesDir, "active.yaml");
@@ -47,7 +48,7 @@ function activePackage(): string {
   if (!existsSync(join(coursesDir, id, "package.yaml"))) throw new Error(`Обучение courses/${id}/ не найдено (нет package.yaml)`);
   return id;
 }
-const pkgDir = join(coursesDir, activePackage());
+activePackage();
 
 export default defineConfig({
   plugins: [
@@ -56,7 +57,7 @@ export default defineConfig({
     pyodideAssets(),
     react({ include: /\.(mdx|tsx?)$/ }),
   ],
-  resolve: { alias: { "@pkg": pkgDir, "@syllabus/sdk": fileURLToPath(new URL("./src/sdk.ts", import.meta.url)) } },
+  resolve: { alias: { "@syllabus/sdk": fileURLToPath(new URL("./src/sdk.ts", import.meta.url)) } },
   optimizeDeps: { exclude: ["pyodide"] },
   worker: { format: "es" },
   server: {

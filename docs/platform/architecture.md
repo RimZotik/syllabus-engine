@@ -141,13 +141,15 @@ uv run forge start     # открывает браузер на http://localhost
 
 ## 8. Движок и пакеты обучения
 
-Платформа разделена на **движок** (ничего не знает о предмете) и **пакеты обучения** (`courses/<id>/`, формат — [template/course-package.md](../template/course-package.md)). Активный пакет задаёт `active:` в `courses/active.yaml` (или `SYLLABUS_PACKAGE`):
+Платформа разделена на **движок** (ничего не знает о предмете) и **пакеты обучения** (`courses/<id>/`, формат — [template/course-package.md](../template/course-package.md)). Установлены все папки `courses/` с `package.yaml`; `active:` в `courses/active.yaml` (или `SYLLABUS_PACKAGE`) — пакет по умолчанию:
 
-- сервер (`syllabus_server/settings.py`, `program.py`) читает `package.yaml` и `program.yaml` активного пакета, отдаёт их через `GET /api/package` и `GET /api/program`; база ученика — своя у каждого пакета (`<data_dir>/<id>.sqlite3`);
-- Vite (`apps/web/vite.config.ts`) задаёт псевдоним `@pkg` → `courses/<id>/`; темы, тесты, задачи, глоссарий и компоненты пакета (`@pkg/components/index.ts`) подключаются через него — в сборку попадает только активный пакет;
+- адрес страницы начинается с пакета: `/<id>/learn/<тема>`; на `/` — каталог (`GET /api/packages`), если пакетов больше одного; старые адреса без пакета ведут в пакет по умолчанию;
+- сайт передаёт пакет страницы в заголовке `X-Syllabus-Package`; сервер (`app.py`, промежуточный обработчик) делает его текущим для запроса: `GET /api/package` и `GET /api/program` отдают его паспорт и план, а база ученика — своя у каждого пакета (`<data_dir>/<id>.sqlite3`, открывается при первом обращении);
+- сайт (`apps/web/src/content/registry.ts`, `glossary.ts`, `components.tsx`) собирает темы, тесты, задачи, глоссарии и компоненты всех пакетов и отвечает за текущий (`src/current.ts`); при смене пакета приложение монтируется заново;
+- компоненты пакета берут из платформы только `@syllabus/sdk` (например `usePageState`);
 - `tools/program/build.py --all` проверяет все пакеты, генерирует `courses/<id>/docs/`.
 
-Смена пакета — правка `courses/active.yaml` и перезапуск. Песочницы и предметные визуализации подключаются как плагины с единым интерфейсом. Это позволяет собрать курс по другому направлению, не трогая движок, — см. [template/new-domain.md](../template/new-domain.md).
+Новый пакет — папка в `courses/` и перезапуск. Песочницы и предметные визуализации подключаются как плагины с единым интерфейсом. Это позволяет собрать курс по другому направлению, не трогая движок, — см. [template/new-domain.md](../template/new-domain.md).
 
 ```
 apps/web/src/

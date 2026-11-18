@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { to } from "../current";
 import { useApp } from "../state";
 
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI"];
@@ -80,7 +81,7 @@ export function Home() {
         <div className="eyebrow">{pkg.title} · {courses} {plural(courses, "курс", "курса", "курсов")} · {subjects.size} {plural(subjects.size, "предмет", "предмета", "предметов")} · {discCount} {plural(discCount, "дисциплина", "дисциплины", "дисциплин")}</div>
         <h1><Emph text={pkg.landing.headline} /></h1>
         <p className="lead">{pkg.landing.lead}</p>
-        <div className="row" style={{ gap: 14, flexWrap: "wrap" }}><Link className="btn" to="/learn">{pkg.landing.cta} <ArrowRight size={16} /></Link></div>
+        <div className="row" style={{ gap: 14, flexWrap: "wrap" }}><Link className="btn" to={to("/learn")}>{pkg.landing.cta} <ArrowRight size={16} /></Link></div>
       </div></section>
       {stages.length > 0 && (
         <section className="sec tint"><div className="wrap">

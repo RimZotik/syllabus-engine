@@ -5,6 +5,7 @@
 import { useState, type ReactNode } from "react";
 import { AlertTriangle, BookMarked, Check as CheckIcon, History, Lightbulb } from "lucide-react";
 import { useApp } from "../state";
+import { currentPackage } from "../current";
 import { term as lookup } from "./glossary";
 import { Sandbox } from "../components/Sandbox";
 import { RichText } from "../components/RichText";
@@ -98,6 +99,10 @@ export function Wide({ children }: { children: ReactNode }) {
 
 // A package may add its own components (interactive demos of its subject): content/<id>/components/index.ts(x)
 // exporting named React components. They become available in every topic of that package.
-const packageComponents = Object.assign({}, ...Object.values(import.meta.glob<Record<string, unknown>>("@pkg/components/index.{ts,tsx}", { eager: true })));
+// Every package's own components (courses/<id>/components/index.ts), by package.
+const componentFiles = import.meta.glob<Record<string, unknown>>("../../../../courses/*/components/index.{ts,tsx}", { eager: true });
+const packageComponents = new Map<string, Record<string, unknown>>();
+for (const [path, mod] of Object.entries(componentFiles)) packageComponents.set(path.replace(/\\/g, "/").split("/").slice(-3)[0], mod);
 
-export const mdxComponents = { Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, Sandbox, Trace, ...packageComponents };
+/** Components available in topics of the current package: the platform's plus the package's own. */
+export const mdxComponents = () => ({ Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, Sandbox, Trace, ...packageComponents.get(currentPackage()) });

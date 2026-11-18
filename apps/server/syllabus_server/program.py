@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from .settings import PackageError, active_package, package_dir, program_file
+from .settings import PackageError, current_package, package_dir, program_file
 
 ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
@@ -24,14 +24,26 @@ def _read(path: Path) -> dict:
 
 def load_package(pkg: str | None = None) -> dict:
     """Passport of the learning package with defaults filled in (format: docs/template/course-package.md)."""
-    pkg = pkg or active_package()
+    pkg = pkg or current_package()
     raw = _read(package_dir(pkg) / "package.yaml")
     landing = raw.get("landing") or {}
+    author = raw.get("author") or {}
+    if isinstance(author, str):
+        author = {"name": author}
     return {
         "id": pkg,
         "title": raw.get("title") or pkg,
         "language": raw.get("language", "ru"),
         "summary": raw.get("summary", ""),
+        # catalog card: everything optional
+        "icon": raw.get("icon") or "book-open",
+        "color": raw.get("color") or "green",
+        "subtitle": raw.get("subtitle", ""),
+        "level": raw.get("level", ""),
+        "version": str(raw.get("version") or ""),
+        "author": {"name": author.get("name", ""), "url": author.get("url", "")},
+        "tags": list(raw.get("tags") or []),
+        "license": raw.get("license", ""),
         "landing": {
             "headline": landing.get("headline") or raw.get("title") or pkg,
             "lead": landing.get("lead") or raw.get("summary", ""),
@@ -45,7 +57,7 @@ def load_package(pkg: str | None = None) -> dict:
 
 
 def load_program(path: Path | None = None) -> dict:
-    """Parsed program of the active package; re-read automatically when the file changes."""
+    """Parsed program of the current package; re-read automatically when the file changes."""
     raw = _read(path or program_file())
     subjects = {s["id"]: s["title"] for s in raw["subjects"]}
     max_level: dict[str, int] = {}

@@ -111,6 +111,24 @@ def test_api_serves_the_active_package(content):
     assert c.put("/api/progress/intro1.what.1", json={"status": "done"}).status_code == 404  # other package's topic
 
 
+
+def test_one_server_serves_every_installed_package(content):
+    """The page's package travels in X-Syllabus-Package: program, progress and data are that package's."""
+    make_package(content, "music")
+    c = TestClient(create_app(connect()))
+    cat = c.get("/api/packages").json()
+    assert cat["default"] == "drawing" and [p["id"] for p in cat["packages"]] == ["drawing", "music"]
+    assert cat["packages"][0]["icon"] == "book-open"  # passport defaults for the catalog card
+    music = {"X-Syllabus-Package": "music"}
+    assert c.get("/api/package", headers=music).json()["id"] == "music"
+    assert c.put("/api/progress/draw1.line.2", json={"status": "done", "page": 0}, headers=music).status_code == 200
+    # progress went to music's own database, drawing's stays empty
+    assert "draw1.line.2" in c.get("/api/progress", headers=music).json()
+    assert c.get("/api/progress").json() == {}
+    assert (settings.data_dir() / "music.sqlite3").exists()
+    assert c.get("/api/package", headers={"X-Syllabus-Package": "nope"}).status_code == 404
+    assert c.get("/api/package", headers={"X-Syllabus-Package": "../secret"}).status_code == 404
+
 def test_each_package_has_its_own_database(content, monkeypatch):
     make_package(content, "music")
     a, b = settings.db_path("drawing"), settings.db_path("music")

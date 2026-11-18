@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, CircleDashed, Play, Target } from "lucide-react";
-import type { Discipline } from "../api";
+import { api, type Discipline, type Results } from "../api";
+import { to } from "../current";
 import { useApp } from "../state";
 import { content } from "../content/registry";
 
@@ -12,11 +13,19 @@ export function Learn() {
   const [courseId, setCourseId] = useState<string | null>(null);
   const [discId, setDiscId] = useState<string | null>(null);
 
+  const [results, setResults] = useState<Results>({});
+  useEffect(() => { api.results().then(setResults).catch(() => {}); }, []);
+
+  // The next step in order: the first unfinished written topic — or, once a section's written topics are
+  // all done, its section test if it is not passed yet (the next section comes after the test).
   const next = useMemo(() => {
-    for (const c of program?.courses ?? []) for (const d of c.disciplines) for (const s of d.sections) for (const t of s.topics)
-      if (content.hasTopic(t.id) && progress[t.id]?.status !== "done") return { c, d, s, t };
+    for (const c of program?.courses ?? []) for (const d of c.disciplines) for (const s of d.sections) {
+      for (const t of s.topics) if (content.hasTopic(t.id) && progress[t.id]?.status !== "done") return { c, d, s, t, test: false };
+      const written = s.topics.filter((t) => content.hasTopic(t.id));
+      if (written.length && content.sectionTest(s.id) && !results[s.id]?.passed) return { c, d, s, t: { id: s.id, title: "Контрольная раздела" }, test: true };
+    }
     return null;
-  }, [program, progress]);
+  }, [program, progress, results]);
 
   useEffect(() => {
     if (program && !courseId) { setCourseId(next?.c.id ?? "0"); setDiscId(next?.d.id ?? program.courses[0].disciplines[0].id); }
@@ -48,9 +57,11 @@ export function Learn() {
           </div>
           {next && (
             <div className="continue">
-              <div><div className="eyebrow">{progress[next.t.id] ? "Продолжить" : "Начать"}</div><h2>{next.t.title}</h2>
+              <div><div className="eyebrow">{next.test ? "Следующий шаг" : progress[next.t.id] ? "Продолжить" : "Начать"}</div><h2>{next.t.title}</h2>
                 <div className="muted" style={{ fontSize: 14 }}>{next.d.name} · {next.s.title}</div></div>
-              <Link className="btn" to={`/learn/${next.t.id}`}><Play size={15} />{progress[next.t.id] ? "Продолжить" : "Начать"}</Link>
+              {next.test
+                ? <Link className="btn" to={to(`/test/${next.s.id}`)}><Target size={15} />К контрольной</Link>
+                : <Link className="btn" to={to(`/learn/${next.t.id}`)}><Play size={15} />{progress[next.t.id] ? "Продолжить" : "Начать"}</Link>}
             </div>
           )}
           <div className="eyebrow" style={{ marginBottom: 8 }}>Дисциплины курса</div>
@@ -79,10 +90,10 @@ export function Learn() {
             {disc.sections.map((s, i) => (
               <li key={s.id}><b>{i + 1}. {s.title}</b>
                 {s.topics.map((t) => content.hasTopic(t.id) ? (
-                  <Link key={t.id} to={`/learn/${t.id}`} className={`topic-link${progress[t.id]?.status === "done" ? " done" : ""}`}>
+                  <Link key={t.id} to={to(`/learn/${t.id}`)} className={`topic-link${progress[t.id]?.status === "done" ? " done" : ""}`}>
                     {progress[t.id]?.status === "done" ? <Check size={15} /> : <Play size={14} />}{t.title}</Link>
                 ) : <span key={t.id} className="topic-link na"><CircleDashed size={15} />{t.title}</span>)}
-                {content.sectionTest(s.id) && <Link to={`/test/${s.id}`} className="topic-link"><Target size={15} />Контрольная раздела</Link>}
+                {content.sectionTest(s.id) && <Link to={to(`/test/${s.id}`)} className="topic-link"><Target size={15} />Контрольная раздела</Link>}
               </li>
             ))}
           </ul>
