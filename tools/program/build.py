@@ -418,6 +418,12 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
                 for t in q.get("traps", []) or []:
                     if not isinstance(t, int) or not 0 <= t < n or t in ans:
                         errors.append(f"{where}: trap {t} must be a wrong option index")
+            elif q["type"] == "fields":
+                fs = q.get("fields") or []
+                if not fs or any(not isinstance(f, dict) or not isinstance(f.get("label"), str) or f.get("answer") in (None, "", []) for f in fs):
+                    errors.append(f"{where}: fields question needs fields: [{{label: текст, answer: ответ или [варианты]}}]")
+            elif q["type"] not in ("open",):
+                errors.append(f"{where}: unknown question type {q['type']!r} (single, multi, open, fields)")
             elif q["type"] == "open" and not q.get("rubric"):
                 errors.append(f"{where}: open question needs a rubric for the teacher")
     errors += check_tasks()

@@ -191,7 +191,7 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     class AttemptIn(BaseModel):
         scope: str
         item_id: str
-        kind: Literal["single", "multi", "open", "code", "exercise"]  # exercise — a package's own trainer (@syllabus/sdk)
+        kind: Literal["single", "multi", "open", "fields", "code", "exercise"]  # exercise — a package's own trainer (@syllabus/sdk)
         answer: Any
         correct: bool | None = None
         confidence: int | None = Field(None, ge=1, le=5)

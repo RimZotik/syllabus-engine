@@ -1,7 +1,7 @@
 import type { Grade } from "../api";
 import type { Question, QuizData } from "../content/registry";
 
-export type Answer = number | number[] | string | undefined;
+export type Answer = number | number[] | string | string[] | undefined;
 /** What is stored on the server, so a finished test stays finished after leaving the page. */
 export type Saved = {
   order: { id: string; perm: number[] }[];
@@ -24,8 +24,20 @@ function shuffled<T>(xs: T[]): T[] {
   return a;
 }
 
+/** How field answers are compared: no spaces, no case, decimal comma = point («401.10 172» = «40110172»). */
+export const normField = (s: string) => s.toLowerCase().replace(/\s+/g, "").replace(/,/g, ".").replace(/ё/g, "е");
+
+/** Whether field `i` of a `fields` question is filled correctly. */
+export function fieldRight(q: Question, a: Answer, i: number): boolean {
+  const f = q.fields?.[i];
+  if (!f) return false;
+  const got = normField(String(((a as string[]) ?? [])[i] ?? ""));
+  return got !== "" && (Array.isArray(f.answer) ? f.answer : [f.answer]).some((x) => normField(String(x)) === got);
+}
+
 export function isRight(q: Question, a: Answer): boolean | null {
   if (q.type === "open") return null;
+  if (q.type === "fields") return (q.fields ?? []).every((_, i) => fieldRight(q, a, i));
   if (q.type === "single") return a === q.answer;
   const want = [...((q.answer as number[]) ?? [])].sort().join(",");
   return [...((a as number[]) ?? [])].sort().join(",") === want;
@@ -87,7 +99,9 @@ export function unanswered(s: Saved, data: QuizData, openAvailable: boolean): nu
   return s.order.flatMap(({ id }, i) => {
     const q = byId.get(id); const a = s.answers[id];
     if (!q) return [];
-    const empty = q.type === "open" ? openAvailable && !String(a ?? "").trim() : a === undefined || (Array.isArray(a) && a.length === 0);
+    const empty = q.type === "open" ? openAvailable && !String(a ?? "").trim()
+      : q.type === "fields" ? (q.fields ?? []).some((_, j) => !String(((a as string[]) ?? [])[j] ?? "").trim())
+      : a === undefined || (Array.isArray(a) && a.length === 0);
     return empty ? [i + 1] : [];
   });
 }

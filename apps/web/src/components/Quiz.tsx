@@ -4,7 +4,7 @@ import { api } from "../api";
 import { useApp } from "../state";
 import type { Question, QuizData } from "../content/registry";
 import { RichText } from "./RichText";
-import { accepted, examStarted, fits, fresh, isPartial, isRight, optionMark, restartState, unanswered, type Saved } from "./quizLogic";
+import { accepted, examStarted, fieldRight, fits, fresh, isPartial, isRight, optionMark, restartState, unanswered, type Saved } from "./quizLogic";
 import { Modal } from "./Modal";
 
 /** Grows with its text; the scrollbar appears only past ~3/4 of the screen height (CSS max-height). */
@@ -57,6 +57,7 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
   const passed = st.done && score >= pass && openOk && !pending;
   const complete = data.questions.every((q) => q.type === "open"
     ? !teacher || written(q.id)
+    : q.type === "fields" ? (q.fields ?? []).every((_, i) => String(((st.answers[q.id] as string[]) ?? [])[i] ?? "").trim() !== "")
     : st.answers[q.id] !== undefined && (q.type !== "multi" || (st.answers[q.id] as number[]).length > 0));
   const correct = auto.filter((q) => isRight(q, st.answers[q.id])).length;
   const phase: ExamPhase = st.done ? "result" : exam && !examStarted(st) ? "intro" : "progress";
@@ -235,8 +236,24 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
         const locked = g?.verdict === "pass"; // accepted earlier: kept through «Пройти заново», not checked again
         return (
           <div className="qitem" key={q.id}>
-            <div className="qtitle"><b>{n + 1}. <RichText text={q.q} /></b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : "развёрнутый ответ"}</span></div>
-            {q.type === "open" ? (
+            <div className="qtitle"><b>{n + 1}. <RichText text={q.q} /></b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : q.type === "fields" ? "заполните поля" : "развёрнутый ответ"}</span></div>
+            {q.type === "fields" ? (
+              <div className="fields">
+                {(q.fields ?? []).map((f, i) => {
+                  const val = ((a as string[]) ?? [])[i] ?? "";
+                  const ok = st.done ? fieldRight(q, a, i) : null;
+                  const right = Array.isArray(f.answer) ? f.answer[0] : f.answer;
+                  return (
+                    <label key={i} className={`field${ok === true ? " right" : ok === false ? " wrong" : ""}`}>
+                      <span className="field-label">{f.label}</span>
+                      <input value={val} disabled={st.done} placeholder={f.placeholder ?? ""} spellCheck={false}
+                        onChange={(e) => { const next = [...(((stRef.current.answers[q.id] as string[]) ?? []))]; next[i] = e.target.value; edit({ answers: { ...stRef.current.answers, [q.id]: next } }); }} />
+                      {ok === false && <span className="field-right">верно: {String(right)}</span>}
+                    </label>
+                  );
+                })}
+              </div>
+            ) : q.type === "open" ? (
               !claude ? (
                 <div className="grading"><LoaderCircle size={18} />Проверяю, установлен ли Claude…</div>
               ) : teacher || written(q.id) ? (
@@ -273,7 +290,7 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
               <div className="qactions"><button className="btn sm" disabled={!written(q.id)} onClick={() => { commit(stRef.current, false); void grade(q); }}>Сдать ответ снова</button></div>
             )}
             {st.done && q.type !== "open" && <div className="explain">{verdict ? "Верно. " : isPartial(q, a) ? "Частично: вы отметили не все верные варианты — пропущенные подсвечены жёлтым. " : "Неверно. "}<RichText text={q.explain ?? ""} /></div>}
-            {st.done && (q.traps ?? []).some((t) => (Array.isArray(a) ? a.includes(t) : a === t)) && (
+            {st.done && (q.traps ?? []).some((t) => (Array.isArray(a) ? (a as (number | string)[]).includes(t) : a === t)) && (
               <div className="explain trap">Это ловушка: вариант звучит почти как фраза из лекции, но смысл в нём другой. Читайте каждый вариант до конца.</div>
             )}
           </div>

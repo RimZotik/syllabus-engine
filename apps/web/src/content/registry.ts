@@ -13,7 +13,10 @@ import { currentPackage } from "../current";
 export type TopicMeta = { minutes?: number; lead?: string };
 export type TopicModule = { default: ComponentType<{ components?: Record<string, unknown> }>; meta?: TopicMeta };
 export type Question = {
-  id: string; type: "single" | "multi" | "open"; q: string; options?: string[];
+  id: string; type: "single" | "multi" | "open" | "fields"; q: string; options?: string[];
+  /** type `fields`: fill in named fields (a journal entry: Дебет, Кредит, КОСГУ, КФО; a value and its unit…).
+   *  Each field accepts one or several equivalent answers; compared without spaces, case and with «,» = «.». */
+  fields?: { label: string; answer: string | string[]; placeholder?: string }[];
   answer?: number | number[]; explain?: string; rubric?: string[];
   /** for the teacher: typical wrong answers and follow-up probes of the oral check */
   wrong_answers?: string[]; followups?: string[];

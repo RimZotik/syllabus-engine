@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { examStarted, isPartial, optionMark, restartState, unanswered, type Saved } from "../components/quizLogic";
+import { examStarted, fieldRight, isPartial, isRight, optionMark, restartState, unanswered, type Saved } from "../components/quizLogic";
 import type { Question, QuizData } from "../content/registry";
 
 const multi = { id: "m", type: "multi", q: "?", options: ["a", "b", "c", "d"], answer: [0, 2] } as Question;
@@ -69,5 +69,19 @@ describe("section test (exam)", () => {
   it("keeps the history of attempts through a retake", () => {
     const prev: Saved = { ...base, done: true, history: [{ n: 1, score: 0.5, correct: 1, total: 2, at: "t", answers: {} }] };
     expect(restartState(data, prev).history).toHaveLength(1);
+  });
+});
+
+describe("fields questions (a journal entry)", () => {
+  const q = { id: "e", type: "fields" as const, q: "Проводка", fields: [
+    { label: "Дебет", answer: ["0 401 20 211", "40120211"] }, { label: "Кредит", answer: "0 302 11 730" }, { label: "КОСГУ", answer: "211" }] };
+  it("accepts any listed variant, ignoring spaces and case", () => {
+    expect(isRight(q, ["40120211", "0 302 11 730", " 211 "])).toBe(true);
+    expect(fieldRight(q, ["0 401 20 211"], 0)).toBe(true);
+  });
+  it("one wrong or empty field makes the whole answer wrong", () => {
+    expect(isRight(q, ["40120211", "030211730", "212"])).toBe(false);
+    expect(isRight(q, ["40120211", "030211730"])).toBe(false);
+    expect(fieldRight(q, ["", "", ""], 2)).toBe(false);
   });
 });
