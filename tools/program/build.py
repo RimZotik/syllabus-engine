@@ -325,23 +325,52 @@ def render_trees(data: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+def names(term: str, text: str) -> bool:
+    """Whether the text names the term in any case form: every word by its stem («разметка данных» ~ «разметкой данных»)."""
+    stems = [w[: max(4, len(w) - 3)] for w in re.findall(r"\w+", term.lower()) if len(w) > 2]
+    return bool(stems) and all(re.search(r"(?<!\w)" + re.escape(s), text) for s in stems)
+
+
 def check_content(data: dict) -> tuple[list[str], set[str]]:
     """Authored topics must exist in the plan; glossary terms must exist; quiz answers must be valid."""
     errors: list[str] = []
     sections, *_ = index(data)
     topic_ids = {f"{s['id']}.{i}" for s in sections for i in range(1, len(s["topics"]) + 1)}
     section_ids = {s["id"] for s in sections}
-    glossary = {t["id"] for t in yaml.safe_load(GLOSSARY.read_text(encoding="utf-8"))} if GLOSSARY.exists() else set()
+    terms = {t["id"]: t for t in (yaml.safe_load(GLOSSARY.read_text(encoding="utf-8")) or [])} if GLOSSARY.exists() else {}
+    glossary = set(terms)
+    # Program order of topics: a concept may be used only in its own topic or after it (glossary introduced_in).
+    order = {f"{s['id']}.{i}": n for n, (s, i) in enumerate((s, i) for s in sections for i in range(1, len(s["topics"]) + 1))}
     authored: set[str] = set()
+    linked: dict[str, set[str]] = {}
+    texts: dict[str, str] = {}
     for mdx in sorted(COURSES.glob("*/*/*/topic.mdx")):
         disc, sec, folder = mdx.relative_to(COURSES).parts[:3]
         tid = f"{disc}.{sec}.{int(folder.split('-')[0])}"
         if tid not in topic_ids:
             errors.append(f"{rel(mdx)}: topic {tid} is not in program.yaml")
         authored.add(tid)
-        for term_id in re.findall(r'<Term id="([^"]+)"', mdx.read_text(encoding="utf-8")):
+        text = mdx.read_text(encoding="utf-8")
+        used = set(re.findall(r'<Term id="([^"]+)"', text))
+        linked[tid] = set(used)
+        texts[tid] = text.lower()
+        # concepts the topic relies on without linking them: export const meta = { uses: ["weight", "layer"] }
+        m = re.search(r"uses:\s*\[([^\]]*)\]", text)
+        used |= set(re.findall(r'"([^"]+)"', m.group(1))) if m else set()
+        for term_id in sorted(used):
             if term_id not in glossary:
                 errors.append(f"{rel(mdx)}: term '{term_id}' missing in glossary.yaml")
+                continue
+            intro = terms[term_id].get("introduced_in")
+            if intro and intro in order and tid in order and order[intro] > order[tid]:
+                errors.append(f"{rel(mdx)}: '{term_id}' is used before it is introduced (glossary: introduced_in {intro}) — explain it here or earlier")
+    for term_id, t in terms.items():
+        intro = t.get("introduced_in")
+        if intro and intro not in order:
+            errors.append(f"glossary.yaml: '{term_id}': introduced_in {intro} is not a topic of program.yaml")
+        elif intro in authored and term_id not in linked.get(intro, set()) and not names(str(t.get("term", "")), texts.get(intro, "")):
+            # introduced by a <Term> link or at least named in that topic (e.g. the title of a <Theorem> definition)
+            errors.append(f"glossary.yaml: '{term_id}': introduced_in {intro}, but that topic neither marks nor names it")
     for qf in sorted(list(COURSES.glob("*/*/*/quiz.yaml")) + list(COURSES.glob("*/*/test.yaml"))):
         try:
             quiz = yaml.safe_load(qf.read_text(encoding="utf-8")) or {}

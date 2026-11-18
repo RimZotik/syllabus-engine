@@ -332,3 +332,24 @@ def test_task_forbid_slice_keeps_plain_indexing():
     assert sliced[0]["ok"] is False and "срезы" in sliced[0]["message"]
     by_index = run_taskcheck("w = input().split()" + chr(10) + "i = len(w) - 1" + chr(10) + "r = []" + chr(10) + "while i >= 0:" + chr(10) + "    r.append(w[i])" + chr(10) + "    i -= 1" + chr(10) + "print(*r)", tests)
     assert all(x["ok"] for x in by_index)
+
+
+def test_validator_catches_a_concept_used_before_it_is_introduced(tmp_path, monkeypatch):
+    croot = tmp_path / "courses"
+    d = make_package(croot)
+    # «штриховка» is introduced in topic 2, but topic 1 already relies on it (by a link and by meta.uses)
+    (d / "glossary.yaml").write_text(
+        "- id: line\n  term: линия\n  short: След карандаша.\n  introduced_in: draw1.line.1\n"
+        "- id: hatch\n  term: штриховка\n  short: Ряды линий.\n  introduced_in: draw1.line.2\n", encoding="utf-8")
+    t1 = d / "lessons" / "draw1" / "line" / "01-straight" / "topic.mdx"
+    t1.write_text('export const meta = { uses: ["hatch"] }\n\n<Page title="Прямая">\n\n<Term id="line">Линия</Term> бывает прямой.\n\n</Page>\n', encoding="utf-8")
+    b = load_build(monkeypatch, croot)
+    b.use_package("drawing")
+    errors, _ = b.check_content(b.load())
+    assert any("'hatch' is used before it is introduced" in e for e in errors)
+    # and the term's own topic must name it: «штриховка» in any case form
+    t2 = t1.parent.parent / "02-hatching"; t2.mkdir()
+    (t2 / "topic.mdx").write_text('<Page title="Штриховка">\n\nТени передают штриховкой.\n\n</Page>\n', encoding="utf-8")
+    t1.write_text('<Page title="Прямая">\n\n<Term id="line">Линия</Term> бывает прямой.\n\n</Page>\n', encoding="utf-8")
+    errors, _ = b.check_content(b.load())
+    assert errors == []
