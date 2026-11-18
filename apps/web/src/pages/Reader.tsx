@@ -6,7 +6,7 @@ import { load, store } from "../persist";
 import { useApp, type TopicPlace } from "../state";
 import { content, type TopicModule } from "../content/registry";
 import { mdxComponents, Page } from "../content/components";
-import { Quiz } from "../components/Quiz";
+import { Quiz, type ExamPhase } from "../components/Quiz";
 import { Drawer, FeedbackDrawer, NotesDrawer } from "../components/Drawers";
 
 type PageDef = { title: string; minutes?: number; node: ReactNode };
@@ -159,6 +159,10 @@ export function SectionTest() {
   const { sectionId = "" } = useParams();
   const { allTopics, place, progress } = useApp();
   const [panel, setPanel] = useState<"toc" | "notes" | "feedback" | null>(null);
+  const [phase, setPhase] = useState<ExamPhase>("intro");
+  const running = phase === "progress"; // during an attempt the topics are out of reach
+  const [testPassed, setTestPassed] = useState(false);
+  useEffect(() => { api.quizState(sectionId).then((r) => setTestPassed(r.passed)).catch(() => {}); }, [sectionId]);
   const data = content.sectionTest(sectionId);
   // the section's last topic (back) and the first topic after the section (forward)
   const lastIdx = allTopics.map((t) => t.id.startsWith(sectionId + ".")).lastIndexOf(true);
@@ -171,18 +175,19 @@ export function SectionTest() {
     <div className="reader">
       {where && (
         <div className="reader-bar"><div className="wrap">
-          <button className="icon-btn" aria-label="Содержание" title="Содержание" onClick={() => setPanel("toc")}><List size={18} /></button>
-          <div className="crumb">{where.discipline.name} · {where.section.title} · <b>Контрольная раздела</b></div>
+          {running ? <span className="icon-btn" aria-hidden="true" /> : <button className="icon-btn" aria-label="Содержание" title="Содержание" onClick={() => setPanel("toc")}><List size={18} /></button>}
+          <div className="crumb">{where.discipline.name} · {where.section.title} · <b>Контрольная раздела{running ? " — идёт попытка" : ""}</b></div>
           <button className="icon-btn" aria-label="Заметки к контрольной" title="Заметки к контрольной" onClick={() => setPanel("notes")}><NotebookPen size={17} /></button>
           <button className="icon-btn" aria-label="Предложить правку" title="Предложить правку" onClick={() => setPanel("feedback")}><Flag size={17} /></button>
         </div></div>
       )}
-      <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} data={{ ...data, title: data.title ?? "Контрольная раздела" }} /></div></div>
-      <div className="reader-nav-wrap"><div className="read reader-nav">
+      <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} exam onPhase={setPhase} onPassed={() => setTestPassed(true)} data={{ ...data, title: data.title ?? "Контрольная раздела" }} /></div></div>
+      {!running && <div className="reader-nav-wrap"><div className="read reader-nav">
         {back ? <Link className="btn soft" id="prev" to={`/learn/${back.id}`} aria-label="К последней теме"><ArrowLeft size={16} /><span className="pl">К последней теме</span></Link> : <span />}
-        {next ? <Link className="btn" id="next" to={`/learn/${next.id}`}><span>Следующий раздел{nextSection ? `: ${nextSection.title}` : ""}</span><ArrowRight size={16} /></Link>
+        {next && !testPassed ? <button className="btn" id="next" disabled title="Следующий раздел откроется после сдачи контрольной"><span>Сдайте контрольную, чтобы продолжить</span></button>
+          : next ? <Link className="btn" id="next" to={`/learn/${next.id}`}><span>Следующий раздел{nextSection ? `: ${nextSection.title}` : ""}</span><ArrowRight size={16} /></Link>
           : <Link className="btn" id="next" to="/learn">К учебному плану</Link>}
-      </div></div>
+      </div></div>}
       {panel === "toc" && where && <TocDrawer place={where} current={sectionId} progress={progress} onClose={() => setPanel(null)} />}
       {panel === "notes" && <NotesDrawer topicId={sectionId} onClose={() => setPanel(null)} />}
       {panel === "feedback" && <FeedbackDrawer topicId={sectionId} onClose={() => setPanel(null)} />}

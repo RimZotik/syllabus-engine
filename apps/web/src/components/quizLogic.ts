@@ -12,6 +12,10 @@ export type Saved = {
   /** share of auto-graded questions answered correctly, set on «Сдать» */
   score?: number;
   submitted_at?: string;
+  /** section test: the learner pressed «Начать контрольную» */
+  started?: boolean;
+  /** every submitted attempt, so the teacher can later see how the learner corrected mistakes */
+  history?: { n: number; score: number; correct: number; total: number; at: string; answers: Record<string, Answer> }[];
 };
 
 function shuffled<T>(xs: T[]): T[] {
@@ -65,13 +69,27 @@ export const accepted = (s: Saved, id: string) => s.grades[id]?.verdict === "pas
  * as an editable draft and is checked again on «Сдать».
  */
 export function restartState(data: QuizData, prev: Saved): Saved {
-  const next = fresh(data);
+  const next: Saved = { ...fresh(data), history: prev.history };
   for (const q of data.questions.filter((x) => x.type === "open")) {
     if (prev.answers[q.id] !== undefined) next.answers[q.id] = prev.answers[q.id];
     if (prev.conf[q.id] !== undefined) next.conf[q.id] = prev.conf[q.id];
     if (accepted(prev, q.id)) next.grades[q.id] = prev.grades[q.id];
   }
   return next;
+}
+
+/** A section test counts as started if the learner pressed «Начать» — or, for states saved before that button existed, already answered something. */
+export const examStarted = (s: Saved) => s.started ?? Object.keys(s.answers).some((id) => s.answers[id] !== undefined && s.answers[id] !== "");
+
+/** Numbers (1-based, in the shown order) of questions without an answer. Written answers count only when they can be written. */
+export function unanswered(s: Saved, data: QuizData, openAvailable: boolean): number[] {
+  const byId = new Map(data.questions.map((q) => [q.id, q]));
+  return s.order.flatMap(({ id }, i) => {
+    const q = byId.get(id); const a = s.answers[id];
+    if (!q) return [];
+    const empty = q.type === "open" ? openAvailable && !String(a ?? "").trim() : a === undefined || (Array.isArray(a) && a.length === 0);
+    return empty ? [i + 1] : [];
+  });
 }
 
 /** A saved state is reused only if the test itself has not changed since (same questions, same option counts). */

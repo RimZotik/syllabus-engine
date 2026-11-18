@@ -402,3 +402,15 @@ input[type=range]{accent-color:var(--green)}
 .read pre:has(code.language-input){box-shadow:inset 3px 0 0 var(--lav)}
 .read pre:has(code.language-input)::before{content:"Ввод";position:absolute;top:8px;left:16px;font:600 11px/1 var(--f-text);letter-spacing:.06em;text-transform:uppercase;color:var(--lav)}
 .qtitle .rt-pre{font-weight:400}
+
+/* section test: rules before the start, confirmation window */
+.exam-rules{margin-top:22px;padding:22px 24px;border-radius:var(--r-l);background:var(--card);box-shadow:var(--sh-soft)}
+.exam-rules ul{margin:12px 0 20px;padding-left:20px;color:var(--ink-2);line-height:1.6}
+.exam-rules li+li{margin-top:6px}
+.exam-nav{max-width:none;padding-inline:0}
+.modal-back{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--ink) 38%,transparent);animation:fadein .15s ease}
+.modal{width:min(460px,100%);padding:24px 26px 22px;border-radius:var(--r-l);background:var(--card);box-shadow:var(--sh-menu);color:var(--ink)}
+.modal h3{margin:0 0 10px;font:600 20px/1.3 var(--f-head)}
+.modal-body p{margin:0 0 10px;line-height:1.55}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px}
+@keyframes fadein{from{opacity:0}to{opacity:1}}

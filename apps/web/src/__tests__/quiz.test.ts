@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPartial, optionMark, restartState, type Saved } from "../components/quizLogic";
+import { examStarted, isPartial, optionMark, restartState, unanswered, type Saved } from "../components/quizLogic";
 import type { Question, QuizData } from "../content/registry";
 
 const multi = { id: "m", type: "multi", q: "?", options: ["a", "b", "c", "d"], answer: [0, 2] } as Question;
@@ -49,5 +49,24 @@ describe("«Пройти заново»", () => {
   it("keeps a non-accepted written answer as a draft without the old verdict", () => {
     expect(next.answers.o2).toBe("ответ на доработку");
     expect(next.grades.o2).toBeUndefined();
+  });
+});
+
+describe("section test (exam)", () => {
+  const base: Saved = { order: [{ id: "m", perm: [0, 1, 2, 3] }, { id: "s", perm: [0, 1] }, { id: "o1", perm: [] }, { id: "o2", perm: [] }], answers: {}, conf: {}, done: false, grades: {} };
+  it("counts as started after «Начать» or, for older saved states, once something is answered", () => {
+    expect(examStarted(base)).toBe(false);
+    expect(examStarted({ ...base, started: true })).toBe(true);
+    expect(examStarted({ ...base, answers: { s: 1 } })).toBe(true);
+    expect(examStarted({ ...base, answers: { s: 1 }, started: false })).toBe(false);
+  });
+  it("names unanswered questions by their shown number; written ones only when they can be written", () => {
+    const s = { ...base, answers: { m: [], s: 0, o1: "текст" } };
+    expect(unanswered(s, data, true)).toEqual([1, 4]);
+    expect(unanswered(s, data, false)).toEqual([1]);
+  });
+  it("keeps the history of attempts through a retake", () => {
+    const prev: Saved = { ...base, done: true, history: [{ n: 1, score: 0.5, correct: 1, total: 2, at: "t", answers: {} }] };
+    expect(restartState(data, prev).history).toHaveLength(1);
   });
 });

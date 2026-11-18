@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type TextareaHTMLAttributes } from "react";
-import { CheckCircle2, CircleAlert, LoaderCircle, MessageSquareText, RotateCcw } from "lucide-react";
+import { CheckCircle2, CircleAlert, Flag, LoaderCircle, MessageSquareText, Play, RotateCcw } from "lucide-react";
 import { api } from "../api";
 import { useApp } from "../state";
 import type { Question, QuizData } from "../content/registry";
 import { RichText } from "./RichText";
-import { accepted, fits, fresh, isPartial, isRight, optionMark, restartState, type Saved } from "./quizLogic";
+import { accepted, examStarted, fits, fresh, isPartial, isRight, optionMark, restartState, unanswered, type Saved } from "./quizLogic";
+import { Modal } from "./Modal";
 
 /** Grows with its text; the scrollbar appears only past ~3/4 of the screen height (CSS max-height). */
 function AutoTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -27,8 +28,13 @@ function AutoTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
  * Topic test or section test. Auto-graded questions are checked here. Written answers go to the teacher
  * (Claude) right after «Сдать»; with Claude installed the test counts as passed only when every written
  * answer is accepted. Without Claude written questions are unavailable and never block progress.
+ *
+ * `exam` — a section test, stricter: it starts with a button and a warning, the topics are out of reach
+ * while it runs, it is finished through a confirmation window (unanswered questions are named), and
+ * below the threshold only the score is shown — the review of answers opens once the test is passed.
  */
-export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData; onPassed?: () => void }) {
+export type ExamPhase = "intro" | "progress" | "result";
+export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: string; data: QuizData; onPassed?: () => void; exam?: boolean; onPhase?: (p: ExamPhase) => void }) {
   const { claude, refreshClaude } = useApp();
   const teacher = !!claude?.installed;
   const pass = data.pass ?? 0.85;
@@ -52,6 +58,18 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
   const complete = data.questions.every((q) => q.type === "open"
     ? !teacher || written(q.id)
     : st.answers[q.id] !== undefined && (q.type !== "multi" || (st.answers[q.id] as number[]).length > 0));
+  const correct = auto.filter((q) => isRight(q, st.answers[q.id])).length;
+  const phase: ExamPhase = st.done ? "result" : exam && !examStarted(st) ? "intro" : "progress";
+  const review = !exam || score >= pass; // a failed section test shows only the score
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => { if (loaded) onPhase?.(phase); }, [phase, loaded, onPhase]);
+  // leaving the page in the middle of a section test asks first (reload, closing the tab)
+  useEffect(() => {
+    if (!exam || phase !== "progress") return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [exam, phase]);
 
   useEffect(() => {
     let alive = true;
@@ -106,8 +124,12 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
 
   async function submit() {
     const seconds = Math.round((Date.now() - started.current) / 1000);
-    const next = { ...stRef.current, done: true, score, submitted_at: new Date().toISOString() };
-    const toCheck = open.filter((q) => written(q.id) && !accepted(next, q.id));
+    const at = new Date().toISOString();
+    const prev = stRef.current;
+    const history = [...(prev.history ?? []), { n: (prev.history?.length ?? 0) + 1, score, correct, total: auto.length, at, answers: prev.answers }];
+    const next = { ...prev, done: true, score, submitted_at: at, history };
+    // a failed section test is not reviewed, so written answers wait for a passing attempt (no teacher tokens spent)
+    const toCheck = exam && score < pass ? [] : open.filter((q) => written(q.id) && !accepted(next, q.id));
     const needsTeacher = teacher && toCheck.length > 0;
     commit(next, score >= pass && !needsTeacher);
     api.saveAttempts(auto.map((q) => ({
@@ -120,7 +142,15 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
     reported.current = false;
     setGradeErr({});
     started.current = Date.now();
-    commit(restartState(data, stRef.current), false);
+    const next = restartState(data, stRef.current);
+    commit(exam ? { ...next, started: false } : next, false);
+    window.scrollTo(0, 0);
+  }
+
+  function startExam() {
+    started.current = Date.now();
+    commit({ ...stRef.current, started: true }, false);
+    window.scrollTo(0, 0);
   }
 
   function toggle(q: Question, i: number) {
@@ -133,12 +163,49 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
 
   if (!loaded) return <div className="faint" style={{ padding: "40px 0" }}>Загружаю проверку…</div>;
 
+  const tries = st.history?.length ?? 0;
+  const head = (
+    <div className="quiz-head">
+      <div><div className="eyebrow">{data.title ?? "Проверка темы"}</div><h2 style={{ marginTop: 10 }}>{data.questions.length} вопросов</h2></div>
+      <span className="faint" style={{ fontSize: 14 }}>Порог {Math.round(pass * 100)}% · подсказки недоступны{exam && tries ? ` · попыток: ${tries}` : ""}</span>
+    </div>
+  );
+
+  if (phase === "intro") return (
+    <div>
+      {head}
+      <div className="exam-rules">
+        <b>Перед началом</b>
+        <ul>
+          <li>Пока идёт контрольная, темы раздела и содержание недоступны: вернуться к теории можно только после сдачи.</li>
+          <li>Сдать можно, не ответив на все вопросы, — вопросы без ответа засчитаются как неверные.</li>
+          <li>Чтобы пройти, нужно {Math.round(pass * 100)}% верных ответов. Если не получится, вы увидите только результат, без разбора: перечитайте раздел и попробуйте снова. Разбор ответов откроется после успешной сдачи.</li>
+          <li>Каждая попытка сохраняется{tries ? ` — это будет попытка ${tries + 1}` : ""}.</li>
+        </ul>
+        <button className="btn" onClick={startExam}><Play size={16} />Начать контрольную</button>
+      </div>
+    </div>
+  );
+
+  if (phase === "result" && !review) return (
+    <div>
+      {head}
+      <div className="result fail">
+        <CircleAlert size={28} />
+        <div>
+          <b className="tnum">Верно {correct} из {auto.length}</b> <span className="faint tnum">· {Math.round(score * 100)}%, нужно {Math.round(pass * 100)}%</span>
+          <div style={{ marginTop: 6 }}>Попытка {tries} не засчитана. Разбор ответов откроется, когда контрольная будет сдана: так ошибки исправляются пониманием, а не запоминанием. Перечитайте темы раздела и начните новую попытку — вопросы и варианты будут в другом порядке.</div>
+        </div>
+      </div>
+      <div className="quiz-foot"><button className="btn" onClick={restart}><RotateCcw size={16} />Новая попытка</button></div>
+    </div>
+  );
+
+  const missing = unanswered(st, data, teacher);
+
   return (
     <div>
-      <div className="quiz-head">
-        <div><div className="eyebrow">{data.title ?? "Проверка темы"}</div><h2 style={{ marginTop: 10 }}>{data.questions.length} вопросов</h2></div>
-        <span className="faint" style={{ fontSize: 14 }}>Порог {Math.round(pass * 100)}% · подсказки недоступны</span>
-      </div>
+      {head}
       {st.order.map(({ id, perm }, n) => {
         const q = byId.get(id);
         if (!q) return null;
@@ -196,15 +263,20 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
         );
       })}
       {!st.done ? (
-        <button className="btn" onClick={submit} disabled={!complete}>Сдать</button>
+        exam ? (
+          <div className="reader-nav-wrap"><div className="reader-nav exam-nav">
+            <span className="faint tnum">{missing.length ? `Без ответа: ${missing.length} из ${data.questions.length}` : "Все вопросы отвечены"}</span>
+            <button className="btn" id="next" onClick={() => setConfirm(true)}><Flag size={16} />Закончить попытку</button>
+          </div></div>
+        ) : <button className="btn" onClick={submit} disabled={!complete}>Сдать</button>
       ) : (
         <>
           <div className={`result ${passed ? "pass" : pending ? "wait" : "fail"}`}>
             {passed ? <CheckCircle2 size={28} /> : pending ? <LoaderCircle size={28} className="spin" /> : <CircleAlert size={28} />}
             <div>
-              <b className="tnum">{Math.round(score * 100)}%</b>
+              <b className="tnum">{exam ? `Верно ${correct} из ${auto.length} · ` : ""}{Math.round(score * 100)}%</b>
               <div style={{ marginTop: 6 }}>
-                {passed ? "Проверка пройдена."
+                {passed ? (exam ? `Контрольная сдана${tries > 1 ? ` с ${tries}-й попытки` : ""}. Ниже — разбор: посмотрите, где были ошибки, чтобы запомнить.` : "Проверка пройдена.")
                   : score < pass ? "Пока ниже порога. Перечитайте страницы с ошибками и пройдите проверку заново — вопросы будут в другом порядке."
                   : pending ? "Тестовая часть пройдена. Ждём, что скажет преподаватель о развёрнутом ответе."
                   : "Тестовая часть пройдена. Осталось довести развёрнутый ответ: исправьте его по замечанию и сдайте снова."}
@@ -215,6 +287,16 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
             <button className="btn soft sm" onClick={restart} disabled={pending}><RotateCcw size={16} />Пройти заново</button>
           </div>
         </>
+      )}
+      {confirm && (
+        <Modal title="Сдать контрольную?" onClose={() => setConfirm(false)}
+          actions={<><button className="btn soft" onClick={() => setConfirm(false)}>Вернуться к вопросам</button>
+            <button className="btn" onClick={() => { setConfirm(false); void submit(); window.scrollTo(0, 0); }}>Сдать</button></>}>
+          {missing.length
+            ? <p>Вы ответили не на все вопросы: без ответа {missing.length === 1 ? "вопрос" : "вопросы"} <b className="tnum">№{missing.join(", №")}</b>. Они засчитаются как неверные.</p>
+            : <p>Вы ответили на все {data.questions.length} вопросов.</p>}
+          <p className="faint">После сдачи изменить ответы будет нельзя. Это попытка {tries + 1}.</p>
+        </Modal>
       )}
     </div>
   );
