@@ -46,9 +46,10 @@ describe("«Пройти заново»", () => {
     expect(next.grades.o1?.verdict).toBe("pass");
     expect(next.conf.o1).toBe(4);
   });
-  it("keeps a non-accepted written answer as a draft without the old verdict", () => {
+  it("keeps a non-accepted written answer with the teacher's comment, so the learner knows what to fix", () => {
     expect(next.answers.o2).toBe("ответ на доработку");
-    expect(next.grades.o2).toBeUndefined();
+    expect(next.grades.o2?.verdict).toBe("revise");
+    expect(next.grades.o2?.feedback).toBe("Дополните");
   });
 });
 

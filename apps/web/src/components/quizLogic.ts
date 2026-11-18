@@ -64,16 +64,16 @@ export const fresh = (data: QuizData): Saved => ({ order: freshOrder(data), answ
 export const accepted = (s: Saved, id: string) => s.grades[id]?.verdict === "pass";
 
 /**
- * «Пройти заново»: auto-graded questions start over in a new order. Written answers are kept: an accepted
- * one stays accepted with the teacher's comment (no new check, nothing to retype); any other one stays
- * as an editable draft and is checked again on «Сдать».
+ * «Пройти заново»: auto-graded questions start over in a new order. Written answers are kept with the
+ * teacher's last comment: an accepted one stays accepted (no new check, nothing to retype); any other one
+ * stays editable — the comment says what to fix — and is checked again on «Сдать».
  */
 export function restartState(data: QuizData, prev: Saved): Saved {
   const next: Saved = { ...fresh(data), history: prev.history };
   for (const q of data.questions.filter((x) => x.type === "open")) {
     if (prev.answers[q.id] !== undefined) next.answers[q.id] = prev.answers[q.id];
     if (prev.conf[q.id] !== undefined) next.conf[q.id] = prev.conf[q.id];
-    if (accepted(prev, q.id)) next.grades[q.id] = prev.grades[q.id];
+    if (prev.grades[q.id]) next.grades[q.id] = prev.grades[q.id];
   }
   return next;
 }
