@@ -39,6 +39,7 @@ STAGES = {
     "tests": "Тесты: написание и экзаменатор",
     "tasks": "Задачи песочницы: написание и проверка",
     "platform": "Платформа и документация",
+    "teaching-audit": "Аудит преподавания (проверка работы преподавателя)",
     "discussion": "Обсуждение с пользователем",
     "other": "Прочее",
 }
@@ -46,6 +47,7 @@ CONTENT = ["design", "theory", "theory-review", "facts", "tests", "tasks"]
 
 # Keyword rules for descriptions without a stage prefix (first match wins).
 DESCRIPTION_RULES = [
+    ("teaching-audit", r"teaching|grader|teacher feedback"),
     ("facts", r"fact|scientist|calque|idiom|quote|фактчек|цитат"),
     ("tests", r"examiner|quiz|экзаменатор"),
     ("tasks", r"task checker|\btasks?\b|задач"),
