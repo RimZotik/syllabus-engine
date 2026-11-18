@@ -161,7 +161,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
               const chosen = q.type === "single" ? a === i : ((a as number[]) ?? []).includes(i);
               const mark = st.done ? optionMark(q, a, i) : "";
               return (
-                <button key={i} className={`opt${mark ? " " + mark : !st.done && chosen ? " chosen" : ""}`} onClick={() => toggle(q, i)}>
+                <button key={i} className={`opt${mark ? " " + mark : ""}`} onClick={() => toggle(q, i)}>
                   <input type={q.type === "single" ? "radio" : "checkbox"} readOnly checked={chosen} tabIndex={-1} /><span className="opt-text"><RichText text={q.options![i]} /></span>
                 </button>
               );

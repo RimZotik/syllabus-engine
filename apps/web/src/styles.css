@@ -170,10 +170,9 @@ mark{background:var(--mark);color:inherit;padding:0 .15em;border-radius:4px;-web
 .opt:hover{background:var(--fill)}
 .opt input{margin:0;flex:none;appearance:none;-webkit-appearance:none;width:19px;height:19px;border:2px solid var(--ink-3);border-radius:6px;background:var(--card);display:grid;place-content:center;cursor:pointer}
 .opt input[type=radio]{border-radius:50%}
-.opt input:checked{background:var(--green);border-color:var(--green)}
+.opt input:checked{background:var(--green);border-color:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 30%,transparent)}
 .opt input[type=checkbox]:checked::after{content:"";width:5px;height:10px;border:solid var(--card);border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
-.opt input[type=radio]:checked::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--card)}
-.opt.chosen{background:var(--green-soft);color:var(--green-ink)}
+.opt input[type=radio]:checked::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--card)}
 .opt.wrong input:checked{background:var(--bad);border-color:var(--bad)}
 .opt.missed input{border-color:var(--warn)}
 .opt.right{background:var(--green-soft);color:var(--green-ink);font-weight:700}
