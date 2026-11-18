@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Children, isValidElement, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CircleAlert, LoaderCircle } from "lucide-react";
 import { explainError, tracePython, type TraceResult, type TraceStep, type TraceVal } from "../sandbox/runner";
 
@@ -106,6 +106,37 @@ export function TraceView({ code, stdin = "" }: { code: string; stdin?: string }
 }
 
 /** MDX: <Trace code={`a = [1, 2]\nb = a`} /> */
-export function Trace({ code, stdin }: { code: string; stdin?: string }) {
-  return <TraceView code={code.replace(/^\n/, "")} stdin={stdin} />;
+/** Text and language of every fenced block (<pre><code class="language-…">) among MDX children. */
+export function fences(node: ReactNode, out: { lang: string; text: string }[] = []) {
+  Children.forEach(node, (child) => {
+    if (!isValidElement<{ children?: ReactNode; className?: string }>(child)) return;
+    if (child.type === "code") {
+      const lang = /language-(\w+)/.exec(child.props.className ?? "")?.[1] ?? "";
+      out.push({ lang, text: textOf(child.props.children) });
+    } else fences(child.props.children, out);
+  });
+  return out;
+}
+function textOf(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  return isValidElement<{ children?: ReactNode }>(node) ? textOf(node.props.children) : "";
+}
+
+/**
+ * MDX: the code as a normal fenced block inside the component — indentation is kept exactly;
+ * an optional ```input block gives what the program reads:
+ *   <Trace>
+ *   ```python
+ *   for t in [1, 2]:
+ *       print(t)
+ *   ```
+ *   </Trace>
+ * The older form <Trace code={"..."} stdin={"..."} /> still works.
+ */
+export function Trace({ code, stdin, children }: { code?: string; stdin?: string; children?: ReactNode }) {
+  const blocks = fences(children);
+  const src = code ?? blocks.find((b) => b.lang !== "input")?.text ?? "";
+  const input = stdin ?? blocks.find((b) => b.lang === "input")?.text;
+  return <TraceView code={src.replace(/^\n/, "")} stdin={input} />;
 }
