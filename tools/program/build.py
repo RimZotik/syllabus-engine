@@ -4,7 +4,7 @@ Checks:
   * package.yaml exists, its id matches the folder, title is set;
   * ids are unique; every discipline references a known subject;
   * subject levels go 1, 2, 3... in order of appearance (a level never repeats or skips);
-  * package rules from package.yaml, e.g. `every_course_has: {subject: algo, except: ["0"]}`;
+  * package rules from package.yaml, e.g. `every_course_has: {subject: algo, except: ["0"]}`, `glossary_en: true` (every term has `en`);
   * every `requires` points to a section defined EARLIER (no forward dependencies);
   * every `used_by` points to a section defined LATER;
   * every section of a math subject declares `used_by` — no math "just because".
@@ -376,7 +376,9 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
         intro = t.get("introduced_in")
         if intro and intro not in order:
             errors.append(f"glossary.yaml: '{term_id}': introduced_in {intro} is not a topic of program.yaml")
-        elif intro in authored and term_id not in linked.get(intro, set()) and not defines(str(t.get("term", "")), texts.get(intro, "")):
+        if (META.get("rules") or {}).get("glossary_en") and not str(t.get("en") or "").strip():
+            errors.append(f"glossary.yaml: '{term_id}': no English name (en) — package rule glossary_en")
+        if intro in order and intro in authored and term_id not in linked.get(intro, set()) and not defines(str(t.get("term", "")), texts.get(intro, "")):
             # the topic that introduces a term must mark it (<Term id>) or define it (<Theorem title>), not just print it in bold:
             # the learner needs the hover hint, and the term comes back in later topics
             errors.append(f"glossary.yaml: '{term_id}': introduced_in {intro}, but that topic does not mark it with <Term id=\"{term_id}\"> or define it in a <Theorem>")

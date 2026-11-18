@@ -39,15 +39,32 @@ export function Reference() {
   }, [program]);
   const passed = (id: string) => content.hasTopic(id) && progress[id]?.status === "done";
 
+  // a term whose topic also has a <Theorem> card for it is shown once — as the card, the fuller definition
+  const carded = (termText: string, topicId: string) => theorems().some((e) => e.topicId === topicId && score(termText, e.title) >= 3);
   const termsBy = useMemo(() => {
     const by = new Map<string, ReturnType<typeof allTerms>>();
-    for (const t of allTerms()) if (t.introduced_in) by.set(t.introduced_in, [...(by.get(t.introduced_in) ?? []), t]);
+    for (const t of allTerms()) if (t.introduced_in && !carded(t.term, t.introduced_in)) by.set(t.introduced_in, [...(by.get(t.introduced_in) ?? []), t]);
     return by;
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const entries = (topicId: string) => (termsBy.get(topicId)?.length ?? 0) + theorems().filter((e) => e.topicId === topicId).length;
 
-  const tree = useMemo(() => (program?.courses ?? []).flatMap((c) => c.disciplines).map((d) => ({
-    d, sections: d.sections.map((s) => ({ s, topics: s.topics.filter((t) => passed(t.id)) })).filter((x) => x.topics.length),
-  })).filter((x) => x.sections.length), [program, progress]); // eslint-disable-line react-hooks/exhaustive-deps
+  // the map: every course and discipline with the number of entries already passed in it
+  const map = useMemo(() => (program?.courses ?? []).map((c) => {
+    const discs = c.disciplines.map((d) => {
+      const sections = d.sections.map((s) => ({ s, topics: s.topics.filter((t) => passed(t.id)) })).filter((x) => x.topics.length);
+      return { d, sections, count: sections.reduce((n, x) => n + x.topics.reduce((m, t) => m + entries(t.id), 0), 0) };
+    });
+    return { c, discs, count: discs.reduce((n, x) => n + x.count, 0) };
+  }), [program, progress]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [pick, setPick] = useDraft<{ c: string; d: string } | null>(`reference-pick:${currentPackage()}`, null);
+  // default: the latest course and discipline with something passed
+  const fallback = useMemo(() => {
+    for (const x of [...map].reverse()) { const d = [...x.discs].reverse().find((y) => y.count > 0); if (d) return { c: x.c.id, d: d.d.id }; }
+    return null;
+  }, [map]);
+  const cur = map.find((x) => x.c.id === pick?.c && x.count > 0) ? pick : fallback;
+  const course = map.find((x) => x.c.id === cur?.c);
+  const disc = course?.discs.find((x) => x.d.id === cur?.d && x.count > 0) ?? course?.discs.find((x) => x.count > 0);
 
   // search: only what is passed; best match first, then what came earlier in the program
   const hits = useMemo((): Hit[] => {
@@ -59,7 +76,7 @@ export function Reference() {
       if (sc) out.push({ kind: "topic", id: t.id, title: t.title, where: `${d.name} · ${s.title}`, score: sc, order: order.get(t.id) ?? 0 });
     }
     for (const x of allTerms()) {
-      if (!x.introduced_in || !passed(x.introduced_in)) continue;
+      if (!x.introduced_in || !passed(x.introduced_in) || carded(x.term, x.introduced_in)) continue;
       const sc = score(query, `${x.term} ${x.en ?? ""}`, `${x.short} ${x.example ?? ""}`);
       if (sc) out.push({ kind: "term", id: x.id, title: x.term, text: x.short, where: where.get(x.introduced_in) ?? "", score: sc, order: order.get(x.introduced_in) ?? 0 });
     }
@@ -83,7 +100,7 @@ export function Reference() {
   }
   const noteKeys = [...notesBy.keys()].sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
 
-  const pick = (h: Hit) => {
+  const choose = (h: Hit) => {
     if (h.kind === "topic") nav(to(`/learn/${h.id}`));
     else if (h.kind === "term") openTerm(h.id);
     else setOpen(h.entry);
@@ -108,38 +125,59 @@ export function Reference() {
           <div className="ref-hits">
             {hits.length === 0 && <p className="faint">Среди пройденного такого нет.</p>}
             {hits.map((h, i) => (
-              <button key={i} className="ref-hit" onClick={() => pick(h)}>
+              <button key={i} className="ref-hit" onClick={() => choose(h)}>
                 <span className={`ref-kind k-${h.kind}`}>{h.kind === "topic" ? "Тема" : h.kind === "term" ? "Термин" : KIND[h.entry.kind]}</span>
                 <span className="ref-body"><b>{h.title}</b><span>{h.kind === "topic" ? h.where : `${h.text} — ${h.where}`}</span></span>
               </button>
             ))}
           </div>
         )}
-        {!query.trim() && (tree.length === 0
+        {!query.trim() && (!course || !disc
           ? <p className="faint">Здесь появятся термины, определения и правила пройденных тем.</p>
-          : tree.map(({ d, sections }) => (
-            <section key={d.id} className="ref-disc">
-              <h2>{d.name}</h2>
-              {sections.map(({ s, topics }) => (
-                <div key={s.id} className="ref-sec">
-                  <div className="eyebrow">{s.title}</div>
-                  {topics.map((t) => (
-                    <article key={t.id} className="ref-topic">
-                      <h3><Link to={to(`/learn/${t.id}`)}>{t.title}</Link></h3>
-                      {(termsBy.get(t.id) ?? []).length > 0 && (
-                        <dl className="ref-terms">
-                          {(termsBy.get(t.id) ?? []).map((x) => (
-                            <div key={x.id}><dt><button className="term" onClick={() => openTerm(x.id)}>{x.term}</button></dt><dd>{x.short}</dd></div>
-                          ))}
-                        </dl>
-                      )}
-                      <TopicTheorems topicId={t.id} />
-                    </article>
-                  ))}
-                </div>
+          : <>
+            <div className="ref-courses" role="tablist" aria-label="Курсы">
+              {map.map(({ c, count }) => (
+                <button key={c.id} className={`ref-course${c.id === course.c.id ? " on" : ""}`} disabled={!count} onClick={() => setPick({ c: c.id, d: "" })} title={count ? c.title : "Здесь пока ничего не пройдено"}>
+                  <b>{c.id === "0" ? "0" : c.id}</b><span>{c.title}</span><small>{count || "—"}</small>
+                </button>
               ))}
-            </section>
-          )))}
+            </div>
+            <div className="ref-discs" role="tablist" aria-label="Дисциплины">
+              {course.discs.map(({ d, count }) => (
+                <button key={d.id} className={d.id === disc.d.id ? "on" : ""} disabled={!count} onClick={() => setPick({ c: course.c.id, d: d.id })}>{d.name}<small>{count || ""}</small></button>
+              ))}
+            </div>
+            <div className="ref-layout">
+              <nav className="ref-toc" aria-label="Разделы и темы">
+                {disc.sections.map(({ s, topics }) => (
+                  <div key={s.id}>
+                    <div className="eyebrow">{s.title}</div>
+                    {topics.map((t) => <a key={t.id} href={`#ref-${t.id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`ref-${t.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{t.title}</a>)}
+                  </div>
+                ))}
+              </nav>
+              <div className="ref-main">
+                {disc.sections.map(({ s, topics }) => (
+                  <section key={s.id} className="ref-sec">
+                    <h2>{s.title}</h2>
+                    {topics.map((t) => (
+                      <article key={t.id} id={`ref-${t.id}`} className="ref-topic">
+                        <h3><Link to={to(`/learn/${t.id}`)}>{t.title}</Link></h3>
+                        {(termsBy.get(t.id) ?? []).length > 0 && (
+                          <dl className="ref-terms">
+                            {(termsBy.get(t.id) ?? []).map((x) => (
+                              <div key={x.id}><dt><button className="ref-term" onClick={() => openTerm(x.id)}>{x.term}</button>{x.en && <span className="ref-en">{x.en}</span>}</dt><dd>{x.short}</dd></div>
+                            ))}
+                          </dl>
+                        )}
+                        <TopicTheorems topicId={t.id} />
+                      </article>
+                    ))}
+                  </section>
+                ))}
+              </div>
+            </div>
+          </>)}
       </>)}
 
       {tab === "notes" && (notes === null ? <p className="faint">Загружаю заметки…</p>

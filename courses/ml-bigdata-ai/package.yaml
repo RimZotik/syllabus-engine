@@ -35,4 +35,5 @@ teacher:
 
 # Правила учебного плана, которые проверяет tools/program/build.py (все необязательны)
 rules:
+  glossary_en: true   # у каждого термина глоссария есть английское название (en)
   every_course_has: {subject: algo, except: ["0"]}   # в каждом курсе есть уровень этого предмета

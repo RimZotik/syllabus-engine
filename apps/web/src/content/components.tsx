@@ -27,7 +27,7 @@ export function Term({ id, children }: { id: string; children?: ReactNode }) {
   return (
     <span className="term" role="button" tabIndex={0} onClick={() => openTerm(id)} onKeyDown={(e) => e.key === "Enter" && openTerm(id)}>
       {children ?? t?.term ?? id}
-      {t && <span className="tip">{t.short}<small>Нажмите, чтобы открыть справку</small></span>}
+      {t && <span className="tip">{t.en && <em className="tip-en">{t.en}</em>}{t.short}<small>Нажмите, чтобы открыть справку</small></span>}
     </span>
   );
 }
