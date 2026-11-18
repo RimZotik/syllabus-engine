@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, CircleDashed, Play, Target } from "lucide-react";
+import { Check, Circle, CircleDashed, Play, Target } from "lucide-react";
 import { api, type Discipline, type Results } from "../api";
 import { to } from "../current";
 import { useApp } from "../state";
@@ -92,9 +92,9 @@ export function Learn() {
               <li key={s.id}><b>{i + 1}. {s.title}</b>
                 {s.topics.map((t) => content.hasTopic(t.id) ? (
                   <Link key={t.id} to={to(`/learn/${t.id}`)} className={`topic-link${progress[t.id]?.status === "done" ? " done" : ""}`}>
-                    {progress[t.id]?.status === "done" ? <Check size={15} /> : <Play size={14} />}{t.title}</Link>
+                    {progress[t.id]?.status === "done" ? <Check size={15} /> : <Circle size={11} className="mark-todo" />}{t.title}</Link>
                 ) : <span key={t.id} className="topic-link na"><CircleDashed size={15} />{t.title}</span>)}
-                {content.sectionTest(s.id) && <Link to={to(`/test/${s.id}`)} className="topic-link"><Target size={15} />Контрольная раздела</Link>}
+                {content.sectionTest(s.id) && <Link to={to(`/test/${s.id}`)} className={`topic-link test${results?.[s.id]?.passed ? " passed" : ""}`}><Target size={15} />Контрольная раздела</Link>}
               </li>
             ))}
           </ul>

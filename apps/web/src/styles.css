@@ -439,3 +439,12 @@ input[type=range]{accent-color:var(--green)}
 .pkg-tags{display:flex;flex-wrap:wrap;gap:6px}
 
 /* spelling: the browser's own checker and its own red wave — restyling it (::spelling-error) can hide the marks inside text fields */
+
+/* record book: rows not reached yet are not links */
+.rec-row.locked{cursor:default;opacity:.55}
+.rec-row.locked:hover{background:transparent}
+/* discipline panel: done — check, not yet — small empty circle; section test — green when passed, grey before */
+.topic-link .mark-todo{color:var(--ink-3);margin-inline:2px}
+.topic-link.test{color:var(--ink-3)}
+.topic-link.test.passed{color:var(--green-ink)}
+.topic-link.test.passed svg{color:var(--green)}

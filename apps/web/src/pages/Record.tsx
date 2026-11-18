@@ -6,6 +6,7 @@ import { to } from "../current";
 import { useApp } from "../state";
 import { content } from "../content/registry";
 import { fmtTime } from "../format";
+import { isOpen, nextStep } from "../content/order";
 
 const pct = (x?: number | null) => (x == null ? "" : `${Math.round(x * 100)}%`);
 
@@ -37,6 +38,7 @@ export function Record() {
   const { program, progress } = useApp();
   const [time, setTime] = useState<TimeStats | null>(null);
   const [results, setResults] = useState<Results>({});
+  const next = useMemo(() => nextStep(program, progress, results), [program, progress, results]);
   useEffect(() => {
     api.time().then(setTime).catch(() => {});
     api.results().then(setResults).catch(() => {});
@@ -80,21 +82,26 @@ export function Record() {
                           const r = results[x.id];
                           const done = progress[x.id]?.status === "done";
                           const icon = done ? <Check size={15} /> : progress[x.id] ? <BookOpen size={15} /> : <CircleDashed size={15} />;
-                          return (
-                            <Link key={x.id} to={to(`/learn/${x.id}`)} className={`rec-row${done ? " done" : ""}`}>
-                              <span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span className="rec-title">{x.title}</span>
-                              <span className="rec-score tnum">{r?.done ? pct(r.score) : ""}</span>
-                              <span className="rec-time tnum">{t(x.id) ? fmtTime(t(x.id)) : ""}</span>
-                            </Link>
-                          );
+                          const inner = <>
+                            <span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span className="rec-title">{x.title}</span>
+                            <span className="rec-score tnum">{r?.done ? pct(r.score) : ""}</span>
+                            <span className="rec-time tnum">{t(x.id) ? fmtTime(t(x.id)) : ""}</span>
+                          </>;
+                          // the course goes in order: from the record book only what is passed, and the next step, opens
+                          return isOpen({ kind: "topic", id: x.id }, next, progress, results)
+                            ? <Link key={x.id} to={to(`/learn/${x.id}`)} className={`rec-row${done ? " done" : ""}`}>{inner}</Link>
+                            : <div key={x.id} className="rec-row locked" title="Откроется, когда вы дойдёте до неё по программе">{inner}</div>;
                         })}
-                        {content.sectionTest(s.id) && (
-                          <Link to={to(`/test/${s.id}`)} className={`rec-row${test?.passed ? " done" : ""}`}>
+                        {content.sectionTest(s.id) && (() => {
+                          const inner = <>
                             <span className="toc-num" />{test?.passed ? <Check size={15} /> : <Target size={15} />}<span className="rec-title">Контрольная раздела</span>
                             <span className="rec-score tnum">{test?.done ? pct(test.score) : ""}</span>
                             <span className="rec-time tnum">{t(s.id) ? fmtTime(t(s.id)) : ""}</span>
-                          </Link>
-                        )}
+                          </>;
+                          return isOpen({ kind: "test", id: s.id }, next, progress, results)
+                            ? <Link to={to(`/test/${s.id}`)} className={`rec-row${test?.passed ? " done" : ""}`}>{inner}</Link>
+                            : <div className="rec-row locked" title="Откроется, когда вы дойдёте до неё по программе">{inner}</div>;
+                        })()}
                       </div>
                     );
                   })}
