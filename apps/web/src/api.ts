@@ -16,6 +16,8 @@ export type Package = {
   id: string; title: string; language: string; summary: string;
   /** catalog card (all optional in package.yaml) */
   icon: string; color: string; subtitle: string; level: string; version: string; author: { name: string; url: string }; tags: string[]; license: string;
+  /** what the learner should know before the course, and what is taught from zero */
+  prerequisites: string[]; not_required: string[];
   landing: { headline: string; lead: string; cta: string; subjects_lead: string; highlight_subject: string | null };
 };
 export type Progress = Record<string, { status: "started" | "done"; page: number; seconds: number }>;

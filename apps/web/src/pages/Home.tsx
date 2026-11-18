@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { to } from "../current";
 import { useApp } from "../state";
 
@@ -82,6 +82,14 @@ export function Home() {
         <h1><Emph text={pkg.landing.headline} /></h1>
         <p className="lead">{pkg.landing.lead}</p>
         <div className="row" style={{ gap: 14, flexWrap: "wrap" }}><Link className="btn" to={to("/learn")}>{pkg.landing.cta} <ArrowRight size={16} /></Link></div>
+        {(pkg.prerequisites.length > 0 || pkg.not_required.length > 0) && (
+          <div className="prereq">
+            {pkg.prerequisites.length > 0 && <div><div className="eyebrow">Что нужно знать до начала</div>
+              <ul>{pkg.prerequisites.map((x) => <li key={x}><Check size={16} />{x}</li>)}</ul></div>}
+            {pkg.not_required.length > 0 && <div><div className="eyebrow">Не нужно знать заранее</div>
+              <ul>{pkg.not_required.map((x) => <li key={x} className="free"><Sparkles size={16} />{x}</li>)}</ul></div>}
+          </div>
+        )}
       </div></section>
       {stages.length > 0 && (
         <section className="sec tint"><div className="wrap">

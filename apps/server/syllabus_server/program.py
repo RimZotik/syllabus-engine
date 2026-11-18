@@ -43,6 +43,9 @@ def load_package(pkg: str | None = None) -> dict:
         "version": str(raw.get("version") or ""),
         "author": {"name": author.get("name", ""), "url": author.get("url", "")},
         "tags": list(raw.get("tags") or []),
+        # who the course is for: what to know before it, and what is taught from zero
+        "prerequisites": list((raw.get("prerequisites") or {}).get("know") or []),
+        "not_required": list((raw.get("prerequisites") or {}).get("not_needed") or []),
         "license": raw.get("license", ""),
         "landing": {
             "headline": landing.get("headline") or raw.get("title") or pkg,

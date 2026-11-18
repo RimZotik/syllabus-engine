@@ -457,3 +457,10 @@ input[type=range]{accent-color:var(--green)}
 /* clickable parts of diagrams (svg role=button): no browser focus box after a mouse click; a soft ring for keyboard users */
 svg [role=button]:focus{outline:none}
 svg [role=button]:focus-visible{outline:2px solid var(--lav);outline-offset:3px;border-radius:50%}
+
+/* course landing: who the course is for */
+.prereq{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:18px 34px;margin-top:30px;max-width:860px}
+.prereq ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.prereq li{display:flex;align-items:center;gap:10px;color:var(--ink-2);line-height:1.4}
+.prereq li svg{flex:none;color:var(--green)}
+.prereq li.free svg{color:var(--lav)}
