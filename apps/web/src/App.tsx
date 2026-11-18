@@ -46,6 +46,15 @@ function TopBar() {
   const [pop, setPop] = useState(false);
   const [busy, setBusy] = useState(false);
   const lim = claude?.limits ?? null;
+  const popRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!pop) return;
+    const away = (e: PointerEvent) => { if (!popRef.current?.contains(e.target as Node)) setPop(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setPop(false); };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
+  }, [pop]);
   const refresh = () => { setBusy(true); api.refreshLimits().then(setClaude).catch(() => {}).finally(() => setBusy(false)); };
   const open = () => { const next = !pop; setPop(next); if (next && claude?.installed) refresh(); };
   const toggle = () => {
@@ -67,7 +76,7 @@ function TopBar() {
         <NavLink to="/record">Зачётка</NavLink>
       </nav>
       <div className="top-right">
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative" }} ref={popRef}>
           <button className={`claude${claude?.installed ? " on" : ""}`} onClick={open} aria-expanded={pop} title={title}><span className="dot" /><span className="lbl">{!claude ? "Claude…" : claude.installed ? "Claude" : "Claude не найден"}</span>
             {lim && <span className="mini" aria-hidden="true">{[lim.five_hour, lim.seven_day].map((w, i) => <i key={i}><b style={{ width: `${Math.min(100, Math.round((w?.used ?? 0) * 100))}%`, background: limColor(w?.used ?? 0) }} /></i>)}</span>}</button>
           {pop && (

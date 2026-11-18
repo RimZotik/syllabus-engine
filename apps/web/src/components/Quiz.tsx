@@ -119,10 +119,11 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
   }
 
   function toggle(q: Question, i: number) {
-    if (st.done) return;
-    const cur = st.answers[q.id];
+    const now = stRef.current; // latest answers, so two quick clicks never overwrite each other
+    if (now.done) return;
+    const cur = now.answers[q.id];
     const value = q.type === "single" ? i : ((cur as number[]) ?? []).includes(i) ? (cur as number[]).filter((x) => x !== i) : [...((cur as number[]) ?? []), i];
-    edit({ answers: { ...st.answers, [q.id]: value } });
+    edit({ answers: { ...now.answers, [q.id]: value } });
   }
 
   if (!loaded) return <div className="faint" style={{ padding: "40px 0" }}>Загружаю проверку…</div>;
@@ -160,7 +161,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
               const chosen = q.type === "single" ? a === i : ((a as number[]) ?? []).includes(i);
               const mark = st.done ? optionMark(q, a, i) : "";
               return (
-                <button key={i} className={`opt${mark ? " " + mark : ""}`} onClick={() => toggle(q, i)}>
+                <button key={i} className={`opt${mark ? " " + mark : !st.done && chosen ? " chosen" : ""}`} onClick={() => toggle(q, i)}>
                   <input type={q.type === "single" ? "radio" : "checkbox"} readOnly checked={chosen} tabIndex={-1} /><span className="opt-text"><RichText text={q.options![i]} /></span>
                 </button>
               );
