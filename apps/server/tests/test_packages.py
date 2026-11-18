@@ -277,3 +277,13 @@ def test_task_forbid_catches_builtin_use_but_not_comments():
     assert all(r["ok"] for r in own)
     via_import = run_taskcheck("from builtins import max as m\ndef biggest(xs):\n    return m(xs)\n", tests)
     assert via_import[0]["ok"] is False
+
+
+def test_task_forbid_constructs_indexing_and_fstrings():
+    tests = {"forbid": ["[]", "f-string", "str"], "io": [{"stdin": "123", "stdout": "6"}]}
+    by_index = run_taskcheck("s = input()" + chr(10) + "print(int(s[0]) + int(s[1]) + int(s[2]))", tests)
+    assert by_index[0]["ok"] is False and "[]" in by_index[0]["message"]
+    by_fstring = run_taskcheck("n = int(input())" + chr(10) + "s = f'{n}'" + chr(10) + "print(6)", tests)
+    assert by_fstring[0]["ok"] is False
+    arithmetic = run_taskcheck("n = int(input())" + chr(10) + "print(n // 100 + n // 10 % 10 + n % 10)", tests)
+    assert all(r["ok"] for r in arithmetic)

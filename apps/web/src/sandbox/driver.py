@@ -150,6 +150,11 @@ def _forbidden(code, names):
         return []
     used = set()
     for node in ast.walk(tree):
+        # constructs, not names: "[]" — indexing and slicing, "f-string" — f-strings
+        if isinstance(node, ast.Subscript):
+            used.add("[]")
+        elif isinstance(node, ast.JoinedStr):
+            used.add("f-string")
         if isinstance(node, ast.Name):
             used.add(node.id)
         elif isinstance(node, ast.Attribute):
