@@ -1,51 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type TextareaHTMLAttributes } from "react";
 import { CheckCircle2, CircleAlert, LoaderCircle, MessageSquareText, RotateCcw } from "lucide-react";
-import { api, type Grade } from "../api";
+import { api } from "../api";
 import { useApp } from "../state";
 import type { Question, QuizData } from "../content/registry";
 import { RichText } from "./RichText";
-
-type Answer = number | number[] | string | undefined;
-/** What is stored on the server, so a finished test stays finished after leaving the page. */
-type Saved = {
-  order: { id: string; perm: number[] }[];
-  answers: Record<string, Answer>;
-  conf: Record<string, number>;
-  done: boolean;
-  grades: Record<string, Grade>;
-  /** share of auto-graded questions answered correctly, set on «Сдать» */
-  score?: number;
-  submitted_at?: string;
-};
-
-function shuffled<T>(xs: T[]): T[] {
-  const a = [...xs];
-  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-  return a;
-}
-
-function isRight(q: Question, a: Answer): boolean | null {
-  if (q.type === "open") return null;
-  if (q.type === "single") return a === q.answer;
-  const want = [...((q.answer as number[]) ?? [])].sort().join(",");
-  return [...((a as number[]) ?? [])].sort().join(",") === want;
-}
-
-// New order of questions and options on every attempt: no position bias, no memorising «the second one».
-// Auto-graded questions are shuffled; questions with a written answer always go last.
-function freshOrder(data: QuizData): Saved["order"] {
-  return [...shuffled(data.questions.filter((q) => q.type !== "open")), ...data.questions.filter((q) => q.type === "open")]
-    .map((q) => ({ id: q.id, perm: shuffled((q.options ?? []).map((_, i) => i)) }));
-}
-
-const fresh = (data: QuizData): Saved => ({ order: freshOrder(data), answers: {}, conf: {}, done: false, grades: {} });
-
-/** A saved state is reused only if the test itself has not changed since (same questions, same option counts). */
-function fits(s: Saved | null, data: QuizData): s is Saved {
-  if (!s || !Array.isArray(s.order) || s.order.length !== data.questions.length) return false;
-  const byId = new Map(data.questions.map((q) => [q.id, q]));
-  return s.order.every((o) => byId.has(o.id) && o.perm.length === (byId.get(o.id)!.options ?? []).length);
-}
+import { accepted, fits, fresh, isPartial, isRight, optionMark, restartState, type Saved } from "./quizLogic";
 
 /** Grows with its text; the scrollbar appears only past ~3/4 of the screen height (CSS max-height). */
 function AutoTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -143,19 +102,20 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
   async function submit() {
     const seconds = Math.round((Date.now() - started.current) / 1000);
     const next = { ...stRef.current, done: true, score, submitted_at: new Date().toISOString() };
-    const needsTeacher = teacher && open.some((q) => written(q.id));
+    const toCheck = open.filter((q) => written(q.id) && !accepted(next, q.id));
+    const needsTeacher = teacher && toCheck.length > 0;
     commit(next, score >= pass && !needsTeacher);
     api.saveAttempts(auto.map((q) => ({
       scope, item_id: q.id, kind: q.type, answer: next.answers[q.id] ?? null, correct: isRight(q, next.answers[q.id]), seconds,
     }))).catch(() => {});
-    if (teacher) open.filter((q) => written(q.id)).forEach((q) => void grade(q));
+    if (teacher) toCheck.forEach((q) => void grade(q));
   }
 
   function restart() {
     reported.current = false;
     setGradeErr({});
     started.current = Date.now();
-    commit(fresh(data), false);
+    commit(restartState(data, stRef.current), false);
   }
 
   function toggle(q: Question, i: number) {
@@ -182,6 +142,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
         const busy = !!grading[q.id];
         // After «Сдать» a written answer stays editable until the teacher accepts it.
         const canRevise = st.done && !busy && g?.verdict !== "pass";
+        const locked = g?.verdict === "pass"; // accepted earlier: kept through «Пройти заново», not checked again
         return (
           <div className="qitem" key={q.id}>
             <div className="qtitle"><b>{n + 1}. <RichText text={q.q} /></b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : "развёрнутый ответ"}</span></div>
@@ -189,7 +150,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
               !claude ? (
                 <div className="grading"><LoaderCircle size={18} />Проверяю, установлен ли Claude…</div>
               ) : teacher || written(q.id) ? (
-                <AutoTextarea value={(a as string) ?? ""} disabled={(st.done && !canRevise) || busy || !teacher}
+                <AutoTextarea value={(a as string) ?? ""} disabled={(st.done && !canRevise) || locked || busy || !teacher}
                   placeholder="Ответьте своими словами — ответ сразу проверит преподаватель"
                   onChange={(e) => edit({ answers: { ...st.answers, [q.id]: e.target.value } })} />
               ) : (
@@ -197,14 +158,14 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
               )
             ) : perm.map((i) => {
               const chosen = q.type === "single" ? a === i : ((a as number[]) ?? []).includes(i);
-              const correct = q.type === "single" ? q.answer === i : (q.answer as number[]).includes(i);
+              const mark = st.done ? optionMark(q, a, i) : "";
               return (
-                <button key={i} className={`opt${st.done && correct ? " right" : st.done && chosen ? " wrong" : ""}`} onClick={() => toggle(q, i)}>
+                <button key={i} className={`opt${mark ? " " + mark : ""}`} onClick={() => toggle(q, i)}>
                   <input type={q.type === "single" ? "radio" : "checkbox"} readOnly checked={chosen} tabIndex={-1} /><span className="opt-text"><RichText text={q.options![i]} /></span>
                 </button>
               );
             })}
-            {q.type === "open" && teacher && (!st.done || canRevise) && (
+            {q.type === "open" && teacher && !locked && (!st.done || canRevise) && (
               <div className="conf">Насколько вы уверены?
                 {[1, 2, 3, 4, 5].map((v) => <button key={v} className={st.conf[q.id] === v ? "on" : ""} onClick={() => edit({ conf: { ...st.conf, [q.id]: v } })}>{v}</button>)}
               </div>
@@ -226,7 +187,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
             {st.done && q.type === "open" && teacher && written(q.id) && canRevise && (
               <div className="qactions"><button className="btn sm" disabled={!written(q.id)} onClick={() => { commit(stRef.current, false); void grade(q); }}>Сдать ответ снова</button></div>
             )}
-            {st.done && q.type !== "open" && <div className="explain">{verdict ? "Верно. " : "Неверно. "}<RichText text={q.explain ?? ""} /></div>}
+            {st.done && q.type !== "open" && <div className="explain">{verdict ? "Верно. " : isPartial(q, a) ? "Частично: вы отметили не все верные варианты — пропущенные подсвечены жёлтым. " : "Неверно. "}<RichText text={q.explain ?? ""} /></div>}
             {st.done && (q.traps ?? []).some((t) => (Array.isArray(a) ? a.includes(t) : a === t)) && (
               <div className="explain trap">Это ловушка: вариант звучит почти как фраза из лекции, но смысл в нём другой. Читайте каждый вариант до конца.</div>
             )}

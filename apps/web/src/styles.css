@@ -169,6 +169,7 @@ mark{background:var(--mark);color:inherit;padding:0 .15em;border-radius:4px;-web
 .opt input{margin:0;accent-color:var(--green);flex:none}
 .opt.right{background:var(--green-soft);color:var(--green-ink);font-weight:700}
 .opt.wrong{background:var(--bad-soft);color:var(--bad)}
+.opt.missed{background:var(--warn-soft);color:var(--warn);font-weight:700}
 .explain{margin-top:12px;font-size:15px;color:var(--ink-2);line-height:1.55}
 .quiz-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:8px}
 .qitem{padding:24px 0;border-top:1px solid var(--line)}
