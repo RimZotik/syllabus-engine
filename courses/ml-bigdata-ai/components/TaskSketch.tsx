@@ -68,15 +68,11 @@ function Dog({ cx, cy }: { cx: number; cy: number }) {
   </g>;
 }
 
-function Verdict({ x, y, ok, text }: { x: number; y: number; ok: boolean; text: string }) {
-  const c = ok ? "var(--green)" : "var(--bad)";
+/** A class label the model outputs: both classes look the same, neither is "right" or "wrong". */
+function Label({ x, y, text }: { x: number; y: number; text: string }) {
   return <g>
-    <rect x={x} y={y} width="104" height="30" rx="15" fill={ok ? "var(--green-soft)" : "var(--bad-soft)"} />
-    <g stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
-      {ok ? <polyline points={`${x + 13},${y + 15} ${x + 18},${y + 20} ${x + 27},${y + 10}`} />
-        : <path d={`M${x + 14},${y + 10} l10,10 M${x + 24},${y + 10} l-10,10`} />}
-    </g>
-    <text x={x + 36} y={y + 19.5} {...font} fill={c} fontWeight="700">{text}</text>
+    <rect x={x} y={y} width="104" height="30" rx="15" fill="var(--fill)" />
+    <text x={x + 52} y={y + 19.5} textAnchor="middle" {...font} fill="var(--ink)" fontWeight="700">{text}</text>
   </g>;
 }
 
@@ -89,8 +85,8 @@ function Classification() {
     <Model x={144} y={56} />
     <Arrow x1={224} y1={66} x2={262} y2={37} />
     <Arrow x1={224} y1={86} x2={262} y2={113} />
-    <Verdict x={268} y={22} ok text="кошка" />
-    <Verdict x={268} y={98} ok={false} text="не кошка" />
+    <Label x={268} y={22} text="кошка" />
+    <Label x={268} y={98} text="не кошка" />
   </>;
 }
 
@@ -179,11 +175,11 @@ function Generation() {
 }
 
 const DRAW: Record<Kind, [() => ReactNode, string]> = {
-  classification: [Classification, "Модель смотрит на фото и выбирает класс из заранее известного списка: «кошка» или «не кошка»"],
+  classification: [Classification, "Модель смотрит на фото и выбирает один класс из заранее известного списка. Здесь в списке два класса: «кошка» и «не кошка»"],
   regression: [Regression, "Точки — квартиры с известной ценой, линия — модель. Для новой квартиры модель выдаёт число"],
-  ranking: [Ranking, "По запросу модель оценивает, насколько подходит каждый товар, и выстраивает их по убыванию"],
-  clustering: [Clustering, "Слева никто не сказал, какие бывают группы. Модель сама нашла три группы похожих объектов"],
-  generation: [Generation, "Модель изучила много примеров и создаёт новый объект, которого в примерах не было"],
+  ranking: [Ranking, "По запросу модель оценивает, насколько подходит каждый товар, и ставит самые подходящие выше"],
+  clustering: [Clustering, "Слева — объекты, про группы ничего не известно. Справа — три группы похожих объектов, которые модель нашла сама"],
+  generation: [Generation, "Модель изучила много примеров и создаёт новый объект: похожий на них, но которого среди них не было"],
 };
 
 export function TaskSketch({ kind }: { kind: Kind }) {
