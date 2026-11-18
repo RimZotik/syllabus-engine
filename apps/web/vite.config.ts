@@ -61,8 +61,11 @@ function theoremIndex(): TheoremEntry[] {
       const file = join(coursesDir, pkg, "lessons", disc, sec, folder, "topic.mdx");
       const n = parseInt(folder, 10);
       if (!existsSync(file) || Number.isNaN(n)) continue;
-      for (const m of readFileSync(file, "utf-8").matchAll(/<Theorem\b([^>]*)>([\s\S]*?)<\/Theorem>/g)) {
-        const attr = (name: string) => new RegExp(`${name}="([^"]*)"`).exec(m[1])?.[1] ?? "";
+      for (const m of readFileSync(file, "utf-8").matchAll(/<Theorem\b((?:"[^"]*"|'[^']*'|\{[^}]*\}|[^>"'{])*)>([\s\S]*?)<\/Theorem>/g)) {
+        const attr = (name: string) => {
+          const v = new RegExp(`\\b${name}=(?:"([^"]*)"|'([^']*)'|\\{\\s*["'\`]([^"'\`]*)["'\`]\\s*\\})`).exec(m[1] ?? "");
+          return v ? v[1] ?? v[2] ?? v[3] ?? "" : "";
+        };
         if (!attr("title")) continue;
         const body = m[2].replace(/<[^>]+>/g, " ").replace(/[*_$`]/g, "").replace(/\s+/g, " ").trim();
         out.push({ pkg, topicId: `${disc}.${sec}.${n}`, kind: attr("kind") || "definition", title: attr("title"), text: `${attr("formal")} ${body}`.trim() });
@@ -78,7 +81,9 @@ function theoremIndexPlugin(): Plugin {
     resolveId: (id) => (id === ID ? RESOLVED : undefined),
     load: (id) => (id === RESOLVED ? `export default ${JSON.stringify(theoremIndex())};` : undefined),
     handleHotUpdate({ file, server }) {
-      if (file.endsWith("topic.mdx")) { const m = server.moduleGraph.getModuleById(RESOLVED); if (m) server.moduleGraph.invalidateModule(m); }
+      if (!file.endsWith("topic.mdx")) return;
+      const m = server.moduleGraph.getModuleById(RESOLVED);
+      if (m) { server.moduleGraph.invalidateModule(m); server.ws.send({ type: "full-reload" }); }
     },
   };
 }

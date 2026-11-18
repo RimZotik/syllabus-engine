@@ -6,17 +6,18 @@
 import { createContext, useContext, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
-import { to } from "../current";
+import { currentPackage, to } from "../current";
 import { content } from "./registry";
 import { mdxComponents, Theorem } from "./components";
 import { useApp } from "../state";
 import { api } from "../api";
-import { examStarted, type Saved } from "../components/quizLogic";
+import { examStarted, fits, type Saved } from "../components/quizLogic";
 
 const Inside = createContext(false);
 
 // tags that markdown produces at the top level of a topic; inside a <Theorem> they render as usual
-const HTML = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "pre", "table", "thead", "tbody", "tr", "th", "td", "hr", "div", "img", "a", "strong", "em", "code", "span"];
+const HTML = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "pre", "table", "thead", "tbody", "tr", "th", "td", "hr", "div", "img", "a", "strong", "em", "code", "span",
+  "sup", "sub", "br", "del", "s", "section", "input", "svg", "path", "figure", "figcaption", "mark", "b", "i", "small", "dl", "dt", "dd", "details", "summary", "kbd", "math"];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function gate(C: any): ComponentType<any> {
@@ -24,8 +25,13 @@ function gate(C: any): ComponentType<any> {
   return function Gated(props: any) { return useContext(Inside) ? <C {...props} /> : null; };
 }
 
+const cache = new Map<string, Record<string, unknown>>();
 function referenceComponents(only?: string): Record<string, unknown> {
+  const key = `${currentPackage()}\u0000${only ?? ""}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
   const out: Record<string, unknown> = {};
+  cache.set(key, out);
   for (const t of HTML) out[t] = gate(t);
   for (const [name, C] of Object.entries(mdxComponents())) out[name] = gate(C);
   out.Page = ({ children }: { children: ReactNode }) => <>{children}</>;
@@ -56,7 +62,7 @@ export function useExamInProgress(): string | null | undefined {
     if (!program) return;
     const ids = program.courses.flatMap((c) => c.disciplines.flatMap((d) => d.sections.map((s) => s.id))).filter((id) => content.sectionTest(id));
     let alive = true;
-    Promise.all(ids.map((id) => api.quizState<Saved>(id).then((r) => (r.state && !r.state.done && examStarted(r.state) ? id : null)).catch(() => null)))
+    Promise.all(ids.map((id) => api.quizState<Saved>(id).then((r) => (r.state && fits(r.state, content.sectionTest(id)!) && !r.state.done && examStarted(r.state) ? id : null)).catch(() => null)))
       .then((found) => { if (alive) setActive(found.find(Boolean) ?? null); });
     return () => { alive = false; };
   }, [program]);

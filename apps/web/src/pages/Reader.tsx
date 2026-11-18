@@ -17,6 +17,7 @@ type PageDef = { title: string; minutes?: number; node: ReactNode };
 /** During a section test (контрольная) the lessons are closed, as at a real exam. */
 export function Reader() {
   const exam = useExamInProgress();
+  if (exam === undefined) return null;
   return exam ? <ExamLock sectionId={exam} what="Тема" /> : <TopicReader />;
 }
 
