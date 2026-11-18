@@ -38,7 +38,9 @@ const killTree = (p) => {
 
 function start(name) {
   const [cmd, args] = commands[name];
-  const p = spawn(cmd, args, { stdio: "inherit", shell: true, env });
+  // Each part in its own process group (detached): on Windows the API's auto-reload sends Ctrl-C to its whole
+  // console group, which used to take down the web part and this launcher too.
+  const p = spawn(cmd, args, { stdio: "inherit", shell: true, env, detached: process.platform === "win32", windowsHide: true });
   procs.set(name, p);
   p.on("exit", (code) => {
     if (stopping) return;

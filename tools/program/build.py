@@ -358,6 +358,13 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
             if q["id"] in ids:
                 errors.append(f"{where}: duplicate question id")
             ids.add(q["id"])
+            # an unquoted "text: more text" in YAML becomes a {key: value} pair, not text — the page then fails
+            for key in ("q", "explain"):
+                if key in q and not isinstance(q[key], str):
+                    errors.append(f"{where}: {key} must be text (quote it if it contains ': ')")
+            for i, o in enumerate(q.get("options") or []):
+                if not isinstance(o, str):
+                    errors.append(f"{where}: option {i} must be text, got {type(o).__name__} (quote it if it contains ': ')")
             if q["type"] in ("single", "multi"):
                 n = len(q.get("options", []))
                 ans = q.get("answer")
