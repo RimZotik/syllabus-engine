@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ArrowLeft, ArrowRight, BookOpen, Check, CircleDashed, Flag, List, NotebookPen, Target } from "lucide-react";
 import { api } from "../api";
 import { load, store } from "../persist";
-import { useApp } from "../state";
+import { useApp, type TopicPlace } from "../state";
 import { content, type TopicModule } from "../content/registry";
 import { mdxComponents, Page } from "../content/components";
 import { Quiz } from "../components/Quiz";
@@ -123,51 +123,69 @@ export function Reader() {
           : <Link className="btn" id="next" to="/learn">К учебному плану</Link>}
       </div></div>
 
-      {panel === "toc" && (
-        <Drawer side="left" label="Содержание" onClose={() => setPanel(null)}>
-          <div className="toc-head"><span className="eyebrow">Курс {where.course.id} · {where.course.title}</span><h3>{where.discipline.name}</h3>{where.discipline.name !== where.discipline.title && <div className="muted">{where.discipline.title}</div>}</div>
-          <nav className="toc">{where.discipline.sections.map((s, si) => (
-            <section key={s.id} className={`toc-sec${s.id === where.section.id ? " cur" : ""}`}>
-              <div className="toc-sec-h"><span className="toc-n">Раздел {si + 1}</span><b>{s.title}</b></div>
-              <ol className="toc-topics">
-                {s.topics.map((t, ti) => {
-                  const done = progress[t.id]?.status === "done";
-                  const written = content.hasTopic(t.id);
-                  const cls = t.id === topicId ? "on" : done ? "done" : !written ? "na" : "";
-                  const icon = done ? <Check size={15} /> : written ? <BookOpen size={15} /> : <CircleDashed size={15} />;
-                  const label = <><span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span>{t.title}</span></>;
-                  return <li key={t.id}>{written ? <Link to={`/learn/${t.id}`} className={cls} onClick={() => setPanel(null)}>{label}</Link> : <span className={`toc-item ${cls}`} title="Тема ещё не написана">{label}</span>}</li>;
-                })}
-                {content.sectionTest(s.id) && <li><Link to={`/test/${s.id}`} className="test" onClick={() => setPanel(null)}><span className="toc-num" /><Target size={15} /><span>Контрольная раздела {si + 1}</span></Link></li>}
-              </ol>
-            </section>
-          ))}</nav>
-        </Drawer>
-      )}
+      {panel === "toc" && <TocDrawer place={where} current={topicId} progress={progress} onClose={() => setPanel(null)} />}
       {panel === "notes" && <NotesDrawer topicId={topicId} onClose={() => setPanel(null)} />}
       {panel === "feedback" && <FeedbackDrawer topicId={topicId} page={cur} onClose={() => setPanel(null)} />}
     </div>
   );
 }
 
+/** The discipline's table of contents: sections, topics with their state, section tests. `current` — open topic or section test. */
+function TocDrawer({ place: where, current, progress, onClose }: { place: TopicPlace; current: string; progress: Record<string, { status?: string } | undefined>; onClose: () => void }) {
+  return (
+    <Drawer side="left" label="Содержание" onClose={onClose}>
+      <div className="toc-head"><span className="eyebrow">Курс {where.course.id} · {where.course.title}</span><h3>{where.discipline.name}</h3>{where.discipline.name !== where.discipline.title && <div className="muted">{where.discipline.title}</div>}</div>
+      <nav className="toc">{where.discipline.sections.map((s, si) => (
+        <section key={s.id} className={`toc-sec${s.id === where.section.id ? " cur" : ""}`}>
+          <div className="toc-sec-h"><span className="toc-n">Раздел {si + 1}</span><b>{s.title}</b></div>
+          <ol className="toc-topics">
+            {s.topics.map((t, ti) => {
+              const done = progress[t.id]?.status === "done";
+              const written = content.hasTopic(t.id);
+              const cls = t.id === current ? "on" : done ? "done" : !written ? "na" : "";
+              const icon = done ? <Check size={15} /> : written ? <BookOpen size={15} /> : <CircleDashed size={15} />;
+              const label = <><span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span>{t.title}</span></>;
+              return <li key={t.id}>{written ? <Link to={`/learn/${t.id}`} className={cls} onClick={onClose}>{label}</Link> : <span className={`toc-item ${cls}`} title="Тема ещё не написана">{label}</span>}</li>;
+            })}
+            {content.sectionTest(s.id) && <li><Link to={`/test/${s.id}`} className={`test${s.id === current ? " on" : ""}`} onClick={onClose}><span className="toc-num" /><Target size={15} /><span>Контрольная раздела {si + 1}</span></Link></li>}
+          </ol>
+        </section>
+      ))}</nav>
+    </Drawer>
+  );
+}
+
 export function SectionTest() {
   const { sectionId = "" } = useParams();
-  const { allTopics, place } = useApp();
+  const { allTopics, place, progress } = useApp();
+  const [panel, setPanel] = useState<"toc" | "notes" | "feedback" | null>(null);
   const data = content.sectionTest(sectionId);
   // the section's last topic (back) and the first topic after the section (forward)
   const lastIdx = allTopics.map((t) => t.id.startsWith(sectionId + ".")).lastIndexOf(true);
   const back = lastIdx >= 0 ? allTopics[lastIdx] : undefined;
   const next = lastIdx >= 0 ? allTopics[lastIdx + 1] : undefined;
   const nextSection = next ? place(next.id)?.section : undefined;
+  const where = back ? place(back.id) : null;
   if (!data) return <div className="wrap stub"><h1>Контрольной нет</h1><Link className="btn" to="/learn">К учебному плану</Link></div>;
   return (
-    <>
+    <div className="reader">
+      {where && (
+        <div className="reader-bar"><div className="wrap">
+          <button className="icon-btn" aria-label="Содержание" title="Содержание" onClick={() => setPanel("toc")}><List size={18} /></button>
+          <div className="crumb">{where.discipline.name} · {where.section.title} · <b>Контрольная раздела</b></div>
+          <button className="icon-btn" aria-label="Заметки к контрольной" title="Заметки к контрольной" onClick={() => setPanel("notes")}><NotebookPen size={17} /></button>
+          <button className="icon-btn" aria-label="Предложить правку" title="Предложить правку" onClick={() => setPanel("feedback")}><Flag size={17} /></button>
+        </div></div>
+      )}
       <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} data={{ ...data, title: data.title ?? "Контрольная раздела" }} /></div></div>
       <div className="reader-nav-wrap"><div className="read reader-nav">
         {back ? <Link className="btn soft" id="prev" to={`/learn/${back.id}`} aria-label="К последней теме"><ArrowLeft size={16} /><span className="pl">К последней теме</span></Link> : <span />}
         {next ? <Link className="btn" id="next" to={`/learn/${next.id}`}><span>Следующий раздел{nextSection ? `: ${nextSection.title}` : ""}</span><ArrowRight size={16} /></Link>
           : <Link className="btn" id="next" to="/learn">К учебному плану</Link>}
       </div></div>
-    </>
+      {panel === "toc" && where && <TocDrawer place={where} current={sectionId} progress={progress} onClose={() => setPanel(null)} />}
+      {panel === "notes" && <NotesDrawer topicId={sectionId} onClose={() => setPanel(null)} />}
+      {panel === "feedback" && <FeedbackDrawer topicId={sectionId} onClose={() => setPanel(null)} />}
+    </div>
   );
 }
