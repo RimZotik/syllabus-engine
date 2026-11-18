@@ -16,7 +16,8 @@ from contextvars import ContextVar
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-CONTENT_ROOT = REPO_ROOT / "courses"
+# A packaged app (tools/bundle) carries its courses inside and says where they are.
+CONTENT_ROOT = Path(os.environ["SYLLABUS_CONTENT_ROOT"]) if os.environ.get("SYLLABUS_CONTENT_ROOT") else REPO_ROOT / "courses"
 CONFIG_FILE = CONTENT_ROOT / "active.yaml"
 
 # Before packages existed, Forge ML progress lived here. It is copied (never moved) on first start.

@@ -27,6 +27,8 @@ function pyodideAssets(): Plugin {
       });
     },
     writeBundle(options) {
+      // a course without Python tasks does not need Python in the browser (tools/bundle sets this)
+      if (process.env.SYLLABUS_NO_PYODIDE === "1") return;
       cpSync(pyodideDir, join(options.dir ?? "dist", "pyodide"), { recursive: true });
     },
   };

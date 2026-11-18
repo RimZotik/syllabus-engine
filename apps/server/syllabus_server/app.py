@@ -348,6 +348,23 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
         log.log(logging.ERROR if body.level == "error" else logging.INFO, "web: %s", body.message)
         return {"ok": True}
 
+    # A packaged app serves the built web pages itself (no Vite): every address that is not an API call
+    # and not a file of the build gets index.html, and the web app routes it.
+    web = os.environ.get("SYLLABUS_WEB_DIST")
+    if web and os.path.isdir(web):
+        from pathlib import Path
+        from fastapi.responses import FileResponse
+        dist = Path(web).resolve()
+
+        @app.get("/{path:path}", include_in_schema=False)
+        def web_page(path: str):
+            if path.startswith("api/"):
+                raise HTTPException(404)
+            f = (dist / path).resolve()
+            if path and f.is_file() and dist in f.parents:
+                return FileResponse(f)
+            return FileResponse(dist / "index.html", headers={"Cache-Control": "no-cache"})
+
     return app
 
 
