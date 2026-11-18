@@ -334,6 +334,11 @@ def names(term: str, text: str) -> bool:
     return bool(stems) and all(re.search(r"(?<!\w)" + re.escape(s), text) for s in stems)
 
 
+def defines(term: str, text: str) -> bool:
+    """Whether a <Theorem title="…"> in the text names the term (any case form)."""
+    return any(names(term, title.lower()) for title in re.findall(r'<Theorem[^>]*title="([^"]+)"', text, re.I))
+
+
 def check_content(data: dict) -> tuple[list[str], set[str]]:
     """Authored topics must exist in the plan; glossary terms must exist; quiz answers must be valid."""
     errors: list[str] = []
@@ -371,9 +376,10 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
         intro = t.get("introduced_in")
         if intro and intro not in order:
             errors.append(f"glossary.yaml: '{term_id}': introduced_in {intro} is not a topic of program.yaml")
-        elif intro in authored and term_id not in linked.get(intro, set()) and not names(str(t.get("term", "")), texts.get(intro, "")):
-            # introduced by a <Term> link or at least named in that topic (e.g. the title of a <Theorem> definition)
-            errors.append(f"glossary.yaml: '{term_id}': introduced_in {intro}, but that topic neither marks nor names it")
+        elif intro in authored and term_id not in linked.get(intro, set()) and not defines(str(t.get("term", "")), texts.get(intro, "")):
+            # the topic that introduces a term must mark it (<Term id>) or define it (<Theorem title>), not just print it in bold:
+            # the learner needs the hover hint, and the term comes back in later topics
+            errors.append(f"glossary.yaml: '{term_id}': introduced_in {intro}, but that topic does not mark it with <Term id=\"{term_id}\"> or define it in a <Theorem>")
     for qf in sorted(list(COURSES.glob("*/*/*/quiz.yaml")) + list(COURSES.glob("*/*/test.yaml"))):
         try:
             quiz = yaml.safe_load(qf.read_text(encoding="utf-8")) or {}

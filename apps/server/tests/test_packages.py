@@ -347,9 +347,12 @@ def test_validator_catches_a_concept_used_before_it_is_introduced(tmp_path, monk
     b.use_package("drawing")
     errors, _ = b.check_content(b.load())
     assert any("'hatch' is used before it is introduced" in e for e in errors)
-    # and the term's own topic must name it: «штриховка» in any case form
+    # and the term's own topic must mark it: a bare mention is not enough
     t2 = t1.parent.parent / "02-hatching"; t2.mkdir()
     (t2 / "topic.mdx").write_text('<Page title="Штриховка">\n\nТени передают штриховкой.\n\n</Page>\n', encoding="utf-8")
     t1.write_text('<Page title="Прямая">\n\n<Term id="line">Линия</Term> бывает прямой.\n\n</Page>\n', encoding="utf-8")
+    errors, _ = b.check_content(b.load())
+    assert any("hatch" in e and "<Term" in e for e in errors)
+    (t2 / "topic.mdx").write_text('<Page title="Штриховка">\n\nТени передают <Term id="hatch">штриховкой</Term>.\n\n</Page>\n', encoding="utf-8")
     errors, _ = b.check_content(b.load())
     assert errors == []

@@ -252,7 +252,7 @@
   en: neural network, «нейросеть»
   short: Модель из многих простых «нейронов», собранных в слои, — выходы одного слоя идут на входы следующего. Обучается подбором
     весов по примерам.
-  introduced_in: intro1.history.4
+  introduced_in: intro1.history.2
 
 - id: deep-learning
   term: глубокое обучение
