@@ -183,9 +183,6 @@ mark{background:var(--mark);color:inherit;padding:0 .15em;border-radius:4px;-web
 .qitem{padding:24px 0;border-top:1px solid var(--line)}
 .qitem .qtitle{display:flex;justify-content:space-between;gap:16px;align-items:start;margin-bottom:12px}
 .qitem .qtitle b{font-size:17px;line-height:1.45}
-.conf{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13px;color:var(--ink-3);flex-wrap:wrap}
-.conf button{width:30px;height:30px;border-radius:8px;background:var(--paper);font-weight:700;font-size:13px}
-.conf button.on{background:var(--lav-soft);color:var(--lav)}
 .result{margin-top:20px;padding:22px 24px;border-radius:var(--r-l);display:flex;align-items:center;gap:16px}
 .result.pass{background:var(--green-soft);color:var(--green-ink)} .result.fail{background:var(--warn-soft);color:var(--warn)}
 .result b{font:500 26px/1 var(--f-head)}

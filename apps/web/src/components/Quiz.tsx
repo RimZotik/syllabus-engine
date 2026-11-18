@@ -85,7 +85,7 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
     try {
       const g = await api.grade({
         scope, item_id: q.id, question: q.q, rubric: q.rubric ?? [], wrong_answers: q.wrong_answers ?? [],
-        answer: String(stRef.current.answers[q.id] ?? ""), confidence: stRef.current.conf[q.id] ?? null,
+        answer: String(stRef.current.answers[q.id] ?? ""), confidence: null, // no self-rating: the teacher judges how well the answer is argued
       });
       const next = { ...stRef.current, grades: { ...stRef.current.grades, [q.id]: g } };
       const allOk = open.every((o) => !String(next.answers[o.id] ?? "").trim() || next.grades[o.id]?.verdict === "pass");
@@ -166,11 +166,6 @@ export function Quiz({ scope, data, onPassed }: { scope: string; data: QuizData;
                 </button>
               );
             })}
-            {q.type === "open" && teacher && !locked && (!st.done || canRevise) && (
-              <div className="conf">Насколько вы уверены?
-                {[1, 2, 3, 4, 5].map((v) => <button key={v} className={st.conf[q.id] === v ? "on" : ""} onClick={() => edit({ conf: { ...st.conf, [q.id]: v } })}>{v}</button>)}
-              </div>
-            )}
             {busy && <div className="grading"><LoaderCircle size={18} />Преподаватель проверяет ответ…</div>}
             {!busy && g && (
               <div className={`verdict ${g.verdict}`}>
