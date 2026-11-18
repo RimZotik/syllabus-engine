@@ -91,7 +91,7 @@ textarea{font:inherit;color:var(--ink);background:var(--paper);border:0;border-r
 .plan .intro p{margin:0;color:var(--ink-2);font-size:17px;max-width:62ch}
 .continue{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:26px 0 32px;padding:22px 24px;border-radius:var(--r-l);background:var(--card);box-shadow:var(--sh-soft)}
 .continue h2{font-size:20px;margin:8px 0 4px}
-.disc{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 12px;margin:0 -12px;border-radius:var(--r-m);cursor:pointer;width:calc(100% + 24px);text-align:left}
+.disc{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 24px;margin:0;border-radius:var(--r-m);cursor:pointer;width:100%;text-align:left} /* same edges and inner padding as the cards above */
 .disc:hover{background:var(--paper)} .disc.sel{background:var(--card);box-shadow:var(--sh-soft)}
 .st{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1.5px var(--line-2)}
 .st.done{background:var(--green);color:#fff;box-shadow:none} .st.cur{box-shadow:inset 0 0 0 2px var(--green)}
