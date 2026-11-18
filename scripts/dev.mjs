@@ -2,6 +2,7 @@
 // Refuses to start a second copy if the ports are already taken.
 // A second copy (e.g. a dev worktree) can run on other ports: SYLLABUS_API_PORT, SYLLABUS_WEB_PORT, and SYLLABUS_DATA_DIR for its own database (FORGE_* names still work).
 import { spawn } from "node:child_process";
+import { watch } from "node:fs";
 import net from "node:net";
 
 const env0 = (k) => process.env[`SYLLABUS_${k}`] ?? process.env[`FORGE_${k}`];
@@ -22,7 +23,9 @@ for (const port of [API, WEB]) {
 
 const env = { ...process.env, PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" };
 const commands = {
-  "API": ["uv", ["run", "--project", "apps/server", "uvicorn", "syllabus_server.app:app", "--port", String(API), "--reload", "--reload-dir", "apps/server/syllabus_server"]],
+  // no uvicorn --reload: on Windows its reloader breaks when the API runs in its own process group;
+  // this launcher watches the server code itself and restarts the API (see below)
+  "API": ["uv", ["run", "--project", "apps/server", "uvicorn", "syllabus_server.app:app", "--port", String(API)]],
   "сайт": ["npm", ["run", "dev", "-w", "apps/web"]],
 };
 const procs = new Map();
@@ -62,6 +65,18 @@ function stop(code = 0) {
 }
 
 for (const name of Object.keys(commands)) start(name);
+
+// Server code changed (an edit or a merge): restart only the API, once things settle.
+let reloadTimer;
+watch("apps/server/syllabus_server", { recursive: true }, (_e, file) => {
+  if (!file || !String(file).endsWith(".py")) return;
+  clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(() => {
+    console.log(`Код сервера изменился (${file}) — перезапускаю API.`);
+    restarts.length = 0;           // a planned restart is not a crash
+    killTree(procs.get("API"));    // its exit handler starts it again
+  }, 600);
+});
 console.log(`Syllabus Engine: http://127.0.0.1:${WEB}  (Ctrl+C — остановить)`);
 process.on("SIGINT", () => stop());
 process.on("SIGTERM", () => stop());
