@@ -29,7 +29,8 @@ export function KnnDemo() {
       const x = (px + step / 2) / W, y = (py + step / 2) / H;
       const near = [...pts].sort((p, q) => (p.x - x) ** 2 + (p.y - y) ** 2 - ((q.x - x) ** 2 + (q.y - y) ** 2)).slice(0, Math.min(k, pts.length));
       const vote = near.filter((p) => p.c === 1).length / near.length;
-      ctx.fillStyle = vote === .5 ? ink : colors[vote > .5 ? 1 : 0]; ctx.globalAlpha = vote === .5 ? .08 : .13 + Math.abs(vote - .5) * .2; // a tie has no winner ctx.fillRect(px, py, step, step);
+      ctx.fillStyle = vote === .5 ? ink : colors[vote > .5 ? 1 : 0]; ctx.globalAlpha = vote === .5 ? .08 : .13 + Math.abs(vote - .5) * .2; // a tie has no winner
+      ctx.fillRect(px, py, step, step);
     }
     ctx.globalAlpha = 1;
     for (const p of pts) { ctx.beginPath(); if (p.c === 1) ctx.rect(p.x * W - 6.5, p.y * H - 6.5, 13, 13); else ctx.arc(p.x * W, p.y * H, 7, 0, 7); ctx.fillStyle = colors[p.c]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = css.getPropertyValue("--card").trim(); ctx.stroke(); }
