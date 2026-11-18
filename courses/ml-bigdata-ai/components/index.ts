@@ -2,3 +2,4 @@
 export { KnnDemo } from "./KnnDemo";
 export { LineFitDemo } from "./LineFitDemo";
 export { TaskSketch } from "./TaskSketch";
+export { TuringTape } from "./TuringTape";

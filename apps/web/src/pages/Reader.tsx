@@ -133,6 +133,8 @@ export function Reader() {
 
 /** The discipline's table of contents: sections, topics with their state, section tests. `current` — open topic or section test. */
 function TocDrawer({ place: where, current, progress, onClose }: { place: TopicPlace; current: string; progress: Record<string, { status?: string } | undefined>; onClose: () => void }) {
+  const [passed, setPassed] = useState<Record<string, boolean>>({});
+  useEffect(() => { api.results().then((r) => setPassed(Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.passed])))).catch(() => {}); }, []);
   return (
     <Drawer side="left" label="Содержание" onClose={onClose}>
       <div className="toc-head"><span className="eyebrow">Курс {where.course.id} · {where.course.title}</span><h3>{where.discipline.name}</h3>{where.discipline.name !== where.discipline.title && <div className="muted">{where.discipline.title}</div>}</div>
@@ -148,7 +150,7 @@ function TocDrawer({ place: where, current, progress, onClose }: { place: TopicP
               const label = <><span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span>{t.title}</span></>;
               return <li key={t.id}>{written ? <Link to={to(`/learn/${t.id}`)} className={cls} onClick={onClose}>{label}</Link> : <span className={`toc-item ${cls}`} title="Тема ещё не написана">{label}</span>}</li>;
             })}
-            {content.sectionTest(s.id) && <li><Link to={to(`/test/${s.id}`)} className={`test${s.id === current ? " on" : ""}`} onClick={onClose}><span className="toc-num" /><Target size={15} /><span>Контрольная раздела {si + 1}</span></Link></li>}
+            {content.sectionTest(s.id) && <li><Link to={to(`/test/${s.id}`)} className={`test${passed[s.id] ? " passed" : ""}${s.id === current ? " on" : ""}`} onClick={onClose}><span className="toc-num" /><Target size={15} /><span>Контрольная раздела {si + 1}</span></Link></li>}
           </ol>
         </section>
       ))}</nav>

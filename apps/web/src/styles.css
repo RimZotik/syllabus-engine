@@ -248,6 +248,7 @@ input[type=range]{accent-color:var(--green)}
 .toc-topics a.done{color:var(--ink-3)} .toc-topics a.done .lucide{color:var(--green)}
 .toc-topics .na{color:var(--ink-3);cursor:default}
 .toc-topics a.test{color:var(--lav);font-weight:600} .toc-topics a.test .lucide{color:var(--lav)}
+.toc-topics a.test.passed{color:var(--green-ink)} .toc-topics a.test.passed .lucide{color:var(--green)} /* a passed section test: green, as on the Learn page */
 .toc-num{min-width:26px;font:500 12px/1 var(--f-mono);color:var(--ink-3)}
 .explain.trap{color:var(--warn);font-weight:600}
 
