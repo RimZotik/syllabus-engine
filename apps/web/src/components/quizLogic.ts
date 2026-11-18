@@ -24,7 +24,7 @@ function shuffled<T>(xs: T[]): T[] {
   return a;
 }
 
-/** How field answers are compared: no spaces, no case, decimal comma = point («401.10 172» = «40110172»). */
+/** How field answers are compared: no spaces, no case, decimal comma = point («0 401 20 223» = «040120223»). Dots stay meaningful (0.5 ≠ 05): list dotted forms like «0.401.20.223» as extra variants. */
 export const normField = (s: string) => s.toLowerCase().replace(/\s+/g, "").replace(/,/g, ".").replace(/ё/g, "е");
 
 /** Whether field `i` of a `fields` question is filled correctly. */
