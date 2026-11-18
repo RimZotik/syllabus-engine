@@ -31,6 +31,8 @@ export function Reader() {
     const i = allTopics.findIndex((t) => t.id === topicId);
     return i >= 0 ? allTopics[i + 1] : undefined;
   }, [allTopics, topicId]);
+  // after the last topic of a section comes its section test (if it has one), then the next section
+  const testAfter = where && where.index === where.section.topics.length - 1 && content.sectionTest(where.section.id) ? where.section.id : null;
 
   const pages: PageDef[] = useMemo(() => {
     if (!mod || !where) return [];
@@ -116,6 +118,7 @@ export function Reader() {
         <div className="pager"><div className="dots">{pages.map((p, i) => <button key={i} title={p.title} aria-label={p.title} className={i < cur ? "done" : i === cur ? "on" : ""} onClick={() => go(i)} />)}</div><span className="tnum">{cur + 1} / {pages.length}</span></div>
         {!last ? <button className="btn" id="next" onClick={() => go(cur + 1)}><span>Далее: {pages[cur + 1].title}</span><ArrowRight size={16} /></button>
           : content.quiz(topicId) && progress[topicId]?.status !== "done" ? <button className="btn" id="next" disabled title="Следующая тема откроется после сдачи проверки"><span>Сдайте проверку, чтобы продолжить</span></button>
+          : testAfter ? <button className="btn" id="next" onClick={() => nav(`/test/${testAfter}`)}><Target size={16} /><span>Контрольная раздела</span><ArrowRight size={16} /></button>
           : nextTopic ? <button className="btn" id="next" onClick={() => nav(`/learn/${nextTopic.id}`)}><span>Следующая тема</span><ArrowRight size={16} /></button>
           : <Link className="btn" id="next" to="/learn">К учебному плану</Link>}
       </div></div>
@@ -149,7 +152,22 @@ export function Reader() {
 
 export function SectionTest() {
   const { sectionId = "" } = useParams();
+  const { allTopics, place } = useApp();
   const data = content.sectionTest(sectionId);
+  // the section's last topic (back) and the first topic after the section (forward)
+  const lastIdx = allTopics.map((t) => t.id.startsWith(sectionId + ".")).lastIndexOf(true);
+  const back = lastIdx >= 0 ? allTopics[lastIdx] : undefined;
+  const next = lastIdx >= 0 ? allTopics[lastIdx + 1] : undefined;
+  const nextSection = next ? place(next.id)?.section : undefined;
   if (!data) return <div className="wrap stub"><h1>Контрольной нет</h1><Link className="btn" to="/learn">К учебному плану</Link></div>;
-  return <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} data={{ ...data, title: data.title ?? "Контрольная раздела" }} /></div></div>;
+  return (
+    <>
+      <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} data={{ ...data, title: data.title ?? "Контрольная раздела" }} /></div></div>
+      <div className="reader-nav-wrap"><div className="read reader-nav">
+        {back ? <Link className="btn soft" id="prev" to={`/learn/${back.id}`} aria-label="К последней теме"><ArrowLeft size={16} /><span className="pl">К последней теме</span></Link> : <span />}
+        {next ? <Link className="btn" id="next" to={`/learn/${next.id}`}><span>Следующий раздел{nextSection ? `: ${nextSection.title}` : ""}</span><ArrowRight size={16} /></Link>
+          : <Link className="btn" id="next" to="/learn">К учебному плану</Link>}
+      </div></div>
+    </>
+  );
 }
