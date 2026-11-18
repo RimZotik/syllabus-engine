@@ -549,10 +549,11 @@ svg [role=button]:focus-visible{outline:2px solid var(--lav);outline-offset:3px;
 .read blockquote:not(.formal) p + p{margin-top:6px}
 
 /* quiz type `fields`: a row of labelled inputs (a journal entry: Дебет · Кредит · КОСГУ · КФО) */
-.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px;margin:10px 0 4px}
-.field{display:grid;gap:4px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px;margin:10px 0 4px;align-items:start}
+.field{display:grid;grid-template-rows:2.6em auto auto;gap:4px;min-width:0}
+.field-label{align-self:end;line-height:1.3}
 .field-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3)}
-.field input{height:42px;padding:0 12px;border-radius:12px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font:inherit;font-variant-numeric:tabular-nums}
+.field input{box-sizing:border-box;width:100%;min-width:0;height:42px;padding:0 12px;border-radius:12px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font:inherit;font-variant-numeric:tabular-nums}
 .field input:focus{outline:none;border-color:var(--lav)}
 .field.right input{border-color:var(--green);background:var(--green-soft)}
 .field.wrong input{border-color:var(--bad);background:var(--bad-soft)}

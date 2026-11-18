@@ -5,6 +5,7 @@ import { api, type Note } from "../api";
 import { to, currentPackage } from "../current";
 import { useApp } from "../state";
 import { content } from "../content/registry";
+import { isFreeOrder } from "../content/order";
 import { ExamLock, TopicTheorems, useExamInProgress } from "../content/reference";
 import { allTerms, score, theorems, type Hit, type TheoremEntry } from "../content/search";
 import { Modal } from "../components/Modal";
@@ -37,7 +38,8 @@ export function Reference() {
     }
     return { order, where };
   }, [program]);
-  const passed = (id: string) => content.hasTopic(id) && progress[id]?.status === "done";
+  // in a course with every topic open (order: free) the reference shows every written topic
+  const passed = (id: string) => content.hasTopic(id) && (isFreeOrder() || progress[id]?.status === "done");
 
   // a term whose topic also has a <Theorem> card for it is shown once — as the card, the fuller definition
   const carded = (termText: string, topicId: string) => theorems().some((e) => e.topicId === topicId && score(termText, e.title) >= 3);
