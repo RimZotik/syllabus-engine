@@ -356,3 +356,20 @@ def test_validator_catches_a_concept_used_before_it_is_introduced(tmp_path, monk
     (t2 / "topic.mdx").write_text('<Page title="Штриховка">\n\nТени передают <Term id="hatch">штриховкой</Term>.\n\n</Page>\n', encoding="utf-8")
     errors, _ = b.check_content(b.load())
     assert errors == []
+
+
+def test_active_exams_lists_a_started_section_test(content):
+    """A section test with an attempt in progress is reported; a finished or outdated one is not."""
+    sec = content / "drawing" / "lessons" / "draw1" / "line"
+    (sec / "test.yaml").write_text("questions:\n- {id: a, type: single, q: Q, options: [x, y], answer: 0}\n", encoding="utf-8")
+    c = TestClient(create_app(connect()))
+    h = {"X-Syllabus-Package": "drawing"}
+    state = {"order": [{"id": "a", "perm": [0, 1]}], "answers": {}, "conf": {}, "done": False, "grades": {}, "started": True}
+    assert c.put("/api/quiz-state/draw1.line", json={"state": state}, headers=h).status_code == 200
+    assert c.get("/api/exams/active").json() == [{"package": "drawing", "section": "draw1.line"}]
+    state["done"] = True
+    c.put("/api/quiz-state/draw1.line", json={"state": state}, headers=h)
+    assert c.get("/api/exams/active").json() == []
+    state.update(done=False, order=[{"id": "old", "perm": [0, 1]}])  # saved for an older version of the test
+    c.put("/api/quiz-state/draw1.line", json={"state": state}, headers=h)
+    assert c.get("/api/exams/active").json() == []

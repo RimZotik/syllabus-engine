@@ -89,7 +89,7 @@ export function Reference() {
   }, [query, program, progress, order, where]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (exam === undefined || !program) return <div className="wrap stub faint">Загружаю справочник…</div>;
-  if (exam) return <ExamLock sectionId={exam} what="Справочник" />;
+  if (exam) return <ExamLock sectionId={exam} title="Справочник закрыт" />;
 
   // notes grouped by topic (a term note goes under the topic that introduces the term)
   const termOf = (id: string | null) => (id ? allTerms().find((t) => t.id === id) : undefined);

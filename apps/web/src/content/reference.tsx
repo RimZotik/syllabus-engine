@@ -78,13 +78,13 @@ export function useExamInProgress(): string | null | undefined {
 
 
 /** Shown instead of the reference, notes and lessons while a section test is in progress. */
-export function ExamLock({ sectionId, what }: { sectionId: string; what: string }) {
+export function ExamLock({ sectionId, title, href }: { sectionId: string; title: string; href?: string }) {
   return (
     <div className="wrap stub">
       <div className="eyebrow row-ic"><Lock size={15} />Идёт контрольная</div>
-      <h1>{what} закрыт{what.endsWith("а") ? "а" : ""}</h1>
-      <p>Во время контрольной справочник, заметки и темы недоступны — как на настоящем экзамене. Они откроются, когда вы сдадите работу.</p>
-      <Link className="btn" to={to(`/test/${sectionId}`)}>Вернуться к контрольной</Link>
+      <h1>{title}</h1>
+      <p>Во время контрольной темы, справочник, заметки и другие обучения недоступны — как на настоящем экзамене. Они откроются, когда вы сдадите работу.</p>
+      <Link className="btn" to={href ?? to(`/test/${sectionId}`)}>Вернуться к контрольной</Link>
     </div>
   );
 }

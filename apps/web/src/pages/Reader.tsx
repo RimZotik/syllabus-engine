@@ -21,7 +21,7 @@ export function Reader() {
   const exam = useExamInProgress();
   const { open, next } = useStepOpen("topic", topicId);
   if (exam === undefined || open === undefined) return null;
-  if (exam) return <ExamLock sectionId={exam} what="Тема" />;
+  if (exam) return <ExamLock sectionId={exam} title="Тема закрыта" />;
   return open ? <TopicReader /> : <StepLocked next={next} />;
 }
 

@@ -58,6 +58,8 @@ export const api = {
   setProgress: (topicId: string, status: "started" | "done", page: number, seconds: number) =>
     call("PUT", `/api/progress/${encodeURIComponent(topicId)}`, { status, page, seconds }),
   claude: () => call<ClaudeStatus>("GET", "/api/claude/status"),
+  /** section tests with an attempt in progress, in every installed package */
+  activeExams: () => call<{ package: string; section: string }[]>("GET", "/api/exams/active"),
   refreshLimits: () => call<ClaudeStatus>("POST", "/api/claude/limits/refresh"),
   saveAttempts: (items: Attempt[]) => call("POST", "/api/attempts", items),
   addTime: (scope: string, seconds: number) => call("POST", "/api/time", { scope, seconds }),

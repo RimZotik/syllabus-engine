@@ -1,3 +1,4 @@
+import { ExamLock } from "./content/reference";
 import { Reference } from "./pages/Reference";
 import { NavLink, Navigate, Route, Routes, Link } from "react-router-dom";
 import { LoaderCircle, Moon, RefreshCw, Sun } from "lucide-react";
@@ -182,14 +183,26 @@ function UnknownPackage({ catalog }: { catalog: CatalogData }) {
     <Link className="btn" to={catalog.packages.length > 1 ? "/" : `/${catalog.default}`}>{catalog.packages.length > 1 ? "К списку обучений" : "На главную"}</Link></div>;
 }
 
+/** A section test in progress in ANOTHER package closes this one (the package's own pages lock themselves). */
+function useOtherExam(pkg: string): { package: string; section: string } | null {
+  const [other, setOther] = useState<{ package: string; section: string } | null>(null);
+  const loc = useLocation();
+  useEffect(() => {
+    api.activeExams().then((xs) => setOther(xs.find((x) => x.package !== pkg) ?? null)).catch(() => setOther(null));
+  }, [pkg, loc.pathname]);
+  return other;
+}
+
 export function App({ catalog, pkg }: { catalog: CatalogData; pkg: string }) {
   const known = catalog.packages.some((p) => p.id === pkg);
+  const other = useOtherExam(pkg);
+  const otherTitle = other ? catalog.packages.find((p) => p.id === other.package)?.title ?? other.package : "";
   return (
     <>
       <RememberPlace />
       <StudyClock />
       <TopBar />
-      <Guard><Routes>
+      {other ? <ExamLock sectionId={other.section} title={`Идёт контрольная в «${otherTitle}»`} href={`/${other.package}/test/${other.section}`} /> : <Guard><Routes>
         <Route path="/" element={<Front catalog={catalog} />} />
         {["learn/*", "test/*", "record", "trainer", "reference"].map((p) => <Route key={p} path={`/${p}`} element={<Legacy pkg={catalog.default} />} />)}
         <Route path="/:pkg/*" element={known ? (
@@ -204,7 +217,7 @@ export function App({ catalog, pkg }: { catalog: CatalogData; pkg: string }) {
             <Route path="*" element={<Stub title="Страница не найдена" text="Такой страницы нет." />} />
           </Routes>
         ) : <UnknownPackage catalog={catalog} />} />
-      </Routes></Guard>
+      </Routes></Guard>}
       <TermDrawer />
     </>
   );

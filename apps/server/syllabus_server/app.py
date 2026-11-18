@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from . import claude, grader
 from .db import PerThread, connect, db_file, migrate, transaction
 from .program import load_package, load_program, topic_ids
-from .settings import PackageError, active_package, current_package, data_dir, db_path, installed_packages, use_package
+from .settings import PackageError, active_package, current_package, data_dir, db_path, installed_packages, package_dir, use_package
 
 
 class PackageDB:
@@ -112,6 +112,36 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     @app.get("/api/program")
     def program() -> dict:
         return load_program()
+
+    @app.get("/api/exams/active")
+    def active_exams() -> list[dict]:
+        """Section tests (контрольные) with an attempt in progress, in every installed package: while one runs,
+        the other packages are closed too, as at a real exam."""
+        import yaml
+        from .settings import _current
+        out = []
+        for p in installed_packages():
+            token = use_package(p)
+            try:
+                for scope, state in db.execute("SELECT scope, state FROM quiz_state WHERE scope NOT LIKE 'task:%'").fetchall():
+                    parts = scope.split(".")
+                    test = package_dir(p) / "lessons" / parts[0] / parts[-1] / "test.yaml" if len(parts) == 2 else None
+                    if not test or not test.exists():
+                        continue
+                    try:
+                        s = json.loads(state or "{}")
+                        questions = (yaml.safe_load(test.read_text(encoding="utf-8")) or {}).get("questions") or []
+                    except (ValueError, yaml.YAMLError):
+                        continue
+                    answers = s.get("answers") or {}
+                    started = s.get("started") if s.get("started") is not None else any(v not in (None, "") for v in answers.values())
+                    # an attempt saved for an older version of the test is not resumed by the page, so it does not lock
+                    same = sorted(o.get("id") for o in (s.get("order") or [])) == sorted(q.get("id") for q in questions)
+                    if started and not s.get("done") and same:
+                        out.append({"package": p, "section": scope})
+            finally:
+                _current.reset(token)
+        return out
 
     # Warm the Claude check (and read the subscription limits) in the background,
     # so the first page load does not wait for `claude --version`.
