@@ -57,7 +57,7 @@ npm run dev
 ## Как сделать свой курс
 
 1. Формат пакета обучения — [docs/template/course-package.md](docs/template/course-package.md). Образец — `courses/ml-bigdata-ai/`.
-2. Готовый промпт для Claude Code — [docs/template/course-generator-prompt.md](docs/template/course-generator-prompt.md). Агент исследует источники, составит план, напишет темы и тесты, проведёт всё через проверки и подключит пакет.
+2. Как описать желаемый курс обычными словами — [docs/template/course-brief-guide.md](docs/template/course-brief-guide.md). Готовый промпт для Claude Code — [docs/template/course-generator-prompt.md](docs/template/course-generator-prompt.md). Агент исследует источники, составит план, напишет темы и тесты, проведёт всё через проверки и подключит пакет.
 3. Готовый пакет из другого репозитория подключается копированием папки в `courses/` и строкой `active:` в `courses/active.yaml`.
 
 Если предмету нужна своя песочница (нотный редактор, холст), это изменение движка — [docs/template/new-domain.md](docs/template/new-domain.md). Полная выжимка замысла проекта для своего агента — [docs/template/project-brief.md](docs/template/project-brief.md).

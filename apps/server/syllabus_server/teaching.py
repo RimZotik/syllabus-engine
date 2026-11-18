@@ -46,7 +46,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scope", help="topic or section id, e.g. intro1.what.4")
     ap.add_argument("--last", type=int, default=10, help="how many most recent checks")
+    ap.add_argument("--package", help="learning package id (default: courses/active.yaml)")
     args = ap.parse_args()
+    settings.use_package(args.package)
     db = connect(); migrate(db)
     sql = "SELECT scope, item_id, answer, feedback, created_at FROM attempt WHERE kind = 'open' AND feedback IS NOT NULL"
     params: tuple = ()

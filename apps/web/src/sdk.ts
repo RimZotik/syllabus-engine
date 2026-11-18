@@ -2,6 +2,7 @@
 // Import it as "@syllabus/sdk" — never by a relative path into apps/web.
 import { useCallback, useRef, useState } from "react";
 import { load, store } from "./persist";
+import { currentPackage } from "./current";
 
 type SetState<T> = (v: T | ((prev: T) => T)) => void;
 
@@ -11,7 +12,10 @@ type SetState<T> = (v: T | ((prev: T) => T)) => void;
  * Returns [value, set, reset]; `reset()` goes back to `initial` and forgets the saved value.
  */
 export function usePageState<T>(name: string, initial: T): [T, SetState<T>, () => void] {
-  const key = useRef(`page:${location.pathname}:${name}`).current;
+  // the address inside the package (/learn/<topic>): the same key as before packages had their own addresses
+  const base = `/${currentPackage()}`, path = location.pathname;
+  const inner = path === base || path.startsWith(base + "/") ? path.slice(base.length) : path;
+  const key = useRef(`page:${inner}:${name}`).current;
   const [value, setValue] = useState<T>(() => load(key, initial));
   const set: SetState<T> = useCallback((v) => {
     setValue((prev) => {

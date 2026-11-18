@@ -197,7 +197,8 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
         n = db.execute("SELECT COUNT(*) FROM attempt WHERE scope = ? AND item_id = ? AND COALESCE(json_extract(feedback, '$.annulled'), 0) = 0",
                        (body.scope, body.item_id)).fetchone()[0] + 1  # a check annulled by the teaching audit is not the learner's attempt
         try:
-            result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n, course=load_package()["teacher"]["course"])
+            t = load_package()["teacher"]
+            result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n, course=t["course"], role=t["role"], style=t["style"])
         except grader.GraderUnavailable as e:
             record_event("warn", "server", f"grader unavailable: {e}", {"scope": body.scope, "item": body.item_id})
             raise HTTPException(503, str(e))

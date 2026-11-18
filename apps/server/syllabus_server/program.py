@@ -51,7 +51,12 @@ def load_package(pkg: str | None = None) -> dict:
             "subjects_lead": landing.get("subjects_lead", ""),
             "highlight_subject": landing.get("highlight_subject"),
         },
-        "teacher": {"course": (raw.get("teacher") or {}).get("course") or raw.get("title") or pkg},
+        # the teacher (Claude) differs by subject: an engineer for programmers, an art historian for painters
+        "teacher": {
+            "course": (raw.get("teacher") or {}).get("course") or raw.get("title") or pkg,
+            "role": (raw.get("teacher") or {}).get("role", ""),
+            "style": (raw.get("teacher") or {}).get("style", ""),
+        },
         "rules": raw.get("rules") or {},
     }
 

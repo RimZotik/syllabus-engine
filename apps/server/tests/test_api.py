@@ -61,7 +61,7 @@ def test_migrations_idempotent(tmp_path):
 def test_grade_saves_attempt_and_counts(tmp_path, monkeypatch):
     from syllabus_server import grader
     calls = []
-    def fake(question, rubric, wrong, answer, attempt, timeout=150, course=""):
+    def fake(question, rubric, wrong, answer, attempt, timeout=150, course="", role="", style=""):
         calls.append(attempt)
         return {"verdict": "revise" if attempt == 1 else "pass", "criteria": [], "feedback": "ok", "misconception": None}
     monkeypatch.setattr(grader, "grade", fake)
@@ -156,3 +156,13 @@ def test_results_summary(tmp_path, monkeypatch):
     c.put("/api/quiz-state/task:greet", json={"state": {"code": "x"}, "passed": True})
     r = c.get("/api/results").json()
     assert r == {"intro1.what.1": {"passed": True, "score": 0.9, "done": True, "updated_at": r["intro1.what.1"]["updated_at"]}}
+
+
+
+def test_teacher_persona_goes_into_the_instructions():
+    from syllabus_server.grader import system_prompt
+    s = system_prompt("рисования", role="художник-педагог и искусствовед", style="образно, через историю искусства")
+    assert "преподаватель курса рисования" in s and "Кто ты: художник-педагог и искусствовед." in s
+    assert "Как ты говоришь с учеником: образно" in s and "{persona}" not in s
+    plain = system_prompt("рисования")
+    assert "Кто ты" not in plain and "{persona}" not in plain

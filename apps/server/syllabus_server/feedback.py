@@ -8,6 +8,7 @@ import argparse
 import sys
 
 from .db import connect, migrate
+from .settings import use_package
 
 LABELS = {"content_issue": "Проблема в материале", "bug": "Ошибка платформы", "idea": "Идея", "question": "Вопрос по курсу"}
 
@@ -15,7 +16,9 @@ LABELS = {"content_issue": "Проблема в материале", "bug": "О�
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--status", default="open")
+    ap.add_argument("--package", help="learning package id (default: courses/active.yaml)")
     args = ap.parse_args()
+    use_package(args.package)
     db = connect(); migrate(db)
     rows = db.execute("SELECT * FROM feedback WHERE status = ? ORDER BY topic_id, id", (args.status,)).fetchall()
     sys.stdout.reconfigure(encoding="utf-8")

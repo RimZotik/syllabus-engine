@@ -13,12 +13,13 @@ export function Learn() {
   const [courseId, setCourseId] = useState<string | null>(null);
   const [discId, setDiscId] = useState<string | null>(null);
 
-  const [results, setResults] = useState<Results>({});
-  useEffect(() => { api.results().then(setResults).catch(() => {}); }, []);
+  const [results, setResults] = useState<Results | null>(null); // null until loaded: no flash of a wrong «next»
+  useEffect(() => { api.results().then(setResults).catch(() => setResults({})); }, []);
 
   // The next step in order: the first unfinished written topic — or, once a section's written topics are
   // all done, its section test if it is not passed yet (the next section comes after the test).
   const next = useMemo(() => {
+    if (!results) return null;
     for (const c of program?.courses ?? []) for (const d of c.disciplines) for (const s of d.sections) {
       for (const t of s.topics) if (content.hasTopic(t.id) && progress[t.id]?.status !== "done") return { c, d, s, t, test: false };
       const written = s.topics.filter((t) => content.hasTopic(t.id));
@@ -28,8 +29,8 @@ export function Learn() {
   }, [program, progress, results]);
 
   useEffect(() => {
-    if (program && !courseId) { setCourseId(next?.c.id ?? "0"); setDiscId(next?.d.id ?? program.courses[0].disciplines[0].id); }
-  }, [program, next, courseId]);
+    if (program && results && !courseId) { setCourseId(next?.c.id ?? "0"); setDiscId(next?.d.id ?? program.courses[0].disciplines[0].id); }
+  }, [program, results, next, courseId]);
 
   if (error) return <div className="wrap stub"><h1>Нет связи с сервером</h1><p>{error}</p></div>;
   if (!program || !courseId) return <div className="wrap stub faint">Загружаю учебный план…</div>;

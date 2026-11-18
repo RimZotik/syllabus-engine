@@ -12,7 +12,7 @@ import subprocess
 from .claude import find_exe, run_stream
 
 SYSTEM = """Ты — строгий, но справедливый преподаватель курса {course}. Ты проверяешь развёрнутый ответ ученика по рубрике.
-Правила:
+{persona}Правила:
 - Оценивай только по критериям рубрики и не требуй больше, чем в них написано: ни подробностей, ни терминов, если критерий прямо не требует термина. Мысль своими словами засчитывается.
 - У каждого критерия status: "met" — мысль есть по сути; "partial" — верная мысль есть, но без ключевого «почему»; "missing" — мысли нет. Не ставь "missing" мысли, которую сам хвалишь в feedback.
 - Для каждого критерия процитируй часть ответа, на которую опираешься, или оставь цитату пустой.
@@ -48,12 +48,19 @@ def build_prompt(question: str, rubric: list[str], wrong_answers: list[str], ans
             f"Это попытка номер {attempt}.\n\n<answer>\n{answer}\n</answer>")
 
 
-def grade(question: str, rubric: list[str], wrong_answers: list[str], answer: str, attempt: int = 1, timeout: int = 150, course: str = "") -> dict:
+def system_prompt(course: str = "", role: str = "", style: str = "") -> str:
+    """The teacher's instructions for this package: its subject, and who the teacher is and how they speak (package.yaml → teacher)."""
+    persona = "".join(f"{line}\n" for line in (f"Кто ты: {role}." if role else "", f"Как ты говоришь с учеником: {style}." if style else "") if line)
+    return SYSTEM.replace("{course}", course or "по этой теме").replace("{persona}", persona)
+
+
+def grade(question: str, rubric: list[str], wrong_answers: list[str], answer: str, attempt: int = 1, timeout: int = 150,
+          course: str = "", role: str = "", style: str = "") -> dict:
     if not find_exe():
         raise GraderUnavailable("Claude Code не найден")
     # stream-json so that every check also refreshes the subscription limits shown in the top bar
     args = ["--json-schema", json.dumps(SCHEMA, ensure_ascii=False), "--tools", "", "--model", os.environ.get("SYLLABUS_GRADER_MODEL") or os.environ.get("FORGE_GRADER_MODEL") or "sonnet",
-            "--no-session-persistence", "--strict-mcp-config", "--system-prompt", SYSTEM.replace("{course}", course or "по этой теме")]
+            "--no-session-persistence", "--strict-mcp-config", "--system-prompt", system_prompt(course, role, style)]
     try:
         out = run_stream(args, build_prompt(question, rubric, wrong_answers, answer, attempt), timeout)
     except subprocess.TimeoutExpired as e:

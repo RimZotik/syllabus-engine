@@ -1,7 +1,7 @@
 import { NavLink, Navigate, Route, Routes, Link } from "react-router-dom";
 import { LoaderCircle, Moon, RefreshCw, Sun } from "lucide-react";
 import { Component, useEffect, useRef, useState, type ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { load, store } from "./persist";
 import { AppProvider, useApp } from "./state";
 import { api, type Catalog as CatalogData, type LimitWindow } from "./api";
@@ -68,7 +68,7 @@ function TopBar() {
     : lim ? `Лимиты Claude: 5 часов — ${Math.round((lim.five_hour?.used ?? 0) * 100)}%, неделя — ${Math.round((lim.seven_day?.used ?? 0) * 100)}%` : `Claude Code ${claude.version ?? ""} найден`;
   return (
     <header className="top"><div className="wrap">
-      <Link className="brand" to={to()} aria-label="Syllabus Engine — главная">
+      <Link className="brand" to="/" aria-label="Syllabus Engine — главная">
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 L9 8 L13 14 L16 9 L21 20" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" /><circle cx="16" cy="9" r="2.4" fill="var(--green)" /></svg>
         <span>Syllabus Engine</span>
       </Link>
@@ -117,20 +117,26 @@ function Guard({ children }: { children: ReactNode }) {
   return <Boundary key={loc.pathname}>{children}</Boundary>;
 }
 
-/** Opening the platform at its address returns to the last place in the course (later visits to «/» stay on the home page). */
-let firstLoad = true;
+/** Remembers the last place in the platform (any package); «/» uses it on the first visit (see Front). */
 function RememberPlace() {
   const loc = useLocation();
-  const nav = useNavigate();
   useEffect(() => {
-    if (firstLoad) {
-      firstLoad = false;
-      const last = load<string | null>("last-place", null);
-      if (loc.pathname === "/" && last && last !== "/") { nav(last, { replace: true }); return; }
-    }
-    if (loc.pathname !== "/") store("last-place", loc.pathname + loc.search);
-  }, [loc.pathname, loc.search]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (loc.pathname !== "/") store("last-place", loc.pathname + loc.search, true);
+  }, [loc.pathname, loc.search]);
   return null;
+}
+
+/**
+ * The platform's address «/». With one package: the first visit returns to the last place, later ones open
+ * the package's home. With several: always the catalog (the brand link leads here).
+ */
+let firstLoad = true;
+function Front({ catalog }: { catalog: CatalogData }) {
+  const first = firstLoad;
+  firstLoad = false;
+  if (catalog.packages.length > 1) return <Catalog packages={catalog.packages} />;
+  const last = first ? load<string | null>("last-place", null, true) : null;
+  return <Navigate to={last && last !== "/" ? last : `/${catalog.default}`} replace />;
 }
 
 /**
@@ -182,7 +188,7 @@ export function App({ catalog, pkg }: { catalog: CatalogData; pkg: string }) {
       <StudyClock />
       <TopBar />
       <Guard><Routes>
-        <Route path="/" element={catalog.packages.length > 1 ? <Catalog packages={catalog.packages} /> : <Navigate to={`/${catalog.default}`} replace />} />
+        <Route path="/" element={<Front catalog={catalog} />} />
         {["learn/*", "test/*", "record", "trainer"].map((p) => <Route key={p} path={`/${p}`} element={<Legacy pkg={catalog.default} />} />)}
         <Route path="/:pkg/*" element={known ? (
           <Routes>
@@ -213,8 +219,10 @@ export function Root() {
   useEffect(() => { api.packages().then(setCatalog).catch(() => setError("Сервер платформы не отвечает. Запустите его командой npm run dev.")); }, []);
   if (error) return <div className="wrap stub"><h1>Нет связи с сервером</h1><p>{error}</p></div>;
   if (!catalog) return null;
-  const first = decodeURIComponent(loc.pathname.split("/")[1] ?? "");
-  const pkg = first && !RESERVED.includes(first) && catalog.packages.some((p) => p.id === first) ? first : catalog.default;
+  let first = "";
+  try { first = decodeURIComponent(loc.pathname.split("/")[1] ?? ""); } catch { /* malformed address: treat as unknown */ }
+  const fallback = catalog.packages.some((p) => p.id === catalog.default) ? catalog.default : catalog.packages[0]?.id ?? catalog.default;
+  const pkg = first && !RESERVED.includes(first) && catalog.packages.some((p) => p.id === first) ? first : fallback;
   setCurrentPackage(pkg);
   return <AppProvider key={pkg}><App catalog={catalog} pkg={first && !RESERVED.includes(first) ? first : pkg} /></AppProvider>;
 }

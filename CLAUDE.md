@@ -5,7 +5,7 @@
 ## Пакеты обучения
 - Каждое обучение — пакет `courses/<id>/` (`package.yaml`, `program.yaml`, `glossary.yaml`, `lessons/`, `components/`). Формат — `docs/template/course-package.md`. Активный — `active:` в `courses/active.yaml`.
 - Движок (`apps/`) не должен знать о предмете: ничего про ML в коде платформы, всё предметное — в пакете.
-- Новый курс по просьбе пользователя — по промпту `docs/template/course-generator-prompt.md`.
+- Новый курс по просьбе пользователя — по промпту `docs/template/course-generator-prompt.md`; что автор может попросить — `docs/template/course-brief-guide.md`.
 - Прогресс ученика — `~/.syllabus-engine/<id>.sqlite3`, у каждого пакета свой. Не сбрасывать и не трогать без прямой просьбы; перед изменениями схемы — резервная копия.
 
 ## Ветки и рабочие копии
