@@ -1,0 +1,120 @@
+id: p1f-cafe-bill
+title: Счёт в кафе по частям
+sandbox: python-browser
+difficulty: 3
+statement: |
+  Компания друзей делит счёт в кафе поровну. В первой строке ввода — сколько человек платит. Дальше — строки счёта вида `название количество цена`, в конце — пустая строка. Название может быть из нескольких слов, количество и цена — целые числа. Программа выводит сумму счёта и сколько платит каждый:
+
+  ```input
+  3
+  капучино 2 180
+  чай с мятой 1 120
+  сырник 3 180
+
+  ```
+  ```
+  Итого: 1020 руб.
+  С каждого: 340.00 руб.
+  ```
+
+  (Последняя строка ввода пустая.)
+
+  Программа в редакторе уже работает, но написана одним куском. Разбейте расчёт на три функции:
+
+  - `line_cost(line)` — получает одну строку счёта и возвращает её стоимость: количество, умноженное на цену;
+  - `bill_total(lines)` — получает список строк счёта и возвращает сумму, пользуясь `line_cost`;
+  - `per_person(total, people)` — возвращает, сколько платит каждый.
+
+  Функции только считают и возвращают, печатает основная программа. Проверки вызывают и программу целиком, и каждую функцию отдельно, поэтому проверки функций упадут, пока самих функций нет.
+starter: |
+  people = int(input())
+  lines = []
+  line = input()
+  while line != "":
+      lines.append(line)
+      line = input()
+
+  # План: вынести расчёт в функции
+  # 1. line_cost(line) — стоимость одной строки
+  # 2. bill_total(lines) — сумма по всем строкам
+  # 3. per_person(total, people) — доля каждого
+  total = 0
+  for line in lines:
+      words = line.split()
+      total += int(words[-2]) * int(words[-1])
+  print(f"Итого: {total} руб.")
+  print(f"С каждого: {total / people:.2f} руб.")
+stdin: "3\nкапучино 2 180\nчай с мятой 1 120\nсырник 3 180\n\n"
+solution: |
+  def line_cost(line):
+      words = line.split()
+      return int(words[-2]) * int(words[-1])
+
+  def bill_total(lines):
+      total = 0
+      for line in lines:
+          total += line_cost(line)
+      return total
+
+  def per_person(total, people):
+      return total / people
+
+  people = int(input())
+  lines = []
+  line = input()
+  while line != "":
+      lines.append(line)
+      line = input()
+  total = bill_total(lines)
+  print(f"Итого: {total} руб.")
+  print(f"С каждого: {per_person(total, people):.2f} руб.")
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "3\nкапучино 2 180\nчай с мятой 1 120\nсырник 3 180\n\n"
+      stdout: "Итого: 1020 руб.\nС каждого: 340.00 руб."
+    - name: Один человек
+      stdin: "1\nсуп 1 250\n\n"
+      stdout: "Итого: 250 руб.\nС каждого: 250.00 руб."
+      hidden: true
+    - name: Доля с копейками
+      stdin: "2\nвода 1 75\n\n"
+      stdout: "Итого: 75 руб.\nС каждого: 37.50 руб."
+      hidden: true
+    - name: Пустой счёт
+      stdin: "4\n\n"
+      stdout: "Итого: 0 руб.\nС каждого: 0.00 руб."
+      hidden: true
+  stdin: "2\nкапучино 2 180\n\n"
+  asserts:
+    - name: Стоимость строки
+      code: assert line_cost("капучино 2 180") == 360, 'line_cost("капучино 2 180") должно вернуть 360'
+    - name: Название из нескольких слов
+      code: assert line_cost("чай с мятой 1 120") == 120, 'line_cost("чай с мятой 1 120") должно вернуть 120'
+    - name: Сумма счёта
+      code: assert bill_total(["капучино 2 180", "сырник 3 150"]) == 810, 'bill_total(["капучино 2 180", "сырник 3 150"]) должно вернуть 810'
+    - name: Сумма пустого счёта
+      code: assert bill_total([]) == 0, "bill_total([]) должно вернуть 0"
+    - name: Доля каждого
+      code: assert per_person(900, 3) == 300, "per_person(900, 3) должно вернуть 300"
+    - name: Функции ничего не печатают
+      code: |
+        import io, contextlib
+        shown = io.StringIO()
+        with contextlib.redirect_stdout(shown):
+            line_cost("вода 1 75")
+            bill_total(["вода 1 75"])
+            per_person(75, 1)
+        assert shown.getvalue() == "", "Функции должны только считать и возвращать: печатает основная программа"
+    - name: Сумма пользуется line_cost
+      code: |
+        def line_cost(line):
+            return 7
+        assert bill_total(["a", "b"]) == 14, "bill_total должна считать стоимость каждой строки через line_cost, а не разбирать строки сама"
+hints:
+  - level: 1
+    text: 'Посмотрите на цикл в редакторе. Какая строка внутри него разбирает одну строку счёта? Это и есть будущее тело `line_cost`.'
+  - level: 2
+    text: '`line_cost` берёт количество и цену из двух последних слов. `bill_total` — тот же накопитель, что в цикле сейчас, только прибавляет `line_cost(line)`. Чтение ввода и оба `print` остаются в основной программе.'
+  - level: 3
+    text: 'Определите три функции над программой. В основной программе вместо цикла — `total = bill_total(lines)`, а во втором `print` вместо `total / people` — вызов `per_person(total, people)`.'

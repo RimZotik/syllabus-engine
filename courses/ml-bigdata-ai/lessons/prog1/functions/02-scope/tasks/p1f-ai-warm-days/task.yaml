@@ -1,0 +1,92 @@
+id: p1f-ai-warm-days
+title: ИИ-ассистент считает тёплые дни
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Задача: во вводе две строки — температуры за две недели, целые числа через пробел. Выведите две строки: сколько дней в первую неделю было теплее 10 градусов и сколько во вторую. Ровно 10 градусов тёплым днём не считается.
+
+  ```input
+  5 12 14
+  9 11 3
+  ```
+  ```
+  2
+  1
+  ```
+
+  Решение в редакторе написал ИИ-ассистент. Ошибки он не выдаёт, первая строка вывода верна, а вторая — нет. Найдите причину и исправьте функцию `warm_days(temps, limit)`, чтобы её результат зависел только от аргументов. Проверки вызывают и программу целиком, и саму функцию — несколько раз подряд.
+starter: |
+  # Решение от ИИ-ассистента
+  count = 0
+
+  def warm_days(temps, limit):
+      global count
+      for t in temps:
+          if t > limit:
+              count += 1
+      return count
+
+  week1 = []
+  for p in input().split():
+      week1.append(int(p))
+  week2 = []
+  for p in input().split():
+      week2.append(int(p))
+  print(warm_days(week1, 10))
+  print(warm_days(week2, 10))
+stdin: "5 12 14\n9 11 3\n"
+solution: |
+  def warm_days(temps, limit):
+      count = 0
+      for t in temps:
+          if t > limit:
+              count += 1
+      return count
+
+  week1 = []
+  for p in input().split():
+      week1.append(int(p))
+  week2 = []
+  for p in input().split():
+      week2.append(int(p))
+  print(warm_days(week1, 10))
+  print(warm_days(week2, 10))
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "5 12 14\n9 11 3\n"
+      stdout: "2\n1"
+    - name: Вторая неделя холодная
+      stdin: "15 16\n1 2 3\n"
+      stdout: "2\n0"
+      hidden: true
+    - name: Ровно 10 — не тёплый
+      stdin: "10 10 11\n10 20\n"
+      stdout: "1\n1"
+      hidden: true
+  stdin: "5 12 14\n9 11 3\n"
+  asserts:
+    - name: Один вызов
+      code: assert warm_days([12, 14, 3], 10) == 2, "warm_days([12, 14, 3], 10) должно вернуть 2"
+    - name: Тот же вызов ещё раз
+      code: |
+        first = warm_days([12, 14], 10)
+        second = warm_days([12, 14], 10)
+        assert first == 2 and second == 2, "Два одинаковых вызова warm_days([12, 14], 10) должны вернуть 2 и 2, а вернули " + str(first) + " и " + str(second)
+    - name: Глобальные имена не меняются
+      code: |
+        if "count" in globals():
+            count = -1
+            warm_days([12, 14], 10)
+            assert count == -1, "Вызов warm_days не должен менять глобальное count: счётчик — локальное имя вызова"
+    - name: Пустой список
+      code: assert warm_days([], 10) == 0, "warm_days([], 10) должно вернуть 0"
+    - name: Другой порог
+      code: assert warm_days([0, -3, 1], 0) == 1, "warm_days([0, -3, 1], 0) должно вернуть 1"
+hints:
+  - level: 1
+    text: 'Вторая строка вывода в примере — 3 вместо 1. Откуда счётчик второго вызова начал считать: с нуля или с того, на чём остановился первый?'
+  - level: 2
+    text: '`count` — глобальное имя, и `global` разрешает функции менять его между вызовами. Счётчик — это накопитель одного вызова: его начальное значение должно задаваться в начале каждого вызова.'
+  - level: 3
+    text: 'Уберите глобальное `count = 0` и строку `global count`, а `count = 0` поставьте первой строкой тела функции, до цикла.'

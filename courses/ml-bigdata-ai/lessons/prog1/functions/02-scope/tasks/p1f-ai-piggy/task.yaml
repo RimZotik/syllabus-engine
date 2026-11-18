@@ -1,0 +1,80 @@
+id: p1f-ai-piggy
+title: Копилка без global
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Задача: программа ведёт копилку. Во вводе — суммы пополнений, целые числа по одному в строке, в конце — пустая строка. В начале в копилке 0 рублей. Выведите `В копилке: N`, где `N` — итоговая сумма.
+
+  ```input
+  100
+  250
+  50
+
+  ```
+  ```
+  В копилке: 400
+  ```
+
+  (Последняя строка ввода пустая.)
+
+  Решение в редакторе написал ИИ-ассистент, и оно падает с `UnboundLocalError`. Исправьте его без инструкции `global`: функция `deposit(balance, amount)` получает текущую сумму и пополнение и **возвращает** новую сумму, а глобальных имён не меняет. Проверки вызывают и программу целиком, и саму функцию: `deposit(100, 50)` должно вернуть `150`.
+starter: |
+  # Решение от ИИ-ассистента
+  balance = 0
+
+  def deposit(amount):
+      balance += amount
+      return balance
+
+  line = input()
+  while line != "":
+      deposit(int(line))
+      line = input()
+  print("В копилке:", balance)
+stdin: "100\n250\n50\n\n"
+solution: |
+  def deposit(balance, amount):
+      return balance + amount
+
+  balance = 0
+  line = input()
+  while line != "":
+      balance = deposit(balance, int(line))
+      line = input()
+  print("В копилке:", balance)
+tests:
+  io:
+    - name: Пример из условия
+      stdin: "100\n250\n50\n\n"
+      stdout: "В копилке: 400"
+    - name: Без пополнений
+      stdin: "\n"
+      stdout: "В копилке: 0"
+      hidden: true
+    - name: Одно пополнение
+      stdin: "1000\n\n"
+      stdout: "В копилке: 1000"
+      hidden: true
+    - name: Нулевые пополнения
+      stdin: "0\n70\n0\n\n"
+      stdout: "В копилке: 70"
+      hidden: true
+  stdin: "100\n50\n\n"
+  asserts:
+    - name: Функция возвращает новую сумму
+      code: assert deposit(100, 50) == 150, "deposit(100, 50) должно вернуть 150"
+    - name: Пополнение на ноль
+      code: assert deposit(0, 0) == 0, "deposit(0, 0) должно вернуть 0"
+    - name: Глобальные имена не меняются
+      code: |
+        if "balance" in globals():
+            balance = -1
+            deposit(10, 5)
+            assert balance == -1, "Вызов deposit не должен менять глобальное balance: новую сумму программа получает из return"
+hints:
+  - level: 1
+    text: 'Строка `balance += amount` — это присваивание. Каким Python делает имя, которому присваивают в теле функции? Где он тогда ищет его значение в правой части?'
+  - level: 2
+    text: 'Пусть функция получает текущую сумму аргументом и возвращает новую, ничего не присваивая глобальному имени. А присваивает программа — результат вызова.'
+  - level: 3
+    text: '`def deposit(balance, amount):` с телом `return balance + amount`; в цикле — `balance = deposit(balance, int(line))`.'

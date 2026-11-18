@@ -638,3 +638,121 @@
   short: Способ обучать многослойную сеть. Ошибку на выходе передают назад, слой за слоем, и каждый вес получает поправку
     по своей доле вины.
   introduced_in: intro1.history.4
+
+# ── prog1.functions
+
+- id: function
+  term: функция
+  en: function
+  short: Именованный кусок программы — последовательность инструкций, которая может принимать аргументы и возвращать результат.
+    Своя функция определяется инструкцией def, а выполняется при вызове.
+  example: "def with_discount(price, percent):\n    return price - price * percent / 100"
+  introduced_in: prog1.functions.1
+
+- id: function-parameter
+  term: параметр функции
+  en: parameter
+  short: Имя в скобках определения функции. При вызове оно привязывается к значению соответствующего аргумента — это новое
+    имя для того же значения.
+  example: В def with_discount(price, percent) параметры — price и percent.
+  introduced_in: prog1.functions.1
+
+- id: argument
+  term: аргумент
+  en: argument
+  short: Значение, которое передают функции при вызове. Аргументы вычисляются до того, как начнёт выполняться тело функции.
+  example: В with_discount(1200, 15) аргументы — 1200 и 15.
+  introduced_in: prog1.functions.1
+
+- id: return-value
+  term: возвращаемое значение
+  en: return value
+  short: Значение, которое функция отдаёт в место вызова инструкцией return. Инструкция return сразу завершает вызов.
+  example: После total = with_discount(1200, 15) имя total указывает на возвращаемое значение 1020.0.
+  introduced_in: prog1.functions.1
+
+- id: none
+  term: None
+  en: None
+  short: Особое значение «ничего, результата нет», единственное значение типа NoneType. Его возвращает функция без return;
+    в условии None ложно. Проверяют через is None.
+  example: print("Привет") выводит текст и возвращает None.
+  introduced_in: prog1.functions.1
+
+- id: default-value
+  term: значение по умолчанию
+  en: default argument value
+  short: Значение параметра, записанное в определении функции. Если аргумент для этого параметра не передали, параметр привязывается
+    к этому значению. Вычисляется один раз, когда выполняется def; такие параметры пишут после остальных.
+  example: def with_discount(price, percent=10) — вызов with_discount(1200) считает скидку 10%.
+  introduced_in: prog1.functions.1
+
+- id: keyword-argument
+  term: именованный аргумент
+  en: keyword argument
+  short: Аргумент, переданный вместе с именем параметра — имя=значение. Сопоставляется по имени, поэтому порядок именованных
+    аргументов неважен. Позиционные аргументы передают по порядку, без имени, и пишут первыми.
+  example: print(n, end=" "); with_discount(percent=50, price=1200)
+  introduced_in: prog1.functions.1
+
+- id: local-variable
+  term: локальная переменная (локальное имя)
+  en: local variable
+  short: Параметр или имя, которому где-либо в теле функции что-то присваивают (в том числе переменная цикла for), если оно
+    не указано в инструкции global. Локально во всём теле, существует только во время вызова и не видно снаружи.
+  example: 'В def f(price): cut = price / 10 локальные имена — price и cut.'
+  introduced_in: prog1.functions.2
+
+- id: global-variable
+  term: глобальная переменная (глобальное имя)
+  en: global variable
+  short: Имя, заведённое в самой программе, вне функций, в том числе имя функции, созданное def. Функция может его читать;
+    присвоить ему изнутри функции можно только после инструкции global — ею пользуются редко и осознанно.
+  introduced_in: prog1.functions.2
+
+- id: scope
+  term: область видимости
+  en: scope
+  short: Часть программы, где имя доступно. Имя, которому где-либо в теле функции присваивают, локальное во всём теле и ищется
+    только среди локальных; остальные имена Python ищет среди глобальных, потом среди встроенных.
+  introduced_in: prog1.functions.2
+
+- id: pure-function
+  term: чистая функция
+  en: pure function
+  short: Функция, которая при одинаковых аргументах всегда возвращает одно и то же и ничего не делает, кроме возврата значения,
+    — не печатает, не меняет переданные значения и глобальные имена. Читать имена, которые никто не меняет (функции, константы),
+    чистоте не мешает.
+  example: 'def tax(price): return price * 0.2'
+  introduced_in: prog1.functions.2
+
+- id: side-effect
+  term: побочный эффект
+  en: side effect
+  short: Всё, что вызов функции делает, кроме возврата значения, — вывод на экран, изменение переданного списка, присваивание
+    глобальному имени.
+  example: print и list.append работают ради побочного эффекта и возвращают None.
+  introduced_in: prog1.functions.2
+
+- id: decomposition
+  term: декомпозиция
+  en: decomposition
+  short: Разбиение задачи на самостоятельные части, каждую из которых можно понять, проверить и использовать повторно. В программе
+    части — это функции.
+  example: «Посчитать чек» → item_price, receipt_sum, apply_discount.
+  introduced_in: prog1.functions.3
+
+- id: docstring
+  term: строка документации
+  en: docstring
+  short: 'Текст в тройных кавычках, первая инструкция тела функции. Описывает, что функция делает, принимает и возвращает.
+    Её показывает help(), а комментарий # в теле функции — нет.'
+  introduced_in: prog1.functions.3
+
+- id: type-hint
+  term: аннотация типов (type hints)
+  en: type hints, type annotations
+  short: 'Подпись ожидаемых типов параметров и результата функции — def f(line: str) -> int. Python при выполнении её не проверяет;
+    это подсказка для человека, редактора кода и программ проверки.'
+  example: 'def item_price(line: str) -> int:'
+  introduced_in: prog1.functions.3
