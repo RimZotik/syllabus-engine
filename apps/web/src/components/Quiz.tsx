@@ -21,7 +21,7 @@ function AutoTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
     el.style.height = `${Math.min(h, max)}px`;
     el.style.overflowY = h > max ? "auto" : "hidden"; // scroll only once the field reached its maximum height
   }, [props.value]);
-  return <textarea ref={ref} rows={3} {...props} />;
+  return <textarea ref={ref} rows={3} spellCheck {...props} />;
 }
 
 /**
@@ -71,15 +71,19 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
     return () => window.removeEventListener("beforeunload", warn);
   }, [exam, phase]);
 
+  // The saved state is read once per test. Not on every new `data` object from the parent: re-reading it
+  // while the learner types put back the last saved draft (saved 0.7 s late) — the newest words vanished.
+  const dataRef = useRef(data);
+  dataRef.current = data;
   useEffect(() => {
     let alive = true;
     api.quizState<Saved>(scope).then(({ state, passed: wasPassed }) => {
       if (!alive) return;
-      if (fits(state, data)) { stRef.current = state; setSt(state); }
+      if (fits(state, dataRef.current)) { stRef.current = state; setSt(state); }
       if (wasPassed) reported.current = true;
     }).catch(() => {}).finally(() => alive && setLoaded(true));
     return () => { alive = false; };
-  }, [scope, data]);
+  }, [scope]);
 
   useEffect(() => {
     if (passed && !reported.current) { reported.current = true; onPassed?.(); }
@@ -128,8 +132,8 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
     const prev = stRef.current;
     const history = [...(prev.history ?? []), { n: (prev.history?.length ?? 0) + 1, score, correct, total: auto.length, at, answers: prev.answers }];
     const next = { ...prev, done: true, score, submitted_at: at, history };
-    // a failed section test is not reviewed, so written answers wait for a passing attempt (no teacher tokens spent)
-    const toCheck = exam && score < pass ? [] : open.filter((q) => written(q.id) && !accepted(next, q.id));
+    // written answers are a separate part: checked in every attempt, so the learner sees what to fix
+    const toCheck = open.filter((q) => written(q.id) && !accepted(next, q.id));
     const needsTeacher = teacher && toCheck.length > 0;
     commit(next, score >= pass && !needsTeacher);
     api.saveAttempts(auto.map((q) => ({
@@ -179,7 +183,8 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
         <ul>
           <li>Пока идёт контрольная, темы раздела и содержание недоступны: вернуться к теории можно только после сдачи.</li>
           <li>Сдать можно, не ответив на все вопросы, — вопросы без ответа засчитаются как неверные.</li>
-          <li>Чтобы пройти, нужно {Math.round(pass * 100)}% верных ответов. Если не получится, вы увидите только результат, без разбора: перечитайте раздел и попробуйте снова. Разбор ответов откроется после успешной сдачи.</li>
+          <li>Контрольная из двух частей. <b>Тестовая</b> — вопросы с выбором ответа, нужно {Math.round(pass * 100)}% верных. Если не наберёте порог, увидите только счёт, без разбора: перечитайте раздел и пройдите тестовую часть снова. Разбор откроется после сдачи.</li>
+          {open.length > 0 && <li><b>Развёрнутые ответы</b> преподаватель проверяет сразу после сдачи в любой попытке: его замечания видны, ответ можно исправить и сдать снова. Принятые ответы сохраняются на следующие попытки.</li>}
           <li>Каждая попытка сохраняется{tries ? ` — это будет попытка ${tries + 1}` : ""}.</li>
         </ul>
         <button className="btn" onClick={startExam}><Play size={16} />Начать контрольную</button>
@@ -187,26 +192,38 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
     </div>
   );
 
-  if (phase === "result" && !review) return (
-    <div>
-      {head}
-      <div className="result fail">
-        <CircleAlert size={28} />
-        <div>
-          <b className="tnum">Верно {correct} из {auto.length}</b> <span className="faint tnum">· {Math.round(score * 100)}%, нужно {Math.round(pass * 100)}%</span>
-          <div style={{ marginTop: 6 }}>Попытка {tries} не засчитана. Разбор ответов откроется, когда контрольная будет сдана: так ошибки исправляются пониманием, а не запоминанием. Перечитайте темы раздела и начните новую попытку — вопросы и варианты будут в другом порядке.</div>
-        </div>
-      </div>
-      <div className="quiz-foot"><button className="btn" onClick={restart}><RotateCcw size={16} />Новая попытка</button></div>
+  const missing = unanswered(st, data, teacher);
+  // a section test's two parts, shown separately in its result
+  const writtenOpen = open.filter((o) => written(o.id));
+  const acceptedN = writtenOpen.filter((o) => accepted(st, o.id)).length;
+  const parts = exam && st.done && (
+    <div className="exam-parts">
+      <div className={score >= pass ? "ok" : "bad"}><span>Тестовая часть</span><b className="tnum">верно {correct} из {auto.length}</b><span className="faint tnum">{Math.round(score * 100)}%, нужно {Math.round(pass * 100)}%</span></div>
+      {open.length > 0 && teacher && <div className={pending ? "wait" : acceptedN === writtenOpen.length && writtenOpen.length ? "ok" : "bad"}><span>Развёрнутые ответы</span>
+        <b className="tnum">{pending ? "проверяет преподаватель" : `принято ${acceptedN} из ${open.length}`}</b>
+        <span className="faint">{pending ? "" : acceptedN < open.length ? "замечания — у вопросов ниже" : "всё принято"}</span></div>}
     </div>
   );
-
-  const missing = unanswered(st, data, teacher);
+  // A failed test part: its questions are hidden (no review), the written answers stay with the teacher's comments.
+  const shown = phase === "result" && !review ? st.order.filter((o) => byId.get(o.id)?.type === "open") : st.order;
 
   return (
     <div>
       {head}
-      {st.order.map(({ id, perm }, n) => {
+      {phase === "result" && !review && (
+        <>
+          <div className="result fail">
+            <CircleAlert size={28} />
+            <div>
+              <b>Попытка {tries} не засчитана</b>
+              <div style={{ marginTop: 6 }}>Тестовая часть ниже порога. Её разбор откроется, когда контрольная будет сдана: так ошибки исправляются пониманием, а не запоминанием. Перечитайте темы раздела и пройдите тестовую часть снова — вопросы и варианты будут в другом порядке.{writtenOpen.length > 0 ? " Развёрнутые ответы ниже: поправьте их по замечаниям преподавателя, принятые сохранятся." : ""}</div>
+            </div>
+          </div>
+          {parts}
+          {shown.length > 0 && <div className="eyebrow" style={{ margin: "26px 0 4px" }}>Развёрнутые ответы</div>}
+        </>
+      )}
+      {shown.map(({ id, perm }, n) => {
         const q = byId.get(id);
         if (!q) return null;
         const a = st.answers[q.id];
@@ -262,7 +279,9 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
           </div>
         );
       })}
-      {!st.done ? (
+      {phase === "result" && !review ? (
+        <div className="quiz-foot"><button className="btn" onClick={restart} disabled={pending}><RotateCcw size={16} />Пройти тестовую часть снова</button></div>
+      ) : !st.done ? (
         exam ? (
           <div className="reader-nav-wrap"><div className="reader-nav exam-nav">
             <span className="faint tnum">{missing.length ? `Без ответа: ${missing.length} из ${data.questions.length}` : "Все вопросы отвечены"}</span>
@@ -271,6 +290,7 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
         ) : <button className="btn" onClick={submit} disabled={!complete}>Сдать</button>
       ) : (
         <>
+          {parts}
           <div className={`result ${passed ? "pass" : pending ? "wait" : "fail"}`}>
             {passed ? <CheckCircle2 size={28} /> : pending ? <LoaderCircle size={28} className="spin" /> : <CircleAlert size={28} />}
             <div>

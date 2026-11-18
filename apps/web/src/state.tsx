@@ -32,7 +32,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshProgress = useCallback(async () => setProgress(await api.progress()), []);
 
   useEffect(() => {
-    api.package().then((p) => { setPkg(p); document.title = `${p.title} · Syllabus Engine`; })
+    api.package().then((p) => {
+      setPkg(p);
+      document.title = `${p.title} · Syllabus Engine`;
+      // the browser's spellchecker follows the page language: Russian for a Russian course, English for an English one
+      document.documentElement.lang = p.language || "ru";
+    })
       .catch((e) => setError(`Не удалось открыть обучение: ${e instanceof Error ? e.message : e}. Проверьте courses/active.yaml.`));
     api.program().then(setProgram).catch(() => setError("Сервер платформы не отвечает. Запустите его командой npm run dev."));
     refreshProgress().catch(() => {});

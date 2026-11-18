@@ -164,7 +164,8 @@ export function SectionTest() {
   const running = phase === "progress"; // during an attempt the topics are out of reach
   const [testPassed, setTestPassed] = useState(false);
   useEffect(() => { api.quizState(sectionId).then((r) => setTestPassed(r.passed)).catch(() => {}); }, [sectionId]);
-  const data = content.sectionTest(sectionId);
+  const raw = content.sectionTest(sectionId);
+  const data = useMemo(() => (raw ? { ...raw, title: raw.title ?? "Контрольная раздела" } : undefined), [raw]);
   // the section's last topic (back) and the first topic after the section (forward)
   const lastIdx = allTopics.map((t) => t.id.startsWith(sectionId + ".")).lastIndexOf(true);
   const back = lastIdx >= 0 ? allTopics[lastIdx] : undefined;
@@ -182,7 +183,7 @@ export function SectionTest() {
           <button className="icon-btn" aria-label="Предложить правку" title="Предложить правку" onClick={() => setPanel("feedback")}><Flag size={17} /></button>
         </div></div>
       )}
-      <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} exam onPhase={setPhase} onPassed={() => setTestPassed(true)} data={{ ...data, title: data.title ?? "Контрольная раздела" }} /></div></div>
+      <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} exam onPhase={setPhase} onPassed={() => setTestPassed(true)} data={data} /></div></div>
       {!running && <div className="reader-nav-wrap"><div className="read reader-nav">
         {back ? <Link className="btn soft" id="prev" to={to(`/learn/${back.id}`)} aria-label="К последней теме"><ArrowLeft size={16} /><span className="pl">К последней теме</span></Link> : <span />}
         {next && !testPassed ? <button className="btn" id="next" disabled title="Следующий раздел откроется после сдачи контрольной"><span>Сдайте контрольную, чтобы продолжить</span></button>
