@@ -10,4 +10,4 @@ export const currentPackage = () => current;
 export const to = (path = "") => `/${current}${path}`;
 
 /** Addresses that are not package ids (old links without a package, and the platform's own paths). */
-export const RESERVED = ["learn", "test", "record", "trainer", "api", "assets", "pyodide", "src", "node_modules", "@fs", "@vite", "@id"];
+export const RESERVED = ["learn", "test", "record", "trainer", "reference", "api", "assets", "pyodide", "src", "node_modules", "@fs", "@vite", "@id"];

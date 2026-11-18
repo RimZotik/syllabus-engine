@@ -10,6 +10,9 @@ for (const [path, mod] of Object.entries(files)) {
   byPkg.set(pkg, new Map(((mod.default ?? []) as Term[]).filter(Boolean).map((t) => [t.id, t])));
 }
 
+/** All terms of the open package, in glossary order. */
+export const allTerms = (): Term[] => [...(byPkg.get(currentPackage())?.values() ?? [])];
+
 export function term(id: string): Term | undefined {
   return byPkg.get(currentPackage())?.get(id);
 }

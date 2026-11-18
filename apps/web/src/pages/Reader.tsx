@@ -9,11 +9,18 @@ import { content, type TopicModule } from "../content/registry";
 import { mdxComponents, Page } from "../content/components";
 import { Quiz, type ExamPhase } from "../components/Quiz";
 import { isOpen, nextStep } from "../content/order";
+import { ExamLock, useExamInProgress } from "../content/reference";
 import { Drawer, FeedbackDrawer, NotesDrawer } from "../components/Drawers";
 
 type PageDef = { title: string; minutes?: number; node: ReactNode };
 
+/** During a section test (контрольная) the lessons are closed, as at a real exam. */
 export function Reader() {
+  const exam = useExamInProgress();
+  return exam ? <ExamLock sectionId={exam} what="Тема" /> : <TopicReader />;
+}
+
+function TopicReader() {
   const { topicId = "" } = useParams();
   const { place, allTopics, progress, refreshProgress } = useApp();
   const nav = useNavigate();
@@ -191,7 +198,7 @@ export function SectionTest() {
         <div className="reader-bar"><div className="wrap">
           {running ? <span className="icon-btn" aria-hidden="true" /> : <button className="icon-btn" aria-label="Содержание" title="Содержание" onClick={() => setPanel("toc")}><List size={18} /></button>}
           <div className="crumb">{where.discipline.name} · {where.section.title} · <b>Контрольная раздела{running ? " — идёт попытка" : ""}</b></div>
-          <button className="icon-btn" aria-label="Заметки к контрольной" title="Заметки к контрольной" onClick={() => setPanel("notes")}><NotebookPen size={17} /></button>
+          {running ? <span className="icon-btn" aria-hidden="true" /> : <button className="icon-btn" aria-label="Заметки к контрольной" title="Заметки к контрольной" onClick={() => setPanel("notes")}><NotebookPen size={17} /></button>}
           <button className="icon-btn" aria-label="Предложить правку" title="Предложить правку" onClick={() => setPanel("feedback")}><Flag size={17} /></button>
         </div></div>
       )}

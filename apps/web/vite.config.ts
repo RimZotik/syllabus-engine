@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { fileURLToPath } from "node:url";
-import { createReadStream, cpSync, existsSync, readFileSync, statSync } from "node:fs";
+import { createReadStream, cpSync, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, normalize } from "node:path";
 import type { Plugin } from "vite";
@@ -50,10 +50,44 @@ function activePackage(): string {
 }
 activePackage();
 
+// The «Справочник» search index: every <Theorem> (definition, theorem, rule) of every topic, read from the
+// topics' own MDX at build time — the lessons stay the only source, and the bundle carries only this list.
+type TheoremEntry = { pkg: string; topicId: string; kind: string; title: string; text: string };
+function theoremIndex(): TheoremEntry[] {
+  const out: TheoremEntry[] = [];
+  const dirs = (p: string) => (existsSync(p) ? readdirSync(p, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort() : []);
+  for (const pkg of dirs(coursesDir)) for (const disc of dirs(join(coursesDir, pkg, "lessons"))) for (const sec of dirs(join(coursesDir, pkg, "lessons", disc))) {
+    for (const folder of dirs(join(coursesDir, pkg, "lessons", disc, sec))) {
+      const file = join(coursesDir, pkg, "lessons", disc, sec, folder, "topic.mdx");
+      const n = parseInt(folder, 10);
+      if (!existsSync(file) || Number.isNaN(n)) continue;
+      for (const m of readFileSync(file, "utf-8").matchAll(/<Theorem\b([^>]*)>([\s\S]*?)<\/Theorem>/g)) {
+        const attr = (name: string) => new RegExp(`${name}="([^"]*)"`).exec(m[1])?.[1] ?? "";
+        if (!attr("title")) continue;
+        const body = m[2].replace(/<[^>]+>/g, " ").replace(/[*_$`]/g, "").replace(/\s+/g, " ").trim();
+        out.push({ pkg, topicId: `${disc}.${sec}.${n}`, kind: attr("kind") || "definition", title: attr("title"), text: `${attr("formal")} ${body}`.trim() });
+      }
+    }
+  }
+  return out;
+}
+function theoremIndexPlugin(): Plugin {
+  const ID = "virtual:theorems", RESOLVED = "\0virtual:theorems";
+  return {
+    name: "theorem-index",
+    resolveId: (id) => (id === ID ? RESOLVED : undefined),
+    load: (id) => (id === RESOLVED ? `export default ${JSON.stringify(theoremIndex())};` : undefined),
+    handleHotUpdate({ file, server }) {
+      if (file.endsWith("topic.mdx")) { const m = server.moduleGraph.getModuleById(RESOLVED); if (m) server.moduleGraph.invalidateModule(m); }
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     { enforce: "pre", ...mdx({ remarkPlugins: [remarkGfm, remarkMath], rehypePlugins: [rehypeKatex] }) },
     yaml(),
+    theoremIndexPlugin(),
     pyodideAssets(),
     react({ include: /\.(mdx|tsx?)$/ }),
   ],

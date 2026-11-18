@@ -52,7 +52,7 @@ def all_packages() -> list[str]:
 
 
 # Package ids become the first segment of every address (/<package>/learn/…), so they must not clash with the platform's own paths.
-RESERVED_IDS = {"learn", "test", "record", "trainer", "api", "assets", "pyodide", "src", "node_modules"}
+RESERVED_IDS = {"learn", "test", "record", "trainer", "reference", "api", "assets", "pyodide", "src", "node_modules"}
 PACKAGE_ID = re.compile(r"[a-z0-9][a-z0-9_.-]*")
 COLORS = {"green", "lav", "amber"}
 

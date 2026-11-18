@@ -1,3 +1,4 @@
+import { Reference } from "./pages/Reference";
 import { NavLink, Navigate, Route, Routes, Link } from "react-router-dom";
 import { LoaderCircle, Moon, RefreshCw, Sun } from "lucide-react";
 import { Component, useEffect, useRef, useState, type ReactNode } from "react";
@@ -74,6 +75,7 @@ function TopBar() {
       </Link>
       <nav className="nav">
         <NavLink to={to("/learn")}>Обучение</NavLink>
+        <NavLink to={to("/reference")}>Справочник</NavLink>
         <NavLink to={to("/trainer")}>Тренажёр</NavLink>
         <NavLink to={to("/record")}>Зачётка</NavLink>
       </nav>
@@ -189,7 +191,7 @@ export function App({ catalog, pkg }: { catalog: CatalogData; pkg: string }) {
       <TopBar />
       <Guard><Routes>
         <Route path="/" element={<Front catalog={catalog} />} />
-        {["learn/*", "test/*", "record", "trainer"].map((p) => <Route key={p} path={`/${p}`} element={<Legacy pkg={catalog.default} />} />)}
+        {["learn/*", "test/*", "record", "trainer", "reference"].map((p) => <Route key={p} path={`/${p}`} element={<Legacy pkg={catalog.default} />} />)}
         <Route path="/:pkg/*" element={known ? (
           <Routes>
             <Route index element={<Home />} />
@@ -198,6 +200,7 @@ export function App({ catalog, pkg }: { catalog: CatalogData; pkg: string }) {
             <Route path="test/:sectionId" element={<SectionTest />} />
             <Route path="trainer" element={<Stub title="Тренажёр" text="Ежедневное повторение, билеты и марафон появятся на этапе 2, когда накопятся пройденные темы и вопросы к ним." />} />
             <Route path="record" element={<Record />} />
+            <Route path="reference" element={<Reference />} />
             <Route path="*" element={<Stub title="Страница не найдена" text="Такой страницы нет." />} />
           </Routes>
         ) : <UnknownPackage catalog={catalog} />} />
