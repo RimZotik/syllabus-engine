@@ -166,3 +166,14 @@ def test_teacher_persona_goes_into_the_instructions():
     assert "Как ты говоришь с учеником: образно" in s and "{persona}" not in s
     plain = system_prompt("рисования")
     assert "Кто ты" not in plain and "{persona}" not in plain
+
+
+def test_teacher_flag_on_the_question_goes_to_the_backlog_not_to_the_learner(tmp_path, monkeypatch):
+    from syllabus_server import grader
+    monkeypatch.setattr(grader, "grade", lambda *a, **k: {"verdict": "revise", "criteria": [], "feedback": "ok", "misconception": None,
+                                                          "content_issue": "вопрос можно понять двояко"})
+    c = make_client(tmp_path, monkeypatch)
+    r = c.post("/api/grade", json={"scope": "intro1.what", "item_id": "q-open", "question": "Зачем?", "rubric": ["a"], "answer": "x"}).json()
+    assert "content_issue" not in r
+    rows = connect(tmp_path / "t.sqlite3").execute("SELECT kind, source, topic_id, text, quote FROM feedback").fetchall()
+    assert [tuple(x) for x in rows] == [("content_issue", "teacher", "intro1.what", "[q-open] вопрос можно понять двояко", "Зачем?")]

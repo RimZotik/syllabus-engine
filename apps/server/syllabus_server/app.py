@@ -206,6 +206,10 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
             db.execute("INSERT INTO attempt (scope, item_id, kind, answer, correct, confidence, feedback) VALUES (?, ?, 'open', ?, ?, ?, ?)",
                        (body.scope, body.item_id, json.dumps(body.answer, ensure_ascii=False), int(result["verdict"] == "pass"),
                         body.confidence, json.dumps(result, ensure_ascii=False)))
+            issue = (result.pop("content_issue", None) or "").strip()
+            if issue:  # the teacher found a flaw in the question itself: into the course backlog, not to the learner
+                db.execute("INSERT INTO feedback (kind, source, topic_id, text, quote) VALUES ('content_issue', 'teacher', ?, ?, ?)",
+                           (body.scope, f"[{body.item_id}] {issue}", body.question))
         return result | {"attempt": n}
 
     # ── saved test state (so a finished test stays finished after reload) ──

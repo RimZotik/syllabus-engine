@@ -84,6 +84,12 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (day, scope)
     );
     """,
+    # 5 — course backlog triage: which level the fix belongs to and what was done (docs/dev/backlog.md)
+    """
+    ALTER TABLE feedback ADD COLUMN level TEXT;        -- course | pipeline | platform
+    ALTER TABLE feedback ADD COLUMN resolution TEXT;   -- what was changed, or why not
+    ALTER TABLE feedback ADD COLUMN resolved_at TEXT;
+    """,
 ]
 
 
