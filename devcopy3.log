@@ -1,3 +1,0 @@
-Syllabus Engine: http://127.0.0.1:5183  (Ctrl+C — остановить)
-(node:25404) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
-(Use `node --trace-deprecation ...` to show where the warning was created)

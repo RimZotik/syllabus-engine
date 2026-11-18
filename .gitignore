@@ -6,3 +6,5 @@ dist/
 .env
 *.tsbuildinfo
 .worktrees/
+
+devcopy*.log
