@@ -10,15 +10,19 @@ import { mdxComponents, Page } from "../content/components";
 import { Quiz, type ExamPhase } from "../components/Quiz";
 import { isOpen, nextStep } from "../content/order";
 import { ExamLock, useExamInProgress } from "../content/reference";
+import { StepLocked, useStepOpen } from "../content/gate";
 import { Drawer, FeedbackDrawer, NotesDrawer } from "../components/Drawers";
 
 type PageDef = { title: string; minutes?: number; node: ReactNode };
 
 /** During a section test (контрольная) the lessons are closed, as at a real exam. */
 export function Reader() {
+  const { topicId = "" } = useParams();
   const exam = useExamInProgress();
-  if (exam === undefined) return null;
-  return exam ? <ExamLock sectionId={exam} what="Тема" /> : <TopicReader />;
+  const { open, next } = useStepOpen("topic", topicId);
+  if (exam === undefined || open === undefined) return null;
+  if (exam) return <ExamLock sectionId={exam} what="Тема" />;
+  return open ? <TopicReader /> : <StepLocked next={next} />;
 }
 
 function TopicReader() {
@@ -176,7 +180,15 @@ function TocDrawer({ place: where, current, progress, onClose }: { place: TopicP
   );
 }
 
+/** A section test opened by its address shows only when its topics are passed. */
 export function SectionTest() {
+  const { sectionId = "" } = useParams();
+  const { open, next } = useStepOpen("test", sectionId);
+  if (open === undefined) return null;
+  return open || !content.sectionTest(sectionId) ? <SectionTestPage key={sectionId} /> : <StepLocked next={next} />;
+}
+
+function SectionTestPage() {
   const { sectionId = "" } = useParams();
   const { allTopics, place, progress } = useApp();
   const [panel, setPanel] = useState<"toc" | "notes" | "feedback" | null>(null);

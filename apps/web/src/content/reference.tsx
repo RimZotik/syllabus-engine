@@ -58,6 +58,13 @@ export function TopicTheorems({ topicId, only }: { topicId: string; only?: strin
 export function useExamInProgress(): string | null | undefined {
   const { program } = useApp();
   const [active, setActive] = useState<string | null | undefined>(undefined);
+  // re-checked when the window gets the focus back: a lesson left open in another tab closes once a test starts
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const again = () => setTick((n) => n + 1);
+    addEventListener("focus", again);
+    return () => removeEventListener("focus", again);
+  }, []);
   useEffect(() => {
     if (!program) return;
     const ids = program.courses.flatMap((c) => c.disciplines.flatMap((d) => d.sections.map((s) => s.id))).filter((id) => content.sectionTest(id));
@@ -65,7 +72,7 @@ export function useExamInProgress(): string | null | undefined {
     Promise.all(ids.map((id) => api.quizState<Saved>(id).then((r) => (r.state && fits(r.state, content.sectionTest(id)!) && !r.state.done && examStarted(r.state) ? id : null)).catch(() => null)))
       .then((found) => { if (alive) setActive(found.find(Boolean) ?? null); });
     return () => { alive = false; };
-  }, [program]);
+  }, [program, tick]);
   return active;
 }
 
