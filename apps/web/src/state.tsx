@@ -1,3 +1,4 @@
+import { setFreeOrder } from "./content/order";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, type Package, type ClaudeStatus, type Course, type Discipline, type Program, type Progress, type Section, type Topic } from "./api";
 
@@ -33,6 +34,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     api.package().then((p) => {
+      setFreeOrder(p.order === "free");
       setPkg(p);
       document.title = `${p.title} · Syllabus Engine`;
       // the browser's spellchecker follows the page language: Russian for a Russian course, English for an English one

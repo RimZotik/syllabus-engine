@@ -13,8 +13,15 @@ export function nextStep(program: Program | null, progress: Progress, results: R
   return null;
 }
 
+// `order: free` in package.yaml: every topic and test is open at once (a group that follows its teacher's pace).
+// Set from the package passport when it loads (state.tsx).
+let freeOrder = false;
+export const setFreeOrder = (v: boolean) => { freeOrder = v; };
+export const isFreeOrder = () => freeOrder;
+
 /** Whether a step may be opened from overviews (the record book): what is passed, and the next step. */
 export function isOpen(step: Step, next: Step | null, progress: Progress, results: Results): boolean {
+  if (freeOrder) return true;
   const passed = step.kind === "topic" ? progress[step.id]?.status === "done" : !!results[step.id]?.passed;
   return passed || (next?.kind === step.kind && next.id === step.id);
 }

@@ -18,6 +18,8 @@ export type Package = {
   icon: string; color: string; subtitle: string; level: string; version: string; author: { name: string; url: string }; tags: string[]; license: string;
   /** what the learner should know before the course, and what is taught from zero */
   prerequisites: string[]; not_required: string[];
+  /** strict — topics open in program order (default); free — all open at once */
+  order: "strict" | "free";
   landing: { headline: string; lead: string; cta: string; subjects_lead: string; highlight_subject: string | null };
 };
 export type Progress = Record<string, { status: "started" | "done"; page: number; seconds: number }>;

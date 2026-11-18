@@ -74,6 +74,8 @@ def passport_errors(pkg: str, meta: dict) -> list[str]:
         errs.append(f"{where}: version — строка, например 1.0.0")
     if "tags" in meta and not (isinstance(meta["tags"], list) and all(isinstance(x, str) for x in meta["tags"])):
         errs.append(f"{where}: tags — список строк")
+    if "order" in meta and meta["order"] not in ("strict", "free"):
+        errs.append(f"{where}: order — strict (по порядку, по умолчанию) или free (все темы открыты сразу)")
     pre = meta.get("prerequisites")
     if pre is not None and not (isinstance(pre, dict) and all(isinstance(pre.get(k, []), list) and all(isinstance(x, str) for x in pre.get(k, [])) for k in ("know", "not_needed"))):
         errs.append(f"{where}: prerequisites — {{know: [строки], not_needed: [строки]}}")

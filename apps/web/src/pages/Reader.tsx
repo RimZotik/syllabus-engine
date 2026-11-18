@@ -8,7 +8,7 @@ import { useApp, type TopicPlace } from "../state";
 import { content, type TopicModule } from "../content/registry";
 import { mdxComponents, Page } from "../content/components";
 import { Quiz, type ExamPhase } from "../components/Quiz";
-import { isOpen, nextStep } from "../content/order";
+import { isFreeOrder, isOpen, nextStep } from "../content/order";
 import { ExamLock, useExamInProgress } from "../content/reference";
 import { StepLocked, useStepOpen } from "../content/gate";
 import { Drawer, FeedbackDrawer, NotesDrawer } from "../components/Drawers";
@@ -131,7 +131,7 @@ function TopicReader() {
         <button className="btn soft" id="prev" onClick={() => go(cur - 1)} disabled={cur === 0} aria-label="Назад"><ArrowLeft size={16} /><span className="pl">Назад</span></button>
         <div className="pager"><div className="dots">{pages.map((p, i) => <button key={i} title={p.title} aria-label={p.title} className={i < cur ? "done" : i === cur ? "on" : ""} onClick={() => go(i)} />)}</div><span className="tnum">{cur + 1} / {pages.length}</span></div>
         {!last ? <button className="btn" id="next" onClick={() => go(cur + 1)}><span>Далее: {pages[cur + 1].title}</span><ArrowRight size={16} /></button>
-          : content.quiz(topicId) && progress[topicId]?.status !== "done" ? <button className="btn" id="next" disabled title="Следующая тема откроется после сдачи проверки"><span>Сдайте проверку, чтобы продолжить</span></button>
+          : content.quiz(topicId) && progress[topicId]?.status !== "done" && !isFreeOrder() ? <button className="btn" id="next" disabled title="Следующая тема откроется после сдачи проверки"><span>Сдайте проверку, чтобы продолжить</span></button>
           : testAfter ? <button className="btn" id="next" onClick={() => nav(to(`/test/${testAfter}`))}><Target size={16} /><span>Контрольная раздела</span><ArrowRight size={16} /></button>
           : nextTopic ? <button className="btn" id="next" onClick={() => nav(to(`/learn/${nextTopic.id}`))}><span>Следующая тема</span><ArrowRight size={16} /></button>
           : <Link className="btn" id="next" to={to("/learn")}>К учебному плану</Link>}
@@ -218,7 +218,7 @@ function SectionTestPage() {
       <div className="page"><div className="read"><Quiz key={sectionId} scope={sectionId} exam onPhase={setPhase} onPassed={() => setTestPassed(true)} data={data} /></div></div>
       {!running && <div className="reader-nav-wrap"><div className="read reader-nav">
         {back ? <Link className="btn soft" id="prev" to={to(`/learn/${back.id}`)} aria-label="К последней теме"><ArrowLeft size={16} /><span className="pl">К последней теме</span></Link> : <span />}
-        {next && !testPassed ? <button className="btn" id="next" disabled title="Следующий раздел откроется после сдачи контрольной"><span>Сдайте контрольную, чтобы продолжить</span></button>
+        {next && !testPassed && !isFreeOrder() ? <button className="btn" id="next" disabled title="Следующий раздел откроется после сдачи контрольной"><span>Сдайте контрольную, чтобы продолжить</span></button>
           : next ? <Link className="btn" id="next" to={to(`/learn/${next.id}`)}><span>Следующий раздел{nextSection ? `: ${nextSection.title}` : ""}</span><ArrowRight size={16} /></Link>
           : <Link className="btn" id="next" to={to("/learn")}>К учебному плану</Link>}
       </div></div>}

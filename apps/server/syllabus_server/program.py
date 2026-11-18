@@ -43,6 +43,8 @@ def load_package(pkg: str | None = None) -> dict:
         "version": str(raw.get("version") or ""),
         "author": {"name": author.get("name", ""), "url": author.get("url", "")},
         "tags": list(raw.get("tags") or []),
+        # strict: topics open in program order; free: everything is open (a group led by its teacher)
+        "order": raw.get("order") if raw.get("order") in ("strict", "free") else "strict",
         # who the course is for: what to know before it, and what is taught from zero
         "prerequisites": list((raw.get("prerequisites") or {}).get("know") or []),
         "not_required": list((raw.get("prerequisites") or {}).get("not_needed") or []),
