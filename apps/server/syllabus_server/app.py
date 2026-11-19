@@ -226,13 +226,18 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
     def grade(body: GradeIn) -> dict:
         # earlier checks of this answer (a check annulled by the teaching audit is not the learner's attempt):
         # the teacher compares the new version with them and with its own earlier remarks
-        past = db.execute("SELECT answer, feedback FROM attempt WHERE scope = ? AND item_id = ? AND kind = 'open' "
-                          "AND COALESCE(json_extract(feedback, '$.annulled'), 0) = 0 ORDER BY id", (body.scope, body.item_id)).fetchall()
+        # An annulled check (the teaching audit found the teacher wrong) is not counted as an attempt and its remarks are dropped,
+        # but the learner's answer stays in the history: the understanding shown there still counts.
+        past = db.execute("SELECT answer, feedback FROM attempt WHERE scope = ? AND item_id = ? AND kind = 'open' ORDER BY id",
+                          (body.scope, body.item_id)).fetchall()
         history = []
         for r in past:
             fb = json.loads(r["feedback"]) if r["feedback"] else {}
-            history.append({"answer": json.loads(r["answer"]), "verdict": fb.get("verdict"), "feedback": fb.get("feedback", ""), "fixes": fb.get("fixes", "")})
-        n = len(history) + 1
+            if fb.get("annulled"):
+                history.append({"answer": json.loads(r["answer"]), "verdict": None, "feedback": "(отзыв отменён как ошибочный — не опирайся на него)", "fixes": ""})
+            else:
+                history.append({"answer": json.loads(r["answer"]), "verdict": fb.get("verdict"), "feedback": fb.get("feedback", ""), "fixes": fb.get("fixes", "")})
+        n = sum(1 for r in past if not (json.loads(r["feedback"]) if r["feedback"] else {}).get("annulled")) + 1
         ctx = check_context(load_program(), body.scope)
         if ctx:
             ctx["lesson"] = lesson_material(package_dir(current_package()), ctx, body.scope)
