@@ -361,6 +361,10 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
             errors.append(f"{rel(mdx)}: topic {tid} is not in program.yaml")
         authored.add(tid)
         text = mdx.read_text(encoding="utf-8")
+        # MDX attributes in plain quotes do not support \" escapes — the page fails to compile
+        for n, line in enumerate(text.splitlines(), 1):
+            if re.match(r'\s*[A-Za-z]+="[^"]*\\"', line):
+                errors.append(f'{rel(mdx)}:{n}: escaped quote inside attr="…" breaks MDX — use attr={{"…"}} or «»')
         used = set(re.findall(r'<Term id="([^"]+)"', text))
         linked[tid] = set(used)
         texts[tid] = text.lower()
