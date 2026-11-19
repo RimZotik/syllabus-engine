@@ -1,0 +1,63 @@
+id: p1k-ai-without-worst
+title: ИИ-ассистент считает балл без худшей оценки
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Учитель разрешил не учитывать одну худшую оценку четверти. Функция `average_without_worst(marks)` получает список оценок (в нём не меньше двух) и возвращает среднее всех оценок, кроме одной самой низкой. Если самых низких несколько, убирается только одна.
+
+  ```python
+  journal = [5, 4, 2]
+  print(average_without_worst(journal))   # 4.5
+  print(journal)                          # [5, 4, 2] — журнал не изменился
+  ```
+
+  Функцию написал ИИ-ассистент. Среднее она считает верно, но после вызова учитель находит журнал испорченным, а повторный вызов даёт другой ответ. Предскажите, что окажется в `journal` после двух вызовов подряд, проверьте в редакторе и исправьте функцию: она должна возвращать тот же ответ и не менять переданный список.
+starter: |
+  # Решение от ИИ-ассистента
+  def average_without_worst(marks):
+      marks.remove(min(marks))
+      return sum(marks) / len(marks)
+
+
+  journal = [5, 4, 2]
+  print(average_without_worst(journal))
+  print(average_without_worst(journal))
+  print(journal)
+solution: |
+  def average_without_worst(marks):
+      return (sum(marks) - min(marks)) / (len(marks) - 1)
+
+
+  journal = [5, 4, 2]
+  print(average_without_worst(journal))
+  print(average_without_worst(journal))
+  print(journal)
+tests:
+  asserts:
+    - name: Среднее без худшей
+      code: |
+        assert average_without_worst([5, 4, 2]) == 4.5, "average_without_worst([5, 4, 2]) должно вернуть 4.5"
+    - name: Журнал не меняется
+      code: |
+        j = [5, 4, 2]
+        average_without_worst(j)
+        assert j == [5, 4, 2], "После вызова список должен остаться [5, 4, 2]: функция не должна менять журнал"
+    - name: Повторный вызов — тот же ответ
+      code: |
+        j = [3, 5, 4, 3]
+        first = average_without_worst(j)
+        second = average_without_worst(j)
+        assert first == second == 4.0, "Оба вызова для [3, 5, 4, 3] должны вернуть 4.0"
+    - name: Убирается только одна худшая
+      code: |
+        assert average_without_worst([5, 2, 2]) == 3.5, "Для [5, 2, 2] убирается одна двойка: среднее 5 и 2 — 3.5"
+    - name: Все оценки одинаковые
+      code: |
+        assert average_without_worst([3, 3]) == 3.0, "average_without_worst([3, 3]) должно вернуть 3.0"
+hints:
+  - level: 1
+    text: '`marks` внутри функции и `journal` снаружи — сколько здесь списков? Что делает с этим списком `remove`?'
+  - level: 2
+    text: '`remove` меняет сам переданный список — это побочный эффект. Можно не убирать оценку вовсе: среднее без одной худшей — это сумма без неё, делённая на число оценок без неё. Или работать с копией.'
+  - level: 3
+    text: 'Верните `(sum(marks) - min(marks)) / (len(marks) - 1)` — или сначала `rest = marks.copy()`, а `remove` вызывайте у `rest`.'

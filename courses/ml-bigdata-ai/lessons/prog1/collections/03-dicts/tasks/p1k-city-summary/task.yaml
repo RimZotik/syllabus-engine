@@ -1,0 +1,83 @@
+id: p1k-city-summary
+title: Сводка заказов по городам
+sandbox: python-browser
+difficulty: 3
+statement: |
+  Интернет-магазин хранит заказы таблицей — списком словарей. У каждого заказа есть город, сумма и отметка, оплачен ли он:
+
+  ```python
+  orders = [
+      {"city": "Казань", "sum": 1200, "paid": True},
+      {"city": "Омск", "sum": 500, "paid": False},
+      {"city": "Казань", "sum": 300, "paid": True},
+      {"city": "Тула", "sum": 800, "paid": True},
+  ]
+  ```
+
+  Напишите функцию `city_summary(orders)`. Она учитывает только **оплаченные** заказы и возвращает словарь: ключ — город, значение — кортеж `(число заказов, общая сумма)`. Город, где оплаченных заказов нет, в сводку не попадает. Таблицу `orders` функция не меняет.
+
+  ```python
+  city_summary(orders)
+  # {'Казань': (2, 1500), 'Тула': (1, 800)}
+  ```
+
+  Вводить и печатать ничего не нужно — проверки вызывают функцию сами.
+starter: |
+  def city_summary(orders):
+      # План:
+      # 1. Пустой словарь сводки
+      # 2. Перебрать заказы; неоплаченные пропустить (отбор)
+      # 3. Для оплаченного взять текущие число и сумму города (если города ещё нет — 0 и 0)
+      #    и связать город с новым кортежем (число + 1, сумма + сумма заказа)
+      # 4. Вернуть словарь
+      return {}
+solution: |
+  def city_summary(orders):
+      summary = {}
+      for order in orders:
+          if not order["paid"]:
+              continue
+          count, total = summary.get(order["city"], (0, 0))
+          summary[order["city"]] = (count + 1, total + order["sum"])
+      return summary
+tests:
+  asserts:
+    - name: Пример из условия
+      code: |
+        orders = [
+            {"city": "Казань", "sum": 1200, "paid": True},
+            {"city": "Омск", "sum": 500, "paid": False},
+            {"city": "Казань", "sum": 300, "paid": True},
+            {"city": "Тула", "sum": 800, "paid": True},
+        ]
+        assert city_summary(orders) == {"Казань": (2, 1500), "Тула": (1, 800)}, "Ожидалось {'Казань': (2, 1500), 'Тула': (1, 800)}"
+    - name: Неоплаченные не считаются
+      code: |
+        orders = [
+            {"city": "Омск", "sum": 500, "paid": False},
+            {"city": "Омск", "sum": 700, "paid": True},
+            {"city": "Омск", "sum": 100, "paid": False},
+        ]
+        assert city_summary(orders) == {"Омск": (1, 700)}, "Из трёх заказов Омска оплачен один: {'Омск': (1, 700)}"
+    - name: Нет оплаченных заказов
+      code: |
+        assert city_summary([{"city": "Тула", "sum": 100, "paid": False}]) == {}, "Если оплаченных заказов нет — пустой словарь"
+    - name: Пустая таблица
+      code: |
+        assert city_summary([]) == {}, "Для пустого списка заказов — пустой словарь"
+    - name: Значение — кортеж
+      code: |
+        s = city_summary([{"city": "Тула", "sum": 100, "paid": True}])
+        assert s == {"Тула": (1, 100)} and type(s["Тула"]) == tuple, "Значение — кортеж (число заказов, сумма): {'Тула': (1, 100)}"
+    - name: Таблица не меняется
+      code: |
+        orders = [{"city": "Тула", "sum": 100, "paid": True}, {"city": "Омск", "sum": 50, "paid": False}]
+        city_summary(orders)
+        assert orders == [{"city": "Тула", "sum": 100, "paid": True}, {"city": "Омск", "sum": 50, "paid": False}], "Функция не должна менять заказы"
+hints:
+  - level: 1
+    text: 'Это группировка, как «ученики по классам», только под ключом-городом копится не список имён, а два накопителя сразу. Что взять для города, который встретился впервые?'
+  - level: 2
+    text: '`summary.get(city, (0, 0))` даёт кортеж из двух чисел — его можно сразу распаковать: `count, total = ...`. Кортеж не изменить, поэтому город связывают с новым кортежем.'
+  - level: 3
+    text: 'В цикле: если `order["paid"]` ложно — `continue`. Иначе `count, total = summary.get(order["city"], (0, 0))` и `summary[order["city"]] = (count + 1, total + order["sum"])`.'
