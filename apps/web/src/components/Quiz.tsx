@@ -277,9 +277,20 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
               <div className={`verdict ${g.verdict}`}>
                 {g.verdict === "pass" ? <CheckCircle2 size={22} /> : <MessageSquareText size={22} />}
                 <div>
-                  <p><b>{g.verdict === "pass" ? "Ответ принят." : "Ответ нужно дополнить или исправить."}</b> {g.feedback}</p>
-                  {/* corrections stand apart from the assessment, so they are easy to find */}
-                  {[g.misconception, ...(g.fixes ?? "").split(/\n+/)].map((t) => t?.trim()).filter(Boolean).map((t, i) => <p key={i}>{t}</p>)}
+                  {(() => {
+                    // Status first, then corrections on their own lines. An accepted answer with corrections ends with the
+                    // teacher's conclusion («несмотря на неточности… вы поняли»); otherwise the assessment follows the status.
+                    const fixes = [g.misconception, ...(g.fixes ?? "").split(/\n+/)].map((t) => t?.trim()).filter(Boolean) as string[];
+                    const status = <b>{g.verdict === "pass" ? "Ответ принят." : "Ответ нужно дополнить или исправить."}</b>;
+                    const conclusionLast = g.verdict === "pass" && fixes.length > 0;
+                    return (
+                      <>
+                        <p>{status}{!conclusionLast && <> {g.feedback}</>}</p>
+                        {fixes.map((t, i) => <p key={i}>{t}</p>)}
+                        {conclusionLast && g.feedback && <p>{g.feedback}</p>}
+                      </>
+                    );
+                  })()}
                   <span className="meta">{g.verdict === "pass" ? `Принят с ${g.attempt}-й попытки` : `Попытка ${g.attempt} · отредактируйте ответ выше и сдайте снова`}</span>
                 </div>
               </div>
