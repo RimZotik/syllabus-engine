@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from . import claude, grader
 from .db import PerThread, connect, db_file, migrate, transaction
-from .program import load_package, load_program, topic_ids
+from .program import check_context, lesson_material, load_package, load_program, topic_ids
 from .settings import PackageError, active_package, current_package, data_dir, db_path, installed_packages, package_dir, use_package
 
 
@@ -233,10 +233,13 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
             fb = json.loads(r["feedback"]) if r["feedback"] else {}
             history.append({"answer": json.loads(r["answer"]), "verdict": fb.get("verdict"), "feedback": fb.get("feedback", ""), "fixes": fb.get("fixes", "")})
         n = len(history) + 1
+        ctx = check_context(load_program(), body.scope)
+        if ctx:
+            ctx["lesson"] = lesson_material(package_dir(current_package()), ctx, body.scope)
         try:
             t = load_package()["teacher"]
             result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n, course=t["course"], role=t["role"], style=t["style"],
-                                  history=history)
+                                  history=history, context=ctx)
         except grader.GraderUnavailable as e:
             record_event("warn", "server", f"grader unavailable: {e}", {"scope": body.scope, "item": body.item_id})
             raise HTTPException(503, str(e))

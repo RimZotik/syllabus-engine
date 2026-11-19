@@ -61,7 +61,7 @@ def test_migrations_idempotent(tmp_path):
 def test_grade_saves_attempt_and_counts(tmp_path, monkeypatch):
     from syllabus_server import grader
     calls = []
-    def fake(question, rubric, wrong, answer, attempt, timeout=150, course="", role="", style="", history=None):
+    def fake(question, rubric, wrong, answer, attempt, timeout=150, course="", role="", style="", history=None, context=None):
         calls.append(attempt)
         assert len(history) == attempt - 1  # the teacher sees every earlier version and its own remarks
         if history:
@@ -120,7 +120,9 @@ def test_grader_prompt_shows_history_and_how_the_answer_changed():
     added = build_prompt("Q", ["c1"], [], "первый\nдописал", 2, first)
     assert "<previous_answer n=\"1\">\nпервый\n</previous_answer>" in added and "Чего не хватает?" in added
     assert "ДОПИСАЛ" in added and "<added>\nдописал\n</added>" in added
-    assert "ОТРЕДАКТИРОВАЛ" in build_prompt("Q", ["c1"], [], "переписал", 2, first)
+    assert "НАПИСАЛ ЗАНОВО" in build_prompt("Q", ["c1"], [], "совсем другой текст", 2, first)
+    long = [{"answer": "один два три четыре пять шесть", "verdict": "revise", "feedback": "", "fixes": ""}]
+    assert "ОТРЕДАКТИРОВАЛ" in build_prompt("Q", ["c1"], [], "один два три пять шесть семь", 2, long)
     assert "сдал тот же текст" in build_prompt("Q", ["c1"], [], "первый", 2, first)
 
 
@@ -190,3 +192,23 @@ def test_teacher_flag_on_the_question_goes_to_the_backlog_not_to_the_learner(tmp
     assert "content_issue" not in r
     rows = connect(tmp_path / "t.sqlite3").execute("SELECT kind, source, topic_id, text, quote FROM feedback").fetchall()
     assert [tuple(x) for x in rows] == [("content_issue", "teacher", "intro1.what", "[q-open] вопрос можно понять двояко", "Зачем?")]
+
+
+def test_grader_prompt_carries_level_and_lesson():
+    from syllabus_server.grader import build_prompt
+    ctx = {"kind": "topic_quiz", "topic": "Почему такой порядок", "section": "Карта", "discipline": "Введение", "discipline_summary": "",
+           "course": "Введение", "course_no": 1, "courses_total": 7, "course_tagline": "", "intro": True, "lesson": "цепочка: функция → производная"}
+    p = build_prompt("Q", ["c1"], [], "ответ", 1, None, ctx)
+    assert "тест по теме «Почему такой порядок»" in p and "Уровень: вводный" in p and "<lesson>\nцепочка: функция → производная\n</lesson>" in p
+    assert p.index("<lesson>") < p.index("Вопрос:")
+
+
+def test_check_context_and_lesson_material():
+    from syllabus_server.program import check_context, lesson_material, load_program
+    from syllabus_server.settings import package_dir
+    prog = load_program()
+    t = check_context(prog, "intro1.map.2")
+    assert t["kind"] == "topic_quiz" and t["intro"] is True
+    assert check_context(prog, "intro1.map")["kind"] == "section_test" and check_context(prog, "intro1")["kind"] == "exam"
+    assert check_context(prog, "prog1.basics.1")["intro"] is False
+    assert "цепочк" in lesson_material(package_dir("ml-bigdata-ai"), t, "intro1.map.2")

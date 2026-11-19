@@ -98,7 +98,7 @@ def load_program(path: Path | None = None) -> dict:
                 "unlocks": d.get("unlocks", []), "levels": levels if len(levels) > 1 else [], "sections": sections,
             })
         courses.append({
-            "id": c["id"], "title": c["title"], "tagline": c["tagline"], "project": c.get("project"),
+            "id": c["id"], "title": c["title"], "tagline": c["tagline"], "project": c.get("project"), "intro": bool(c.get("intro")),
             "hours": sum(d["hours"] for d in c["disciplines"]), "disciplines": discs,
         })
     levels = [{"id": x["id"], "title": x["title"], "gate": x.get("gate", "")} for x in (raw["program"].get("levels") or [])]
@@ -107,3 +107,64 @@ def load_program(path: Path | None = None) -> dict:
 
 def topic_ids(program: dict) -> list[str]:
     return [t["id"] for c in program["courses"] for d in c["disciplines"] for s in d["sections"] for t in s["topics"]]
+
+
+def check_context(program: dict, scope: str) -> dict:
+    """Where a checked question lives, so the teacher can match its demands to the level:
+    a topic quiz (scope = topic id), a section test (section id) or a discipline exam (discipline id)."""
+    courses = program["courses"]
+    for ci, c in enumerate(courses, 1):
+        for d in c["disciplines"]:
+            base = {"course": c["title"], "course_no": ci, "intro": c.get("intro", False), "courses_total": len(courses), "course_tagline": c.get("tagline", ""),
+                    "discipline": d["title"], "discipline_summary": d.get("summary", "")}
+            if d["id"] == scope:
+                return base | {"kind": "exam"}
+            for s in d["sections"]:
+                if s["id"] == scope:
+                    return base | {"kind": "section_test", "section": s["title"], "topics": [t["title"] for t in s["topics"]]}
+                for t in s["topics"]:
+                    if t["id"] == scope:
+                        return base | {"kind": "topic_quiz", "section": s["title"], "topic": t["title"]}
+    return {}
+
+
+def _topic_files(pkg_dir: Path, section_id: str) -> list[Path]:
+    """topic.mdx files of a section, in topic order (lessons/<discipline>/<section>/<NN-slug>/topic.mdx)."""
+    disc, _, sec = section_id.partition(".")
+    return sorted((pkg_dir / "lessons" / disc / sec).glob("*/topic.mdx"))
+
+
+def _plain(mdx: str) -> str:
+    """Lesson text without the export block, JSX tags and blank runs — what the learner reads, in short."""
+    import re
+    text = re.sub(r"^export const meta = \{.*?\n\};?\s*$", "", mdx, flags=re.S | re.M)
+    text = re.sub(r"<[A-Z][^>]*?/>", "", text, flags=re.S)       # self-closing components
+    text = re.sub(r"</?[A-Z][^>]*>", "", text)                     # component open/close tags
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+def _gist(mdx: str) -> str:
+    """Lead, highlighted ideas and summary of one topic."""
+    import re
+    lead = re.search(r'lead:\s*"(.*?)"', mdx)
+    marks = re.findall(r"<Mark>(.*?)</Mark>", mdx, flags=re.S)
+    summary = re.search(r"<Summary items=\{\[(.*?)\]\}", mdx, flags=re.S)
+    items = re.findall(r'"((?:[^"\\]|\\.)*)"', summary.group(1)) if summary else []
+    return "\n".join([lead.group(1) if lead else "", *[f"• {m.strip()}" for m in marks], *[f"– {i}" for i in items]]).strip()
+
+
+def lesson_material(pkg_dir: Path, ctx: dict, scope: str, limit: int = 14000) -> str:
+    """What the learner has read for this check: the whole topic for a topic quiz, the gist of every topic for a section test."""
+    try:
+        if ctx.get("kind") == "topic_quiz":
+            section, _, n = scope.rpartition(".")
+            files = _topic_files(pkg_dir, section)
+            if len(files) < int(n):
+                return ""
+            mdx = files[int(n) - 1].read_text(encoding="utf-8")
+            return f"Итог темы:\n{_gist(mdx)}\n\nТекст темы:\n{_plain(mdx)}"[:limit]  # summary first: it survives the cut
+        if ctx.get("kind") == "section_test":
+            return "\n\n".join(_gist(f.read_text(encoding="utf-8")) for f in _topic_files(pkg_dir, scope))[:limit]
+    except (OSError, ValueError):
+        return ""
+    return ""
