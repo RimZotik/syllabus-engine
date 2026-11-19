@@ -2,24 +2,6 @@ title: Проверка темы
 pass: 0.85
 minutes: 15
 questions:
-- id: rebind-then-append
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    week = [0, 0]
-    plan = week
-    plan = [5, 5]
-    plan.append(1)
-    print(week)
-    ```
-  options:
-  - '`[0, 0]`'
-  - '`[5, 5, 1]`'
-  - '`[0, 0, 1]`'
-  - '`[5, 5]`'
-  answer: 0
-  explain: 'Сначала `plan` — псевдоним `week`. Но `plan = [5, 5]` привязывает имя `plan` к новому списку, и связь со старым пропадает. `append` меняет уже новый список, а `week` указывает на прежний `[0, 0]`.'
 - id: duty-through-alias
   type: multi
   q: 'Дежурные: `team = ["Аня", "Борис"]`, затем `duty = team`. После какой следующей строки кода `print(team)` выведет три имени?'
