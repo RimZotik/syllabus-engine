@@ -224,11 +224,19 @@ def create_app(conn: "sqlite3.Connection | None" = None) -> FastAPI:
 
     @app.post("/api/grade")
     def grade(body: GradeIn) -> dict:
-        n = db.execute("SELECT COUNT(*) FROM attempt WHERE scope = ? AND item_id = ? AND COALESCE(json_extract(feedback, '$.annulled'), 0) = 0",
-                       (body.scope, body.item_id)).fetchone()[0] + 1  # a check annulled by the teaching audit is not the learner's attempt
+        # earlier checks of this answer (a check annulled by the teaching audit is not the learner's attempt):
+        # the teacher compares the new version with them and with its own earlier remarks
+        past = db.execute("SELECT answer, feedback FROM attempt WHERE scope = ? AND item_id = ? AND kind = 'open' "
+                          "AND COALESCE(json_extract(feedback, '$.annulled'), 0) = 0 ORDER BY id", (body.scope, body.item_id)).fetchall()
+        history = []
+        for r in past:
+            fb = json.loads(r["feedback"]) if r["feedback"] else {}
+            history.append({"answer": json.loads(r["answer"]), "verdict": fb.get("verdict"), "feedback": fb.get("feedback", ""), "fixes": fb.get("fixes", "")})
+        n = len(history) + 1
         try:
             t = load_package()["teacher"]
-            result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n, course=t["course"], role=t["role"], style=t["style"])
+            result = grader.grade(body.question, body.rubric, body.wrong_answers, body.answer, n, course=t["course"], role=t["role"], style=t["style"],
+                                  history=history)
         except grader.GraderUnavailable as e:
             record_event("warn", "server", f"grader unavailable: {e}", {"scope": body.scope, "item": body.item_id})
             raise HTTPException(503, str(e))

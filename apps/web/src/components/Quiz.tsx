@@ -277,8 +277,9 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
               <div className={`verdict ${g.verdict}`}>
                 {g.verdict === "pass" ? <CheckCircle2 size={22} /> : <MessageSquareText size={22} />}
                 <div>
-                  <b>{g.verdict === "pass" ? "Ответ принят." : "Ответ нужно дополнить или исправить."}</b> {g.feedback}
-                  {g.misconception && <> {g.misconception}</>}
+                  <p><b>{g.verdict === "pass" ? "Ответ принят." : "Ответ нужно дополнить или исправить."}</b> {g.feedback}</p>
+                  {/* corrections stand apart from the assessment, so they are easy to find */}
+                  {(g.fixes || g.misconception) && <p className="fixes">{[g.misconception, g.fixes].filter(Boolean).join(" ")}</p>}
                   <span className="meta">{g.verdict === "pass" ? `Принят с ${g.attempt}-й попытки` : `Попытка ${g.attempt} · отредактируйте ответ выше и сдайте снова`}</span>
                 </div>
               </div>

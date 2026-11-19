@@ -61,9 +61,12 @@ def test_migrations_idempotent(tmp_path):
 def test_grade_saves_attempt_and_counts(tmp_path, monkeypatch):
     from syllabus_server import grader
     calls = []
-    def fake(question, rubric, wrong, answer, attempt, timeout=150, course="", role="", style=""):
+    def fake(question, rubric, wrong, answer, attempt, timeout=150, course="", role="", style="", history=None):
         calls.append(attempt)
-        return {"verdict": "revise" if attempt == 1 else "pass", "criteria": [], "feedback": "ok", "misconception": None}
+        assert len(history) == attempt - 1  # the teacher sees every earlier version and its own remarks
+        if history:
+            assert history[0] == {"answer": "мой ответ", "verdict": "revise", "feedback": "ok", "fixes": "дополните"}
+        return {"verdict": "revise" if attempt == 1 else "pass", "criteria": [], "feedback": "ok", "fixes": "дополните", "misconception": None}
     monkeypatch.setattr(grader, "grade", fake)
     c = make_client(tmp_path, monkeypatch)
     body = {"scope": "intro1.what.1", "item_id": "q-open", "question": "?", "rubric": ["a"], "answer": "мой ответ"}
