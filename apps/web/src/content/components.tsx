@@ -70,11 +70,17 @@ export function Figure({ caption, wide, children }: { caption?: string; wide?: b
 /** Inline «Проверь себя» question. */
 export function Check({ q, options, answer, explain }: { q: string; options: string[]; answer: number; explain: string }) {
   const [picked, setPicked] = useState<number | null>(null);
+  // Options are shown in random order (fixed for the page visit), so the right one is not always first.
+  const [order] = useState(() => {
+    const xs = options.map((_, i) => i);
+    for (let i = xs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [xs[i], xs[j]] = [xs[j], xs[i]]; }
+    return xs;
+  });
   return (
     <div className="check">
       <div className="eyebrow">Проверь себя</div>
       <div className="q"><RichText text={q} /></div>
-      {options.map((o, i) => (
+      {order.map((i) => [options[i], i] as const).map(([o, i]) => (
         <button key={i} className={`opt${picked === null ? "" : i === answer ? " right" : i === picked ? " wrong" : ""}`} onClick={() => setPicked(i)} disabled={picked !== null}>
           <input type="radio" readOnly checked={picked === i} tabIndex={-1} /><span className="opt-text"><RichText text={o} /></span>
         </button>

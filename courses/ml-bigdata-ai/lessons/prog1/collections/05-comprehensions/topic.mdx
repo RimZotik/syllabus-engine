@@ -205,7 +205,7 @@ False
   q={"Пароль должен содержать хотя бы одну цифру. Метод строк isdigit() возвращает True, если строка состоит только из цифр: \"7\".isdigit() — True. Какое выражение проверяет пароль password?"}
   options={["any(ch.isdigit() for ch in password)", "all(ch.isdigit() for ch in password)", "[ch.isdigit() for ch in password]", "any(password.isdigit() for ch in password)"]}
   answer={0}
-  explain="any истинно, если хотя бы один символ — цифра. all требовал бы, чтобы цифрами были все символы. Список из True и False сам ничего не проверяет. В последнем варианте isdigit вызывается для всей строки, а не для символа ch."
+  explain="any истинно, если хотя бы один символ — цифра. all требовал бы, чтобы цифрами были все символы. Список из True и False сам ничего не проверяет. В записи any(password.isdigit() for ch in password) isdigit вызывается для всей строки, а не для символа ch."
 />
 
 </Page>
