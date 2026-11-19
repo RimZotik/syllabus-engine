@@ -1,0 +1,87 @@
+id: p1e-fix-parking
+title: Жалоба на парковку
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Тариф парковки у торгового центра: до 15 минут включительно — бесплатно, до 120 минут включительно — 100 ₽, дольше — 300 ₽. Программа читает время стоянки в минутах (целые числа, по одному в строке) до пустой строки и печатает стоимость каждой стоянки и итог.
+
+  ```input
+  10
+  60
+  200
+
+  ```
+  ```
+  10 мин — 0 ₽
+  60 мин — 100 ₽
+  200 мин — 300 ₽
+  Итого: 400 ₽
+  ```
+
+  На этом примере программа отвечает верно, но водитель пожаловался: простоял ровно 15 минут, а с него взяли 100 ₽. Воспроизведите ошибку, найдите причину и исправьте программу. Проверьте, нет ли такой же ошибки ещё где-нибудь. Функцию `parking_cost(minutes)` оставьте.
+starter: |
+  def parking_cost(minutes):
+      if minutes < 15:
+          return 0
+      if minutes < 120:
+          return 100
+      return 300
+
+
+  total = 0
+  line = input()
+  while line != "":
+      minutes = int(line)
+      cost = parking_cost(minutes)
+      print(f"{minutes} мин — {cost} ₽")
+      total += cost
+      line = input()
+  print(f"Итого: {total} ₽")
+solution: |
+  def parking_cost(minutes):
+      if minutes <= 15:
+          return 0
+      if minutes <= 120:
+          return 100
+      return 300
+
+
+  total = 0
+  line = input()
+  while line != "":
+      minutes = int(line)
+      cost = parking_cost(minutes)
+      print(f"{minutes} мин — {cost} ₽")
+      total += cost
+      line = input()
+  print(f"Итого: {total} ₽")
+tests:
+  stdin: "\n"
+  io:
+    - name: Пример из условия
+      stdin: "10\n60\n200\n\n"
+      stdout: "10 мин — 0 ₽\n60 мин — 100 ₽\n200 мин — 300 ₽\nИтого: 400 ₽"
+    - name: Жалоба водителя
+      stdin: "15\n\n"
+      stdout: "15 мин — 0 ₽\nИтого: 0 ₽"
+    - name: Граница 120
+      stdin: "120\n121\n\n"
+      stdout: "120 мин — 100 ₽\n121 мин — 300 ₽\nИтого: 400 ₽"
+      hidden: true
+    - name: Сразу за бесплатными минутами
+      stdin: "16\n0\n\n"
+      stdout: "16 мин — 100 ₽\n0 мин — 0 ₽\nИтого: 100 ₽"
+      hidden: true
+  asserts:
+    - name: Обе границы тарифа
+      code: |
+        for minutes, cost in [(15, 0), (16, 100), (120, 100), (121, 300)]:
+            got = parking_cost(minutes)
+            assert got == cost, f"parking_cost({minutes}) должна вернуть {cost}, а вернула {got}"
+hints:
+  - level: 1
+    text: 'Запустите программу на вводе `15` — ошибка повторяется? Что значит «до 15 минут включительно» на языке сравнений?'
+  - level: 2
+    text: 'Под функцией допишите `assert parking_cost(15) == 0` и такие же проверки для других стыков тарифа — по обе стороны от каждой границы. Какие из них падают?'
+  - level: 3
+    text: 'Обе границы входят в свою группу: нужно `minutes <= 15` и `minutes <= 120` вместо `<`.'

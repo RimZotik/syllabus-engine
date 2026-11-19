@@ -1,0 +1,147 @@
+id: p1e-scan-beep
+title: Сигнал кассы при любом исходе
+sandbox: python-browser
+difficulty: 3
+statement: |
+  Касса самообслуживания сканирует товар и после каждой попытки подаёт сигнал — даже если сканер не прочитал код или товара нет в каталоге: покупатель должен понять, что попытка закончилась.
+
+  Напишите функцию `scan(read_code, beep)`. Оба параметра — функции:
+
+  - `read_code()` возвращает код товара или выбрасывает исключение, если сканер не прочитал код;
+  - `beep()` подаёт сигнал.
+
+  `scan` вызывает `read_code()`, находит цену по коду в словаре `PRICES` и возвращает её. После попытки сканирования — удачной или нет — `beep()` вызывается ровно один раз. Исключения `scan` не ловит: неизвестный код — `KeyError`, ошибка сканера — то исключение, которое выбросил `read_code`. Обрабатывать их будет код, который вызвал `scan`. Сканирование может прерваться чем угодно — даже отменой, которая, как Ctrl+C, проходит мимо `except Exception`, — и сигнал всё равно должен прозвучать.
+
+  ```python
+  def read_bread():
+      return "4601"
+
+  def beep():
+      print("пик")
+
+  print(scan(read_bread, beep))
+  ```
+  ```
+  пик
+  45
+  ```
+
+  Словарь `PRICES` уже есть в редакторе, не меняйте его.
+starter: |
+  PRICES = {"4601": 45, "4602": 89, "4603": 320}
+
+
+  def scan(read_code, beep):
+      # План:
+      # 1. try: прочитать код и вернуть цену из PRICES
+      # 2. Блок, который выполняется при любом выходе из try, —
+      #    вызвать beep()
+      # Исключения не перехватывать
+      pass
+
+
+  def read_bread():
+      return "4601"
+
+
+  def beep():
+      print("пик")
+
+
+  print(scan(read_bread, beep))
+solution: |
+  PRICES = {"4601": 45, "4602": 89, "4603": 320}
+
+
+  def scan(read_code, beep):
+      try:
+          code = read_code()
+          return PRICES[code]
+      finally:
+          beep()
+
+
+  def read_bread():
+      return "4601"
+
+
+  def beep():
+      print("пик")
+
+
+  print(scan(read_bread, beep))
+tests:
+  asserts:
+    - name: Удачное сканирование
+      code: |
+        events = []
+        def read_ok():
+            events.append("скан")
+            return "4602"
+        def sound():
+            events.append("сигнал")
+        price = scan(read_ok, sound)
+        assert price == 89, f"Для кода 4602 цена 89, а вернулось {price}"
+        assert events == ["скан", "сигнал"], f"Нужен порядок [скан, сигнал], а было {events}"
+    - name: Неизвестный код — KeyError и сигнал
+      code: |
+        events = []
+        def read_unknown():
+            events.append("скан")
+            return "9999"
+        def sound():
+            events.append("сигнал")
+        caught = None
+        try:
+            scan(read_unknown, sound)
+        except KeyError:
+            caught = "KeyError"
+        assert caught == "KeyError", "Для неизвестного кода scan должна пропустить KeyError дальше, а не перехватить его"
+        assert events == ["скан", "сигнал"], f"Сигнал после сканирования ровно один раз, а было {events}"
+    - name: Сканер не прочитал код — его исключение и сигнал
+      code: |
+        events = []
+        def read_broken():
+            events.append("скан")
+            raise ValueError("сканер не прочитал код")
+        def sound():
+            events.append("сигнал")
+        msg = None
+        try:
+            scan(read_broken, sound)
+        except ValueError as e:
+            msg = str(e)
+        assert msg == "сканер не прочитал код", "Исключение сканера должно дойти до вызывающего кода без изменений"
+        assert events == ["скан", "сигнал"], f"Сигнал после попытки ровно один раз, а было {events}"
+    - name: Отмена сканирования — тоже сигнал
+      code: |
+        events = []
+        def read_cancelled():
+            events.append("скан")
+            raise KeyboardInterrupt("покупатель нажал «Отмена»")
+        def sound():
+            events.append("сигнал")
+        caught = None
+        try:
+            scan(read_cancelled, sound)
+        except KeyboardInterrupt:
+            caught = "отмена"
+        assert caught == "отмена", "Отмена должна дойти до вызывающего кода"
+        assert events == ["скан", "сигнал"], f"Сигнал после любой попытки ровно один раз, а было {events}"
+    - name: Сигнал после каждой попытки
+      code: |
+        count = []
+        def read_cheese():
+            return "4603"
+        def sound():
+            count.append(1)
+        for i in range(3):
+            scan(read_cheese, sound)
+        assert len(count) == 3, f"Три сканирования — три сигнала, а было {len(count)}"
+hints:
+  - level: 1
+    text: 'Что должно случиться при любом исходе — и при `return`, и когда исключение уходит из функции? Какой блок `try` выполняется в каждом из этих случаев?'
+  - level: 2
+    text: 'Ловить исключения здесь не нужно, поэтому `except` лишний. Нужен блок конструкции `try`, который выполнится и перед `return`, и когда исключение уходит из функции.'
+  - level: 3
+    text: '`try: code = read_code(); return PRICES[code]` (по строке на инструкцию), затем `finally: beep()`.'

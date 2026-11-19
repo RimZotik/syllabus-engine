@@ -1,0 +1,73 @@
+id: p1e-safe-int
+title: Количество из поля формы
+sandbox: python-browser
+difficulty: 1
+statement: |
+  В интернет-магазине покупатель вписывает количество товара в поле формы, и программе приходит текст. Напишите функцию `safe_int(text, default)`: если текст — целое число (пробелы по краям допустимы), она возвращает это число, а если нет — значение `default`.
+
+  ```python
+  print(safe_int("3", 1))       # 3
+  print(safe_int(" 12 ", 1))    # 12
+  print(safe_int("три", 1))     # 1
+  print(safe_int("2.5", 0))     # 0
+  ```
+
+  Неверный *текст* — обычное дело. А если вместо текста пришло что-то совсем другое, например `None`, — это ошибка в программе, и такой вызов должен падать с `TypeError`, как у самого `int`.
+
+  Проверять текст заранее методами строк в этой задаче нельзя — используйте `try` и `except`.
+starter: |
+  def safe_int(text, default):
+      # План:
+      # 1. Попробовать перевести text в целое число и вернуть его
+      # 2. Если значение не разбирается как целое — вернуть default
+      # 3. Исключения других типов не ловить
+      pass
+
+
+  print(safe_int("3", 1))
+  print(safe_int("три", 1))
+solution: |
+  def safe_int(text, default):
+      try:
+          return int(text)
+      except ValueError:
+          return default
+
+
+  print(safe_int("3", 1))
+  print(safe_int("три", 1))
+tests:
+  forbid: [isdigit, isdecimal, isnumeric]
+  asserts:
+    - name: Целое число
+      code: |
+        assert safe_int("3", 1) == 3, "safe_int(\"3\", 1) должно вернуть 3"
+        assert safe_int("-4", 0) == -4, "safe_int(\"-4\", 0) должно вернуть -4"
+    - name: Пробелы по краям
+      code: |
+        assert safe_int(" 12 ", 1) == 12, "safe_int(\" 12 \", 1) должно вернуть 12"
+    - name: Не целое число
+      code: |
+        assert safe_int("три", 1) == 1, "safe_int(\"три\", 1) должно вернуть 1"
+        assert safe_int("2.5", 0) == 0, "safe_int(\"2.5\", 0) должно вернуть 0: дробь — не целое число"
+    - name: Пустая строка
+      code: |
+        assert safe_int("", 7) == 7, "safe_int(\"\", 7) должно вернуть 7"
+    - name: default может быть любым
+      code: |
+        assert safe_int("много", None) is None, "safe_int(\"много\", None) должно вернуть None — то, что передали в default"
+    - name: Не текст — по-прежнему TypeError
+      code: |
+        caught = None
+        try:
+            safe_int(None, 0)
+        except TypeError:
+            caught = "TypeError"
+        assert caught == "TypeError", "safe_int(None, 0) должна упасть с TypeError: ловите только исключение неверного значения"
+hints:
+  - level: 1
+    text: 'Какое исключение выбрасывает `int`, когда текст не разбирается как целое число? А какое — когда ему дали `None`?'
+  - level: 2
+    text: 'В `try` — только попытка перевести текст. Подумайте, что поймает `except` без типа при вызове с `None` и почему это нарушит условие.'
+  - level: 3
+    text: 'Тело функции — `try: return int(text)`, затем `except ValueError: return default`.'

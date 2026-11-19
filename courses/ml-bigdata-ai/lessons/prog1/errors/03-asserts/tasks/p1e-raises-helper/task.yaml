@@ -1,0 +1,91 @@
+id: p1e-raises-helper
+title: Помощник для проверки исключений
+sandbox: python-browser
+difficulty: 3
+statement: |
+  Проверка «функция выбрасывает `ValueError`» каждый раз занимает пять строк с флагом. Спрячем их в функцию-помощник.
+
+  Напишите `raises_value_error(func, arg)`: она вызывает `func(arg)` ровно один раз и возвращает `True`, если вызов выбросил `ValueError`, и `False`, если вызов закончился без исключения. Исключение другого типа помощник не ловит: оно идёт дальше, и проверка с ним упадёт — так она сообщит, что функция ломается не так, как обещано.
+
+  ```python
+  print(raises_value_error(int, "сто"))   # True
+  print(raises_value_error(int, "100"))   # False
+  ```
+
+  Теперь проверка в одну строку:
+
+  ```python
+  assert raises_value_error(parse_age, "200"), "parse_age(\"200\") должна выбросить ValueError"
+  ```
+starter: |
+  def raises_value_error(func, arg):
+      # План:
+      # 1. В try вызвать func(arg); если исключения не было — вернуть False
+      # 2. Если было исключение неверного значения — вернуть True
+      # 3. Другие исключения не ловить
+      pass
+
+
+  print(raises_value_error(int, "сто"))
+  print(raises_value_error(int, "100"))
+solution: |
+  def raises_value_error(func, arg):
+      try:
+          func(arg)
+      except ValueError:
+          return True
+      return False
+
+
+  print(raises_value_error(int, "сто"))
+  print(raises_value_error(int, "100"))
+tests:
+  asserts:
+    - name: Выбросила ValueError — True
+      code: |
+        assert raises_value_error(int, "сто") is True, "raises_value_error(int, \"сто\") должна вернуть True"
+    - name: Без исключения — False
+      code: |
+        assert raises_value_error(int, "100") is False, "raises_value_error(int, \"100\") должна вернуть False"
+    - name: Своя функция с raise
+      code: |
+        def _timer(minutes):
+            if minutes <= 0:
+                raise ValueError(f"нужно больше нуля, а не {minutes}")
+            return minutes
+        assert raises_value_error(_timer, -5) is True, "Для функции, которая выбрасывает ValueError через raise, нужно True"
+        assert raises_value_error(_timer, 10) is False, "Для вызова без исключения нужно False"
+    - name: Функция возвращает None — это не исключение
+      code: |
+        def _quiet(x):
+            return None
+        assert raises_value_error(_quiet, 1) is False, "Функция вернула None без исключения — нужно False"
+    - name: Другое исключение идёт дальше
+      code: |
+        caught = None
+        try:
+            raises_value_error(int, None)
+        except TypeError:
+            caught = "TypeError"
+        assert caught == "TypeError", "int(None) выбрасывает TypeError — помощник не должен его ловить"
+    - name: Вызов ровно один раз
+      code: |
+        calls = []
+        def _counted_ok(x):
+            calls.append(x)
+            return x
+        raises_value_error(_counted_ok, 7)
+        assert calls == [7], f"func должна быть вызвана один раз с аргументом 7, а вызовы: {calls}"
+        calls.clear()
+        def _counted_bad(x):
+            calls.append(x)
+            raise ValueError("плохо")
+        raises_value_error(_counted_bad, 7)
+        assert calls == [7], f"func должна быть вызвана один раз с аргументом 7, а вызовы: {calls}"
+hints:
+  - level: 1
+    text: 'Вспомните проверку с флагом из темы. Какие её строки останутся в помощнике, если вместо `assert` вернуть сам флаг?'
+  - level: 2
+    text: 'Помощнику нужны три исхода: исключение нужного типа, исключения нет, исключение другого типа. Какой из них обрабатывает `except`, какой — строка после всей конструкции, а какой не должен обрабатываться вовсе?'
+  - level: 3
+    text: '`try: func(arg)` / `except ValueError: return True` / после конструкции — `return False`.'

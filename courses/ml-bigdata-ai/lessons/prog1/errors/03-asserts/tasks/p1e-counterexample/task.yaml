@@ -1,0 +1,84 @@
+id: p1e-counterexample
+title: Контрпример для подсчёта слов
+sandbox: python-browser
+difficulty: 2
+statement: |
+  ИИ-ассистент написал функцию, которая считает слова в тексте. Слово — непрерывная цепочка букв без пробелов; пустых слов не бывает. Пробелов подряд может быть несколько, они бывают и по краям текста.
+
+  ```python
+  def count_words(text):
+      if text == "":
+          return 0
+      return text.count(" ") + 1
+  ```
+
+  На «мама мыла раму» она отвечает 3 — верно, а на пустую строку ассистент её уже исправил. Найдите вход, на котором она всё-таки ошибается, — самый короткий, какой сможете.
+
+  Напишите функцию `counterexample()` без параметров. Она возвращает пару: текст из букв и пробелов длиной **не больше 3 символов** и правильное число слов в нём — посчитанное вами по условию, а не взятое у функции ассистента.
+
+  ```python
+  def counterexample():
+      return ("мир", 1)   # не годится: здесь функция ассистента отвечает верно
+  ```
+starter: |
+  # Решение от ИИ-ассистента — его не меняйте
+  def count_words(text):
+      if text == "":
+          return 0
+      return text.count(" ") + 1
+
+
+  def counterexample():
+      # План:
+      # 1. Подумать, где в тексте пробел не разделяет два слова
+      # 2. Придумать такой текст не длиннее 3 символов
+      # 3. Посчитать слова в нём по условию
+      return ("мир", 1)
+
+
+  text, answer = counterexample()
+  print("ассистент:", count_words(text), "правильно:", answer)
+solution: |
+  def count_words(text):
+      if text == "":
+          return 0
+      return text.count(" ") + 1
+
+
+  def counterexample():
+      return (" ", 0)
+
+
+  text, answer = counterexample()
+  print("ассистент:", count_words(text), "правильно:", answer)
+tests:
+  asserts:
+    - name: Пара «текст, число слов»
+      code: |
+        result = counterexample()
+        assert isinstance(result, tuple) and len(result) == 2, "counterexample() должна вернуть пару: (текст, число слов)"
+        assert isinstance(result[0], str) and isinstance(result[1], int), "Первый элемент пары — текст, второй — целое число"
+    - name: Короткий текст из букв и пробелов
+      code: |
+        text = counterexample()[0]
+        assert len(text) <= 3, f"Текст длиной {len(text)}, а нужно не больше 3 символов"
+        assert all(ch == " " or ch.isalpha() for ch in text), "В тексте должны быть только буквы и пробелы"
+    - name: Правильный ответ посчитан по условию
+      code: |
+        text, answer = counterexample()
+        assert answer == len(text.split()), f"В тексте «{text}» по условию другое число слов, а не {answer}"
+    - name: Функция ассистента на нём ошибается
+      code: |
+        def _ai_count_words(text):
+            if text == "":
+                return 0
+            return text.count(" ") + 1
+        text, answer = counterexample()
+        assert _ai_count_words(text) != answer, f"На тексте «{text}» функция ассистента отвечает верно — нужен вход, на котором она ошибается"
+hints:
+  - level: 1
+    text: 'Функция считает пробелы и прибавляет один. Когда пробелов в тексте столько же, сколько промежутков между словами? А когда нет?'
+  - level: 2
+    text: 'Пробел не разделяет два слова, если он стоит с краю или рядом с другим пробелом. Сколько слов, например, в тексте из одних пробелов?'
+  - level: 3
+    text: 'Возьмите текст из одного пробела или из буквы и пробела. Сколько в нём слов по условию? Сколько пробелов насчитает `count` и что вернёт функция ассистента?'

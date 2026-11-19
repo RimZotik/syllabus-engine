@@ -1,0 +1,73 @@
+id: p1e-ai-warm-streak
+title: ИИ-ассистент ищет самую длинную оттепель
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Функция `longest_warm_streak(temps)` получает температуры по дням и возвращает длину самой длинной серии дней подряд с температурой выше нуля. Если тёплых дней нет — 0.
+
+  ```python
+  print(longest_warm_streak([3, 5, -1, 2]))         # 2
+  print(longest_warm_streak([-3, 1, 2, -1, 4, 5, 6]))  # 3
+  ```
+
+  Функцию написал ИИ-ассистент. На первом примере она отвечает верно, а на втором — 2 вместо 3. Не переписывайте функцию заново: воспроизведите ошибку, уменьшите вход до самого маленького, на котором она ещё есть, сформулируйте предположение о причине, проверьте его и исправьте функцию.
+starter: |
+  # Решение от ИИ-ассистента
+  def longest_warm_streak(temps):
+      best = 0
+      current = 0
+      for t in temps:
+          if t > 0:
+              current += 1
+          else:
+              if current > best:
+                  best = current
+              current = 0
+      return best
+
+
+  print(longest_warm_streak([3, 5, -1, 2]))
+  print(longest_warm_streak([-3, 1, 2, -1, 4, 5, 6]))
+solution: |
+  def longest_warm_streak(temps):
+      best = 0
+      current = 0
+      for t in temps:
+          if t > 0:
+              current += 1
+              if current > best:
+                  best = current
+          else:
+              current = 0
+      return best
+
+
+  print(longest_warm_streak([3, 5, -1, 2]))
+  print(longest_warm_streak([-3, 1, 2, -1, 4, 5, 6]))
+tests:
+  asserts:
+    - name: Первый пример
+      code: |
+        assert longest_warm_streak([3, 5, -1, 2]) == 2, "Для [3, 5, -1, 2] самая длинная серия — 2"
+    - name: Второй пример
+      code: |
+        got = longest_warm_streak([-3, 1, 2, -1, 4, 5, 6])
+        assert got == 3, f"Для [-3, 1, 2, -1, 4, 5, 6] нужно 3, а вернулось {got}"
+    - name: Один день
+      code: |
+        got = longest_warm_streak([4])
+        assert got == 1, f"longest_warm_streak([4]) должна вернуть 1, а вернула {got}"
+    - name: Три дня
+      code: |
+        assert longest_warm_streak([1, 2, 3]) == 3, "Для [1, 2, 3] нужно 3"
+    - name: Холодные дни и пустой список
+      code: |
+        assert longest_warm_streak([0, -1, -5]) == 0, "Ноль — не выше нуля: для [0, -1, -5] нужно 0"
+        assert longest_warm_streak([]) == 0, "Для пустого списка нужно 0"
+hints:
+  - level: 1
+    text: 'Укоротите второй пример: какая серия в нём потерялась? Найдите самый короткий вход, на котором ответ всё ещё неверен.'
+  - level: 2
+    text: 'Сравните, что вернёт функция на `[4]` и на `[4, -1]`. Чем различаются эти входы? Посмотрите, в какой момент функция обновляет `best`.'
+  - level: 3
+    text: 'Обновляйте `best` сразу, когда серия растёт: внутри `if t > 0:` после `current += 1` — `if current > best: best = current`. Или после цикла ещё раз сравните `current` с `best`.'

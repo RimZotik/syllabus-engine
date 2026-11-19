@@ -1,0 +1,84 @@
+id: p1e-fix-receipt
+title: Чек с весовыми товарами
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Программа считает сумму чека. Каждая строка — товар: штучный записан как `название;цена`, весовой — как `название;цена за кг;вес в граммах`. Стоимость весового товара — цена за кг, умноженная на вес и делённая на 1000; дробная часть рубля отбрасывается. Ввод заканчивается пустой строкой.
+
+  ```input
+  батон;52
+  яблоки;130;1500
+  кефир;95
+
+  ```
+  ```
+  Итого: 342
+  ```
+
+  Программа в редакторе падает. Найдите причину по traceback и исправьте её. Функцию `line_cost(line)` оставьте: она возвращает стоимость одной строки чека.
+starter: |
+  def line_cost(line):
+      parts = line.split(";")
+      price = int(parts[1])
+      if len(parts) == 3:          # весовой товар: цена за кг и вес в граммах
+          grams = int(parts[2])
+          return price * grams // 1000
+      price
+
+
+  total = 0
+  line = input()
+  while line != "":
+      total += line_cost(line)
+      line = input()
+  print("Итого:", total)
+solution: |
+  def line_cost(line):
+      parts = line.split(";")
+      price = int(parts[1])
+      if len(parts) == 3:          # весовой товар: цена за кг и вес в граммах
+          grams = int(parts[2])
+          return price * grams // 1000
+      return price
+
+
+  total = 0
+  line = input()
+  while line != "":
+      total += line_cost(line)
+      line = input()
+  print("Итого:", total)
+tests:
+  stdin: "\n"
+  io:
+    - name: Пример из условия
+      stdin: "батон;52\nяблоки;130;1500\nкефир;95\n\n"
+      stdout: "Итого: 342"
+    - name: Только весовые
+      stdin: "орехи;900;155\nпеченье;250;337\n\n"
+      stdout: "Итого: 223"
+      hidden: true
+    - name: Только штучные
+      stdin: "молоко;89\nчай;150\n\n"
+      stdout: "Итого: 239"
+      hidden: true
+    - name: Пустой чек
+      stdin: "\n"
+      stdout: "Итого: 0"
+      hidden: true
+  asserts:
+    - name: Штучный товар
+      code: |
+        got = line_cost("батон;52")
+        assert got == 52, f"line_cost(\"батон;52\") должна вернуть 52, а вернула {got}"
+    - name: Весовой товар
+      code: |
+        assert line_cost("яблоки;130;1500") == 195, "line_cost(\"яблоки;130;1500\") должна вернуть 195"
+        assert line_cost("орехи;900;155") == 139, "line_cost(\"орехи;900;155\") должна вернуть 139: дробная часть рубля отбрасывается, а не округляется"
+hints:
+  - level: 1
+    text: 'Прочитайте последнюю строку сообщения: что с чем пытались сложить? Строка из traceback может быть верной — откуда пришло неправильное значение?'
+  - level: 2
+    text: 'В `total` прибавляют результат `line_cost`. Проверьте её отдельно через `print` — на одной штучной и на одной весовой строке. Какая из них возвращает не число?'
+  - level: 3
+    text: 'Для штучного товара функция вычисляет цену, но не возвращает её: последняя строка тела — просто `price`. Нужно `return price`.'

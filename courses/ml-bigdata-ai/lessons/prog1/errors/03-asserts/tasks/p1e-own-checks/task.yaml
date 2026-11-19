@@ -1,0 +1,168 @@
+id: p1e-own-checks
+title: Сначала проверки, потом посылка
+sandbox: python-browser
+difficulty: 2
+statement: |
+  Почта считает стоимость посылки по весу в граммах (целое число):
+
+  - до 500 г включительно — 150 ₽;
+  - до 2000 г включительно — 300 ₽;
+  - до 10000 г включительно — 600 ₽;
+  - вес меньше 1 г или больше 10000 г — `ValueError` с текстом `вес должен быть от 1 до 10000 г, а не 12000` (в конце — переданный вес).
+
+  Нужны две функции, и **сначала — проверки**.
+
+  1. `check_parcel_cost(f)` — ваш набор проверок. Параметр `f` — проверяемая функция: внутри пишите `assert f(200) == 150, "…"` и так далее, а не `parcel_cost(...)`. Нужны обычные проверки (вес из каждой группы), граничные (стыки групп с обеих сторон, края допустимого веса) и «плохие» (вес вне диапазона — через `try`/`except` и флаг). Набор молчит, если функция верна, и падает с `AssertionError`, если нет.
+  2. `parcel_cost(grams)` — сама функция. Пишите её, когда проверки готовы, и запускайте `check_parcel_cost(parcel_cost)`, пока он не перестанет падать.
+
+  ```python
+  print(parcel_cost(500))    # 150
+  print(parcel_cost(501))    # 300
+  check_parcel_cost(parcel_cost)   # ничего не выводит: проверки прошли
+  ```
+
+  Платформа проверит обе функции. Вашу `parcel_cost` — своими проверками. А ваш `check_parcel_cost` она запустит на верной функции (он должен промолчать) и на нескольких сломанных версиях с типичными ошибками — каждую он должен поймать. Если ваш код сам упадёт при запуске, провалятся все проверки платформы — поэтому вызов `check_parcel_cost(parcel_cost)` оставляйте, только когда он проходит.
+starter: |
+  def check_parcel_cost(f):
+      """Мои проверки: f — проверяемая функция."""
+      # Обычные: по одному весу из каждой группы
+      assert f(200) == 150, f"f(200) должна вернуть 150, а вернула {f(200)}"
+      # …
+
+      # Граничные: стыки 500/501 и 2000/2001, края 1 и 10000
+
+      # «Плохие»: 0 и 10001 — f должна выбросить ValueError
+      # raised = False
+      # try:
+      #     f(0)
+      # except ValueError:
+      #     raised = True
+      # assert raised, "f(0) должна выбросить ValueError"
+
+
+  def parcel_cost(grams):
+      """Цена посылки: до 500 г — 150, до 2000 г — 300, до 10000 г — 600; вне 1..10000 — ValueError."""
+      pass   # функцию — после проверок
+
+
+  # check_parcel_cost(parcel_cost)
+solution: |
+  def check_parcel_cost(f):
+      """Мои проверки: f — проверяемая функция."""
+      # обычные
+      assert f(200) == 150, f"f(200) должна вернуть 150, а вернула {f(200)}"
+      assert f(1200) == 300, f"f(1200) должна вернуть 300, а вернула {f(1200)}"
+      assert f(5000) == 600, f"f(5000) должна вернуть 600, а вернула {f(5000)}"
+      # граничные
+      for grams, cost in [(1, 150), (500, 150), (501, 300), (2000, 300), (2001, 600), (10000, 600)]:
+          assert f(grams) == cost, f"f({grams}) должна вернуть {cost}, а вернула {f(grams)}"
+      # «плохие»
+      for bad in [0, -3, 10001]:
+          raised = False
+          try:
+              f(bad)
+          except ValueError:
+              raised = True
+          assert raised, f"f({bad}) должна выбросить ValueError"
+
+
+  def parcel_cost(grams):
+      """Цена посылки: до 500 г — 150, до 2000 г — 300, до 10000 г — 600; вне 1..10000 — ValueError."""
+      if grams < 1 or grams > 10000:
+          raise ValueError(f"вес должен быть от 1 до 10000 г, а не {grams}")
+      if grams <= 500:
+          return 150
+      if grams <= 2000:
+          return 300
+      return 600
+
+
+  check_parcel_cost(parcel_cost)
+tests:
+  asserts:
+    - name: Ваша функция — обычные веса
+      code: |
+        for grams, cost in [(200, 150), (1200, 300), (5000, 600)]:
+            got = parcel_cost(grams)
+            assert got == cost, f"parcel_cost({grams}) должна вернуть {cost}, а вернула {got}"
+    - name: Ваша функция — стыки групп и края
+      code: |
+        for grams, cost in [(1, 150), (500, 150), (501, 300), (2000, 300), (2001, 600), (10000, 600)]:
+            got = parcel_cost(grams)
+            assert got == cost, f"parcel_cost({grams}) должна вернуть {cost}, а вернула {got}"
+    - name: Ваша функция — вес вне диапазона
+      code: |
+        for bad in [0, -3, 10001, 12000]:
+            msg = None
+            try:
+                parcel_cost(bad)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"parcel_cost({bad}) должна выбросить ValueError"
+            assert msg == f"вес должен быть от 1 до 10000 г, а не {bad}", f"Текст исключения для {bad}: «{msg}»"
+    - name: Ваши проверки принимают верную функцию
+      code: |
+        assert "check_parcel_cost" in globals(), "Нужна функция check_parcel_cost(f) с вашими проверками"
+        def _ref(grams):
+            if grams < 1 or grams > 10000:
+                raise ValueError(f"вес должен быть от 1 до 10000 г, а не {grams}")
+            if grams <= 500:
+                return 150
+            if grams <= 2000:
+                return 300
+            return 600
+        try:
+            check_parcel_cost(_ref)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную функцию: {e}"
+    - name: Ваши проверки ловят сломанные версии
+      code: |
+        assert "check_parcel_cost" in globals(), "Нужна функция check_parcel_cost(f) с вашими проверками"
+        def _first_border(grams):        # 500 г считается уже второй группой
+            if grams < 1 or grams > 10000:
+                raise ValueError(f"вес должен быть от 1 до 10000 г, а не {grams}")
+            if grams < 500:
+                return 150
+            if grams <= 2000:
+                return 300
+            return 600
+        def _second_border(grams):       # 2001 г — ещё вторая группа
+            if grams < 1 or grams > 10000:
+                raise ValueError(f"вес должен быть от 1 до 10000 г, а не {grams}")
+            if grams <= 500:
+                return 150
+            if grams <= 2001:
+                return 300
+            return 600
+        def _no_lower(grams):            # нет проверки нижней границы
+            if grams > 10000:
+                raise ValueError(f"вес должен быть от 1 до 10000 г, а не {grams}")
+            if grams <= 500:
+                return 150
+            if grams <= 2000:
+                return 300
+            return 600
+        def _upper_off(grams):           # 10001 г ещё принимается
+            if grams < 1 or grams > 10001:
+                raise ValueError(f"вес должен быть от 1 до 10000 г, а не {grams}")
+            if grams <= 500:
+                return 150
+            if grams <= 2000:
+                return 300
+            return 600
+        missed = []
+        for name, broken in [("500 г во второй группе", _first_border), ("2001 г во второй группе", _second_border),
+                             ("нет проверки веса меньше 1 г", _no_lower), ("10001 г принимается", _upper_off)]:
+            try:
+                check_parcel_cost(broken)
+                missed.append(name)
+            except AssertionError:
+                pass
+        assert not missed, "Ваши проверки не поймали сломанные версии: " + "; ".join(missed)
+hints:
+  - level: 1
+    text: 'Сколько групп у веса и где их стыки? Для каждого стыка — какие два веса стоят по разные стороны от него? А какой вес — самый маленький и самый большой из допустимых?'
+  - level: 2
+    text: 'Проверки внутри `check_parcel_cost` вызывают `f`, а не `parcel_cost`. Для каждого стыка — пара весов по обе стороны, плюс края допустимого веса. Вес вне диапазона проверяют флагом: `assert f(0) == ...` здесь не написать.'
+  - level: 3
+    text: 'Граничные проверки: 1, 500, 501, 2000, 2001, 10000; «плохие» — 0 и 10001 через `try`/`except ValueError` и флаг. В `parcel_cost` сначала отсейте неверный вес `raise`, потом идите по группам с `<=`.'
