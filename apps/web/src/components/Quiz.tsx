@@ -279,7 +279,7 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
                 <div>
                   <p><b>{g.verdict === "pass" ? "Ответ принят." : "Ответ нужно дополнить или исправить."}</b> {g.feedback}</p>
                   {/* corrections stand apart from the assessment, so they are easy to find */}
-                  {(g.fixes || g.misconception) && <p className="fixes">{[g.misconception, g.fixes].filter(Boolean).join(" ")}</p>}
+                  {[g.misconception, ...(g.fixes ?? "").split(/\n+/)].map((t) => t?.trim()).filter(Boolean).map((t, i) => <p key={i}>{t}</p>)}
                   <span className="meta">{g.verdict === "pass" ? `Принят с ${g.attempt}-й попытки` : `Попытка ${g.attempt} · отредактируйте ответ выше и сдайте снова`}</span>
                 </div>
               </div>

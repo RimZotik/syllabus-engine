@@ -263,8 +263,8 @@ input[type=range]{accent-color:var(--green)}
 .verdict.revise b{color:var(--lav)}
 .verdict.error{background:var(--warn-soft);color:var(--warn)}
 .verdict .meta{display:block;margin-top:4px;font-size:13px;opacity:.8}
-.verdict p{margin:0}
-.verdict p.fixes{margin-top:12px;white-space:pre-line}
+.verdict p{margin:0;font-size:inherit;line-height:inherit}
+.verdict p+p{margin-top:8px}
 .qactions{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .quiz-foot{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .result.wait{background:var(--lav-soft);color:var(--lav)}
