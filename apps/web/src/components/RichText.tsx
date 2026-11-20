@@ -2,10 +2,24 @@ import { Fragment, type ReactNode } from "react";
 
 /** `inline code` and **bold** inside a line of text. */
 function inline(line: string, key: string): ReactNode[] {
-  return line.split(/(`[^`\n]+`)/).flatMap((s, j) =>
-    s.length > 2 && s.startsWith("`") && s.endsWith("`") ? [<code key={`${key}-${j}`}>{s.slice(1, -1)}</code>]
-      : s.split(/(\*\*[^*\n]+\*\*)/).map((t, m) => t.length > 4 && t.startsWith("**") && t.endsWith("**")
-        ? <b key={`${key}-${j}-${m}`}>{t.slice(2, -2)}</b> : <Fragment key={`${key}-${j}-${m}`}>{t}</Fragment>));
+  // tokens: `code` or a ** marker; ** inside code stays code (2 ** 3), code may sit inside bold
+  const tokens = line.split(/(`[^`\n]+`|\*\*)/).filter((s) => s !== "");
+  const markers = tokens.filter((s) => s === "**").length;
+  const out: ReactNode[] = [];
+  let bold: ReactNode[] | null = null;
+  let seen = 0;
+  tokens.forEach((s, j) => {
+    const k = `${key}-${j}`;
+    // an unpaired last marker stays literal
+    if (s === "**" && (bold || seen < markers - (markers % 2))) {
+      seen++;
+      if (bold) { out.push(<b key={k}>{bold}</b>); bold = null; } else bold = [];
+      return;
+    }
+    const node = s.length > 2 && s.startsWith("`") && s.endsWith("`") ? <code key={k}>{s.slice(1, -1)}</code> : <Fragment key={k}>{s}</Fragment>;
+    (bold ?? out).push(node);
+  });
+  return out;
 }
 
 /**

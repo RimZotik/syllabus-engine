@@ -16,6 +16,8 @@ describe("RichText — text from YAML with code", () => {
       '<div class="rt-io"><span>Ввод</span><pre class="rt-pre"><code class="language-input">3725</code></pre></div>' +
       '<div class="rt-io"><span>Вывод</span><pre class="rt-pre"><code>1 ч 2 мин 5 с</code></pre></div>');
     expect(html("**Копилка.** Выведите `x`")).toBe("<b>Копилка.</b> Выведите <code>x</code>");
+    expect(html("**Верните `total`.** И `2 ** 3`")).toBe("<b>Верните <code>total</code>.</b> И <code>2 ** 3</code>");
+    expect(html("a ** b")).toBe("a ** b");
   });
   it("keeps single line breaks and splits paragraphs in block mode", () => {
     expect(html("строка 1\nстрока 2")).toBe("строка 1<br/>строка 2");
