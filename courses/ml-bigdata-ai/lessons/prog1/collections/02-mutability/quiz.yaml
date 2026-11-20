@@ -57,28 +57,6 @@ questions:
   - 1
   - 2
   explain: '`shared` — второе имя корзины `cart_a`, поэтому чай дописан в неё, и это одно и то же значение: и `is`, и `==` дают `True`. `cart_b` — отдельный список, его не трогали: в нём по-прежнему два товара, а значит, с `cart_a` он больше не равен, хотя в начале был равен. Запись `["хлеб", "сыр"]` справа от `is` создаёт ещё один новый список — с `cart_b` это не одно значение, даже при равном содержимом.'
-- id: clean-same-list
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    def clean(lines):
-        while "" in lines:
-            lines.remove("")
-        return lines
-
-    notes = ["купить хлеб", "", "позвонить"]
-    result = clean(notes)
-    expected = ["купить хлеб", "позвонить"]
-    print(result is notes, result == expected, expected is notes)
-    ```
-  options:
-  - '`True True False`'
-  - '`False True False`'
-  - '`True True True`'
-  - '`False False False`'
-  answer: 0
-  explain: '`clean` удаляет пустые строки из самого переданного списка и возвращает его же, поэтому `result` и `notes` — одно значение. Содержимое совпадает с `expected`, но `expected` — отдельный список: равные списки не становятся одним значением. `False True False` получилось бы, если бы функция собирала новый список.'
 - id: shallow-replace-vs-mutate
   type: single
   q: |
@@ -97,27 +75,6 @@ questions:
   - "`[['кефир'], ['хлеб']]`"
   answer: 0
   explain: '`list(shelf)` — поверхностная копия: новый внешний список, но внутренние списки общие. `copy1[0] = ...` заменяет элемент только в новом внешнем списке. А `copy1[1].append(...)` меняет внутренний список, на который указывают оба внешних.'
-- id: protect-backup
-  type: multi
-  q: |
-    После правки меню испортилась и резервная копия. Чем заменить строку `backup = menu.copy()`, чтобы правка `menu[0].append("хлеб")` не была видна через `backup`?
-    ```python
-    import copy
-
-    menu = [["суп", "салат"], ["каша"]]
-    backup = menu.copy()
-    menu[0].append("хлеб")
-    ```
-  options:
-  - '`backup = copy.deepcopy(menu)`'
-  - '`backup = [menu[0].copy(), menu[1].copy()]`'
-  - '`backup = menu[:]`'
-  - '`backup = list(menu)`'
-  - '`backup = [menu.copy()[0], menu.copy()[1]]`'
-  answer:
-  - 0
-  - 1
-  explain: 'Правка меняет внутренний список, поэтому копировать нужно и внутренние списки. Это делает `deepcopy`, и то же самое вручную — новый внешний список из копий обеих строк. Срез и `list(...)` — такие же поверхностные копии, как `copy()`: внешний список новый, а строки меню общие. В записи `menu.copy()[0]` копируется внешний список, а из копии берётся тот же самый внутренний — строки меню снова общие.'
 - id: seats-rows
   type: multi
   q: Какие варианты создают зал из двух рядов по три свободных места `"."` так, что бронь места в одном ряду не появится в другом?
@@ -132,51 +89,322 @@ questions:
   - 1
   - 2
   explain: 'Когда `["."] * 3` вычисляется дважды (два `append` или две такие записи в списке) или второй ряд — копия `row.copy()`, у каждого ряда свой список. Умножение `[...] * 2` даёт два псевдонима одного ряда. Два `append(row)` выглядят как два отдельных ряда, но `row` вычислен один раз, и дописан дважды один и тот же список — бронь `seats[0][1] = "X"` появится в обоих.'
-- id: which-spoil
-  type: multi
+- id: k2-fix-backup
+  type: code
   q: |
-    Вызовы каких функций изменят список, переданный им аргументом?
-    ```python
-    def two_cheapest(prices):
-        return sorted(prices)[:2]
-
-    def first_two_sorted(prices):
-        prices.sort()
-        return prices[:2]
-
-    def lowest_with_gift(prices):
-        prices = prices + [0]
-        return min(prices)
-
-    def lowest_including_gift(prices):
-        prices += [0]
-        return min(prices)
+    В первой строке — цены, во второй — новая цена первого товара. **Программа должна вывести цены до и после изменения, а сейчас обе строки одинаковые. Исправьте одну строку.**
+    ```input
+    100 250 40
+    90
     ```
-  options:
-  - '`two_cheapest`'
-  - '`first_two_sorted`'
-  - '`lowest_with_gift`'
-  - '`lowest_including_gift`'
-  answer:
-  - 1
-  - 3
-  explain: '`prices` — псевдоним аргумента. `sort` и `+=` у списка меняют сам этот список — изменение увидит тот, кто вызвал функцию. `sorted` и `prices + [0]` собирают новые списки, и исходный не трогают.'
-- id: shared-default-reveal
-  type: single
+    ```output
+    Было: [100, 250, 40]
+    Стало: [90, 250, 40]
+    ```
+  starter: |
+    prices = []
+    for w in input().split():
+        prices.append(int(w))
+    backup = prices
+    prices[0] = int(input())
+    print("Было:", backup)
+    print("Стало:", prices)
+  solution: |
+    prices = []
+    for w in input().split():
+        prices.append(int(w))
+    backup = prices.copy()
+    prices[0] = int(input())
+    print("Было:", backup)
+    print("Стало:", prices)
+  tests:
+    io:
+    - name: Три товара
+      stdin: "100 250 40\n90\n"
+      stdout: "Было: [100, 250, 40]\nСтало: [90, 250, 40]"
+    - name: Один товар
+      stdin: "500\n450\n"
+      stdout: "Было: [500]\nСтало: [450]"
+      hidden: true
+    - name: Цена выросла
+      stdin: "70 70\n85\n"
+      stdout: "Было: [70, 70]\nСтало: [85, 70]"
+      hidden: true
+  explain: |
+    `backup = prices` не копирует список, а даёт ему второе имя, и замена элемента видна через оба. Копию делает `prices.copy()` (или `prices[:]`, `list(prices)`): для списка чисел поверхностной копии достаточно.
+- id: k2-write-same-or-copy
+  type: code
   q: |
-    Какие два вызова подряд (в новой программе) покажут ошибку этой функции — один из них вернёт список, где есть чужая оценка?
-    ```python
+    **Напишите `relation(a, b)` для двух списков: `"один список"`, если это одно и то же значение; `"копия"`, если это разные списки с равным содержимым; иначе `"разные"`.**
+    ```input
+    cart = ["хлеб", "сыр"]
+    relation(cart, cart), relation(cart, cart.copy()), relation(cart, ["сыр"])
+    ```
+    ```output
+    ('один список', 'копия', 'разные')
+    ```
+  starter: |
+    def relation(a, b):
+        if a == b:
+            return "один список"
+        return "разные"
+  solution: |
+    def relation(a, b):
+        if a is b:
+            return "один список"
+        if a == b:
+            return "копия"
+        return "разные"
+  tests:
+    asserts:
+    - name: Второе имя
+      code: |
+        cart = ["хлеб", "сыр"]
+        other = cart
+        r = relation(cart, other)
+        assert r == "один список", "Для cart и other = cart нужно 'один список', а вернулось " + repr(r)
+    - name: Копия
+      code: |
+        cart = ["хлеб", "сыр"]
+        r = relation(cart, cart.copy())
+        assert r == "копия", "Для cart и cart.copy() нужно 'копия', а вернулось " + repr(r)
+    - name: Разное содержимое
+      code: |
+        r = relation(["хлеб"], ["сыр"])
+        assert r == "разные", "Для ['хлеб'] и ['сыр'] нужно 'разные', а вернулось " + repr(r)
+    - name: Порядок важен
+      code: |
+        r = relation([1, 2], [2, 1])
+        assert r == "разные", "Для [1, 2] и [2, 1] нужно 'разные', а вернулось " + repr(r)
+    - name: Два пустых списка
+      code: |
+        r = relation([], [])
+        assert r == "копия", "Два отдельных пустых списка — 'копия', а вернулось " + repr(r)
+  explain: |
+    `is` отвечает, одно ли это значение, `==` — равно ли содержимое. Порядок проверок важен: один и тот же список всегда равен сам себе, поэтому сначала проверяют `is`, и только потом `==`.
+- id: k2-change-delivery
+  type: code
+  q: |
+    `with_delivery(cart)` добавляет в корзину `"доставка"`, но доставка появляется и в корзине покупателя. **Измените функцию: вернуть новый список, а переданную корзину не трогать.**
+    ```input
+    cart = ["хлеб"]
+    with_delivery(cart), cart
+    ```
+    ```output
+    (['хлеб', 'доставка'], ['хлеб'])
+    ```
+  starter: |
+    def with_delivery(cart):
+        cart += ["доставка"]
+        return cart
+  solution: |
+    def with_delivery(cart):
+        return cart + ["доставка"]
+  tests:
+    asserts:
+    - name: Результат
+      code: |
+        r = with_delivery(["хлеб", "сыр"])
+        assert r == ["хлеб", "сыр", "доставка"], "Нужно ['хлеб', 'сыр', 'доставка'], а вернулось " + repr(r)
+    - name: Корзина покупателя не меняется
+      code: |
+        cart = ["чай"]
+        r = with_delivery(cart)
+        assert cart == ["чай"], "Переданная корзина должна остаться ['чай'], а стала " + repr(cart)
+        assert r == ["чай", "доставка"], "Нужно ['чай', 'доставка'], а вернулось " + repr(r)
+    - name: Пустая корзина
+      code: |
+        cart = []
+        r = with_delivery(cart)
+        assert r == ["доставка"] and cart == [], "Для пустой корзины нужно ['доставка'], а исходная должна остаться []; получилось " + repr(r) + " и " + repr(cart)
+  explain: |
+    `cart` в функции — псевдоним списка покупателя, а `+=` у списка меняет сам список, как `extend`. `cart + ["доставка"]` собирает новый список, исходный остаётся прежним.
+- id: k2-fix-upper-in-place
+  type: code
+  q: |
+    **Исправьте `shout_all(words)`: заменить каждое слово в самом списке на то же слово заглавными буквами и ничего не возвращать, как `sort`.** Сейчас список после вызова не меняется.
+    ```input
+    words = ["стоп", "внимание"]
+    shout_all(words)
+    words
+    ```
+    ```output
+    ['СТОП', 'ВНИМАНИЕ']
+    ```
+  starter: |
+    def shout_all(words):
+        for w in words:
+            w = w.upper()
+  solution: |
+    def shout_all(words):
+        for i in range(len(words)):
+            words[i] = words[i].upper()
+  tests:
+    asserts:
+    - name: Список изменился
+      code: |
+        words = ["стоп", "внимание"]
+        shout_all(words)
+        assert words == ["СТОП", "ВНИМАНИЕ"], "После вызова список должен стать ['СТОП', 'ВНИМАНИЕ'], а он " + repr(words)
+    - name: Возвращает None
+      code: |
+        words = ["да"]
+        r = shout_all(words)
+        assert r is None, "Функция меняет список и ничего не возвращает, а вернула " + repr(r)
+        assert words == ["ДА"], "Список должен стать ['ДА'], а он " + repr(words)
+    - name: Тот же список, а не новый
+      code: |
+        words = ["а", "б", "в"]
+        alias = words
+        shout_all(words)
+        assert alias == ["А", "Б", "В"], "Изменение должно быть видно через все имена списка, а через второе имя видно " + repr(alias)
+    - name: Пустой список
+      code: |
+        words = []
+        shout_all(words)
+        assert words == [], "Пустой список должен остаться пустым, а он " + repr(words)
+  explain: |
+    Строка неизменяема: `w.upper()` собирает новую строку, а `w = ...` привязывает к ней только имя цикла — элемент списка остаётся прежним. Менять нужно сам список, заменяя элементы по индексу: длина при этом не меняется, поэтому в цикле так можно.
+- id: k2-fix-default-journal
+  type: code
+  q: |
+    `add_mark(mark, journal)` дописывает оценку в журнал и возвращает его, а без журнала начинает новый. **Исправьте её: каждый вызов без журнала начинает новый журнал.** Сейчас второй вызов возвращает `[5, 3]`.
+    ```input
+    add_mark(5)
+    add_mark(3)
+    ```
+    ```output
+    [5]
+    [3]
+    ```
+    Переданный журнал функция по-прежнему дописывает.
+  starter: |
     def add_mark(mark, journal=[]):
         journal.append(mark)
         return journal
+  solution: |
+    def add_mark(mark, journal=None):
+        if journal is None:
+            journal = []
+        journal.append(mark)
+        return journal
+  tests:
+    asserts:
+    - name: Два новых журнала
+      code: |
+        a = add_mark(5)
+        b = add_mark(3)
+        assert a == [5], "Первый вызов должен вернуть [5], а вернул " + repr(a)
+        assert b == [3], "Второй вызов без журнала должен вернуть [3], а вернул " + repr(b)
+    - name: Свой журнал
+      code: |
+        j = [4]
+        r = add_mark(2, j)
+        assert r == [4, 2] and j == [4, 2], "Переданный журнал [4] должен стать [4, 2]; вернулось " + repr(r) + ", журнал " + repr(j)
+    - name: Три вызова подряд
+      code: |
+        add_mark(5)
+        add_mark(4)
+        r = add_mark(3)
+        assert r == [3], "Каждый вызов без журнала начинает новый: нужно [3], а вернулось " + repr(r)
+  explain: |
+    Значение по умолчанию вычисляется один раз, при выполнении `def`, поэтому все вызовы без журнала получают один и тот же список. Правильно — `None` по умолчанию и новый список внутри функции; проверяют `None` через `is`.
+- id: k2-fix-student-tuple
+  type: code
+  q: |
+    Ученик — кортеж `(имя, список оценок)`. **Исправьте `with_mark(student, mark)`: вернуть новый кортеж с дописанной оценкой, а переданного ученика не менять.** Сейчас оценка появляется и у исходного ученика.
+    ```input
+    anya = ("Аня", [5, 4])
+    with_mark(anya, 3), anya
     ```
-  options:
-  - '`add_mark(5)`, затем `add_mark(3)`'
-  - '`add_mark(5, [])`, затем `add_mark(3, [])`'
-  - '`add_mark(5)`, затем `add_mark(3, [4])`'
-  - '`add_mark(5, [4])`, затем `add_mark(3)`'
-  answer: 0
-  explain: 'Список по умолчанию создан один раз, при выполнении `def`, и общим он становится только для вызовов без второго аргумента. Ошибку видно, когда таких вызовов два: второй вернёт `[5, 3]`. Если хотя бы в одном вызове передан свой список, этот вызов с общим списком не встречается: `add_mark(3, [4])` вернёт `[4, 3]`, а `add_mark(3)` после `add_mark(5, [4])` — `[3]`.'
+    ```output
+    (('Аня', [5, 4, 3]), ('Аня', [5, 4]))
+    ```
+    Список оценок у нового кортежа свой: его правка не меняет исходного ученика.
+  starter: |
+    def with_mark(student, mark):
+        student[1].append(mark)
+        return student
+  solution: |
+    def with_mark(student, mark):
+        name, marks = student
+        return (name, marks + [mark])
+  tests:
+    asserts:
+    - name: Оценка дописана
+      code: |
+        r = with_mark(("Аня", [5, 4]), 3)
+        assert r == ("Аня", [5, 4, 3]), "Нужно ('Аня', [5, 4, 3]), а вернулось " + repr(r)
+    - name: Исходный ученик не меняется
+      code: |
+        anya = ("Аня", [5])
+        r = with_mark(anya, 4)
+        assert anya == ("Аня", [5]), "Исходный ученик должен остаться ('Аня', [5]), а стал " + repr(anya)
+        assert type(r) == tuple, "Нужен кортеж, а вернулось значение типа " + type(r).__name__
+    - name: Список оценок у результата свой
+      code: |
+        boris = ("Борис", [])
+        r = with_mark(boris, 5)
+        r[1].append(2)
+        assert boris == ("Борис", []), "Правка результата не должна менять исходного ученика, а он стал " + repr(boris)
+    - name: Два вызова подряд
+      code: |
+        vera = ("Вера", [3])
+        a = with_mark(vera, 4)
+        b = with_mark(vera, 5)
+        assert a == ("Вера", [3, 4]) and b == ("Вера", [3, 5]), "Нужно ('Вера', [3, 4]) и ('Вера', [3, 5]), а вернулось " + repr(a) + " и " + repr(b)
+  explain: |
+    Кортеж неизменяем — его элементы нельзя заменить, — но список внутри него меняться может: `append` дописал оценку в тот самый список, который виден и через исходный кортеж. `marks + [mark]` собирает новый список, а из имени и этого списка собирают новый кортеж.
+- id: k2-write-move-task
+  type: code
+  q: |
+    План — список списков дел по дням. **Напишите `move_task(plan, task, src, dst)`: вернуть новый план, где дело `task` убрано из дня с индексом `src` и дописано в конец дня `dst`.**
+    ```input
+    move_task([["зарядка", "уборка"], ["кино"]], "уборка", 0, 1)
+    ```
+    ```output
+    [['зарядка'], ['кино', 'уборка']]
+    ```
+    Исходный план и его списки не меняются, а списки по дням у нового плана свои. Дело `task` в дне `src` точно есть; если таких несколько, переносится одно.
+  starter: |
+    def move_task(plan, task, src, dst):
+        plan[src].remove(task)
+        plan[dst].append(task)
+        return plan
+  solution: |
+    import copy
+
+    def move_task(plan, task, src, dst):
+        result = copy.deepcopy(plan)
+        result[src].remove(task)
+        result[dst].append(task)
+        return result
+  tests:
+    asserts:
+    - name: Перенос дела
+      code: |
+        plan = [["зарядка", "уборка"], ["кино"]]
+        r = move_task(plan, "уборка", 0, 1)
+        assert r == [["зарядка"], ["кино", "уборка"]], "Нужно [['зарядка'], ['кино', 'уборка']], а вернулось " + repr(r)
+    - name: План не меняется
+      code: |
+        plan = [["зарядка", "уборка"], ["кино"]]
+        move_task(plan, "уборка", 0, 1)
+        assert plan == [["зарядка", "уборка"], ["кино"]], "Исходный план не должен меняться, а стал " + repr(plan)
+    - name: Правка результата не видна в плане
+      code: |
+        plan = [["чтение"], [], ["бег"]]
+        r = move_task(plan, "бег", 2, 1)
+        r[0].append("кино")
+        assert plan == [["чтение"], [], ["бег"]], "Списки дней результата не должны быть общими с планом, а план стал " + repr(plan)
+        assert r == [["чтение", "кино"], ["бег"], []], "Нужно [['чтение', 'кино'], ['бег'], []], а получилось " + repr(r)
+    - name: Повторяющееся дело
+      code: |
+        plan = [["бег", "бег"], []]
+        r = move_task(plan, "бег", 0, 1)
+        assert r == [["бег"], ["бег"]], "Переносится одно дело: нужно [['бег'], ['бег']], а вернулось " + repr(r)
+  explain: |
+    Сначала нужна глубокая копия: с поверхностной `remove` и `append` поменяли бы списки дней, общие с исходным планом. Потом правки делаются уже в копии. `remove` убирает только первое такое дело.
 - id: open-append-vs-plus
   type: open
   q: После `b = a` (где `a` — список) строка `a.append(5)` меняет и то, что видно через `b`, а строка `a = a + [5]` — нет. Объясните, почему так.

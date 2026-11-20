@@ -1,29 +1,7 @@
 title: Проверка темы
 pass: 0.85
-minutes: 20
+minutes: 40
 questions:
-- id: broken-versions-pass
-  type: multi
-  q: |
-    Тариф фитнес-клуба: до 4 посещений в месяц включительно — «лёгкий», от 5 до 12 — «стандарт», больше 12 — «безлимит». Для функции `membership(visits)` написали проверки:
-    ```python
-    assert membership(2) == "лёгкий"
-    assert membership(4) == "лёгкий"
-    assert membership(8) == "стандарт"
-    assert membership(20) == "безлимит"
-    ```
-    Какие сломанные версии функции пройдут все четыре проверки?
-  options:
-  - '`visits < 4` вместо `visits <= 4`'
-  - '`visits < 12` вместо `visits <= 12`'
-  - '`visits <= 13` вместо `visits <= 12`'
-  - 'Перепутаны «стандарт» и «безлимит»'
-  - '`visits <= 5` вместо `visits <= 4`'
-  answer:
-  - 1
-  - 2
-  - 4
-  explain: 'Проверка для 4 ловит `< 4`, а перепутанные названия ловят проверки для 8 и 20. Граница 12 не проверена ни с одной стороны, поэтому и `< 12`, и `<= 13` проходят. У границы 4/5 проверена только одна сторона: `<= 5` на четырёх отвечает верно, а пятёрку никто не спросил. Нужны проверки для 5, 12 и 13.'
 - id: flag-check-fails
   type: multi
   q: |
@@ -47,75 +25,6 @@ questions:
   - 2
   - 3
   explain: 'Если функция что-то вернула — число или `None`, — исключения не было, флаг остался `False`, и `assert` падает. `TypeError` этот `except` не ловит — проверка падает с ним. Любой `ValueError` поднимает флаг, что бы функция ни напечатала до него и какой бы ни был текст: текст эта проверка не смотрит.'
-- id: bare-except-swallows
-  type: single
-  q: |
-    Чем плоха такая проверка?
-    ```python
-    try:
-        parse_age("-3")
-        assert False, "parse_age(\"-3\") не выбросила исключение"
-    except:
-        pass
-    ```
-  options:
-  - 'Она всегда падает: `assert False` ложен при любом поведении функции'
-  - 'Она не проверяет текст сообщения, а в остальном верна'
-  - 'Она никогда не падает: `except` без типа ловит и `AssertionError`'
-  - 'Ничем: нет исключения — сработает `assert False`, есть — `except`'
-  answer: 2
-  explain: 'Если `parse_age` не выбросит исключение, `assert False` выбросит `AssertionError` — но он внутри того же `try`, и `except` без типа его поймает. Поймает и `TypeError`, если функция упадёт не так. Проверка молчит при любом исходе. До `assert False` дело доходит, только когда исключения нет, поэтому «всегда падает» тоже неверно.'
-- id: ai-own-tests
-  type: multi
-  q: |
-    Условие: «Скидка 10 % на заказы от 1000 ₽». ИИ-ассистент написал функцию с условием `if total > 1000:` и три проверки к ней — все прошли:
-    ```python
-    assert order_total(500) == 500
-    assert order_total(1000) == 1000
-    assert order_total(2000) == 1800
-    ```
-    Какие утверждения верны?
-  options:
-  - 'Проверка для 1000 повторяет ошибку функции'
-  - 'Раз все три проверки прошли, функция соответствует условию'
-  - 'Проверка для 2000 верна, её стоит оставить'
-  - 'Чтобы найти ошибку, сначала нужно прочитать код функции'
-  answer:
-  - 0
-  - 2
-  explain: '«От 1000» включает 1000: по условию `order_total(1000)` — 900. Ассистент понял условие как «больше 1000», и с этим же пониманием написал и функцию, и ожидание — поэтому проверка проходит. Проверка для 2000 верна: 1800 следует из условия. Ошибку видно, если посчитать ожидание для 1000 по условию, — код читать для этого не нужно.'
-- id: paren-in-assert
-  type: single
-  q: |
-    Что произойдёт при запуске?
-    ```python
-    def discount(price):
-        return price * 0.9
-
-    assert (discount(100) == 80, "скидка должна быть 20%")
-    print("проверка прошла")
-    ```
-  options:
-  - '`AssertionError: скидка должна быть 20%`'
-  - '`SyntaxError`: условие `assert` нельзя брать в скобки'
-  - '`AssertionError` без текста: скобки отрезали сообщение'
-  - 'Напечатается `проверка прошла`'
-  answer: 3
-  traps:
-  - 0
-  explain: 'В скобках — кортеж из двух элементов: сравнение и текст. Непустой кортеж истинен, поэтому `assert` молчит, хотя 90 не равно 80, и программа идёт дальше. Синтаксической ошибки нет: Python лишь предупреждает `SyntaxWarning`, и то не везде, — а выполнение продолжается. Пишите без скобок.'
-- id: assert-or-raise
-  type: multi
-  q: Какие проверки лучше записать через `if` и `raise ValueError(...)`, а не через `assert`?
-  options:
-  - 'Количество товара, которое ввёл покупатель, больше нуля'
-  - 'Процент скидки, который пришёл из чужой функции, — от 0 до 100'
-  - '`average([4, 5])` возвращает 4.5 — проверка под вашей функцией'
-  - 'Список, который ваша функция только что отсортировала, действительно упорядочен'
-  answer:
-  - 0
-  - 1
-  explain: 'Всё, что приходит снаружи — от пользователя или из чужого кода, — может быть неверным в любой момент и должно проверяться всегда. А `assert` при запуске с `-O` пропускается. Проверка `average` и проверка результата сортировки — о вашем коде: ложь там означает баг, и для этого `assert` подходит.'
 - id: new-kind-of-case
   type: multi
   q: |
@@ -158,16 +67,443 @@ questions:
   - 'Ничего: проверки для 59 и 61 проходят, значит, граница проверена'
   answer: 0
   explain: 'Непойманный `AssertionError` останавливает программу, как любое исключение, поэтому проверки ниже упавшей не выполняются: что функция отвечает для 61 и 80, этот запуск не скажет. Падает только 60: для 59 обе версии отвечают «нет скидки», для 61 — «есть». Проверки по обе стороны от 60 молчат, ошибку ловит лишь значение на самой границе.'
-- id: open-grade-checks
-  type: open
-  q: 'Функция `grade(points)` переводит баллы за контрольную (целое число от 0 до 100) в оценку: 0–49 — 2, 50–69 — 3, 70–84 — 4, 85–100 — 5; для баллов вне 0..100 — `ValueError`. Какие проверки вы напишете и почему именно такие? Код писать не обязательно: достаточно входов и ожидаемых ответов.'
-  rubric:
-  - обычные случаи — хотя бы по одному значению внутри каждой оценки
-  - граничные — значения на стыках оценок с обеих сторон (например, 49 и 50) и края диапазона 0 и 100, потому что ошибки вида < вместо <= живут на стыках
-  - «плохие» входы вне диапазона (например, −1 или 101) — проверить, что функция выбрасывает ValueError, а не возвращает оценку
-  wrong_answers:
-  - достаточно проверить по одному значению для каждой оценки
-  - «плохие» входы проверять не нужно, функция для них не предназначена
-  - для −1 написать assert grade(-1) == ValueError
-  followups:
-  - Какую ошибку в функции пропустит набор, в котором нет значений 69 и 70?
+- id: assert-or-raise
+  type: multi
+  q: Какие проверки лучше записать через `if` и `raise ValueError(...)`, а не через `assert`?
+  options:
+  - 'Количество товара, которое ввёл покупатель, больше нуля'
+  - 'Процент скидки, который пришёл из чужой функции, — от 0 до 100'
+  - '`average([4, 5])` возвращает 4.5 — проверка под вашей функцией'
+  - 'Список, который ваша функция только что отсортировала, действительно упорядочен'
+  answer:
+  - 0
+  - 1
+  explain: 'Всё, что приходит снаружи — от пользователя или из чужого кода, — может быть неверным в любой момент и должно проверяться всегда. А `assert` при запуске с `-O` пропускается. Проверка `average` и проверка результата сортировки — о вашем коде: ложь там означает баг, и для этого `assert` подходит.'
+- id: code-fix-paren-asserts
+  type: code
+  q: |
+    `discount(price)` даёт скидку 10 %. Набор `check_discount(f)` должен молчать на верной функции и падать с `AssertionError` на неверной. **Сейчас он молчит всегда — даже на функции без скидки.** Исправьте набор.
+    ```input
+    check_discount(discount)
+    check_discount(функция без скидки)
+    ```
+    ```output
+    (ничего)
+    AssertionError: f(100) должна вернуть 90, а вернула 100
+    ```
+  starter: |
+    def check_discount(f):
+        assert (f(100) == 90, f"f(100) должна вернуть 90, а вернула {f(100)}")
+        assert (f(0) == 0, f"f(0) должна вернуть 0, а вернула {f(0)}")
+        assert (f(250) == 225, f"f(250) должна вернуть 225, а вернула {f(250)}")
+
+
+    def discount(price):
+        return price * 0.9
+
+
+    check_discount(discount)
+  solution: |
+    def check_discount(f):
+        assert f(100) == 90, f"f(100) должна вернуть 90, а вернула {f(100)}"
+        assert f(0) == 0, f"f(0) должна вернуть 0, а вернула {f(0)}"
+        assert f(250) == 225, f"f(250) должна вернуть 225, а вернула {f(250)}"
+
+
+    def discount(price):
+        return price * 0.9
+
+
+    check_discount(discount)
+  tests:
+    asserts:
+    - name: Верную функцию проверки пропускают
+      code: |
+        def _ok(price):
+            return price * 0.9
+        try:
+            check_discount(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную функцию: {e}"
+    - name: Сломанные версии проверки ловят
+      code: |
+        def _none(price):
+            return price
+        def _twenty(price):
+            return price * 0.8
+        def _minus(price):
+            return price - 10
+        missed = []
+        for name, broken in [("без скидки", _none), ("скидка 20 %", _twenty), ("минус 10 рублей", _minus)]:
+            try:
+                check_discount(broken)
+                missed.append(name)
+            except AssertionError:
+                pass
+        assert not missed, "Проверки не поймали сломанные версии: " + "; ".join(missed)
+  explain: 'В скобках после `assert` стоит кортеж из двух элементов — сравнения и текста. Непустой кортеж всегда истинен, поэтому такой `assert` не проверяет ничего. Без скобок условие и текст — две части самого `assert`: ложное условие выбрасывает `AssertionError` с этим текстом. Функцию `discount` менять было не нужно: она верна.'
+- id: code-fix-swallowed-check
+  type: code
+  q: |
+    `set_timer(minutes)` при нуле и отрицательных минутах выбрасывает `ValueError`. Набор `check_set_timer(f)` должен это проверять, **но молчит, что бы ни делала функция.** Исправьте набор.
+    ```input
+    check_set_timer(set_timer)
+    check_set_timer(функция, которая принимает 0)
+    ```
+    ```output
+    (ничего)
+    AssertionError: f(0) должна выбросить ValueError
+    ```
+    - Функция вернула значение вместо исключения — набор падает с `AssertionError`.
+    - Функция выбросила исключение другого типа — набор его не ловит и падает вместе с ним.
+  starter: |
+    def check_set_timer(f):
+        assert f(5) == 5, f"f(5) должна вернуть 5, а вернула {f(5)}"
+        for bad in [0, -3]:
+            try:
+                f(bad)
+                assert False, f"f({bad}) не выбросила исключение"
+            except:
+                pass
+
+
+    def set_timer(minutes):
+        if minutes <= 0:
+            raise ValueError(f"минут должно быть больше нуля, а не {minutes}")
+        return minutes
+
+
+    check_set_timer(set_timer)
+  solution: |
+    def check_set_timer(f):
+        assert f(5) == 5, f"f(5) должна вернуть 5, а вернула {f(5)}"
+        for bad in [0, -3]:
+            raised = False
+            try:
+                f(bad)
+            except ValueError:
+                raised = True
+            assert raised, f"f({bad}) должна выбросить ValueError"
+
+
+    def set_timer(minutes):
+        if minutes <= 0:
+            raise ValueError(f"минут должно быть больше нуля, а не {minutes}")
+        return minutes
+
+
+    check_set_timer(set_timer)
+  tests:
+    asserts:
+    - name: Верную функцию проверки пропускают
+      code: |
+        def _ok(minutes):
+            if minutes <= 0:
+                raise ValueError("минут должно быть больше нуля")
+            return minutes
+        try:
+            check_set_timer(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную функцию: {e}"
+    - name: Функция вернула значение — проверки падают
+      code: |
+        def _zero_ok(minutes):           # ноль принимается
+            if minutes < 0:
+                raise ValueError("минут должно быть больше нуля")
+            return minutes
+        def _no_check(minutes):          # проверки нет вовсе
+            return minutes
+        missed = []
+        for name, broken in [("ноль принимается", _zero_ok), ("нет проверки минут", _no_check)]:
+            try:
+                check_set_timer(broken)
+                missed.append(name)
+            except AssertionError:
+                pass
+        assert not missed, "Проверки не поймали сломанные версии: " + "; ".join(missed)
+    - name: Другое исключение — проверки падают
+      code: |
+        def _wrong_type(minutes):
+            if minutes <= 0:
+                raise TypeError("минут должно быть больше нуля")
+            return minutes
+        silent = True
+        try:
+            check_set_timer(_wrong_type)
+        except (AssertionError, TypeError):
+            silent = False
+        assert not silent, "Функция выбросила TypeError вместо ValueError, а проверки промолчали"
+  explain: 'Если функция не выбросит исключение, `assert False` выбросит `AssertionError` — но внутри того же `try`, и `except` без типа его поймает. Он ловит и `TypeError`. Нужен флаг: поднять его в `except ValueError`, а `assert` поставить после всей конструкции. Тогда возвращённое значение оставит флаг опущенным, а исключение другого типа никто не поймает — оно само уронит проверку. Подойдёт и `else` с `assert False`: он выполняется, только если исключения не было, и стоит вне `try`.'
+- id: code-complete-membership
+  type: code
+  q: |
+    Тариф фитнес-клуба: до 4 посещений в месяц включительно — `лёгкий`, от 5 до 12 — `стандарт`, больше 12 — `безлимит`. Функция с ошибкой на стыке групп проходит набор `check_membership(f)`. **Допишите набор, чтобы он ловил ошибку на любом стыке**, а верную функцию пропускал.
+    ```input
+    check_membership(membership)
+    check_membership(функция, где 5 посещений — «лёгкий»)
+    ```
+    ```output
+    (ничего)
+    AssertionError: f(5) должна вернуть «стандарт», а вернула лёгкий
+    ```
+  starter: |
+    def check_membership(f):
+        assert f(2) == "лёгкий", f"f(2) должна вернуть «лёгкий», а вернула {f(2)}"
+        assert f(4) == "лёгкий", f"f(4) должна вернуть «лёгкий», а вернула {f(4)}"
+        assert f(8) == "стандарт", f"f(8) должна вернуть «стандарт», а вернула {f(8)}"
+        assert f(20) == "безлимит", f"f(20) должна вернуть «безлимит», а вернула {f(20)}"
+
+
+    def membership(visits):
+        if visits <= 4:
+            return "лёгкий"
+        if visits <= 12:
+            return "стандарт"
+        return "безлимит"
+
+
+    check_membership(membership)
+  solution: |
+    def check_membership(f):
+        assert f(2) == "лёгкий", f"f(2) должна вернуть «лёгкий», а вернула {f(2)}"
+        assert f(4) == "лёгкий", f"f(4) должна вернуть «лёгкий», а вернула {f(4)}"
+        assert f(8) == "стандарт", f"f(8) должна вернуть «стандарт», а вернула {f(8)}"
+        assert f(20) == "безлимит", f"f(20) должна вернуть «безлимит», а вернула {f(20)}"
+        for visits, plan in [(0, "лёгкий"), (5, "стандарт"), (12, "стандарт"), (13, "безлимит")]:
+            assert f(visits) == plan, f"f({visits}) должна вернуть «{plan}», а вернула {f(visits)}"
+
+
+    def membership(visits):
+        if visits <= 4:
+            return "лёгкий"
+        if visits <= 12:
+            return "стандарт"
+        return "безлимит"
+
+
+    check_membership(membership)
+  tests:
+    asserts:
+    - name: Верную функцию проверки пропускают
+      code: |
+        def _ok(visits):
+            if visits <= 4:
+                return "лёгкий"
+            if visits <= 12:
+                return "стандарт"
+            return "безлимит"
+        try:
+            check_membership(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную функцию: {e}"
+    - name: Ошибки на стыках проверки ловят
+      code: |
+        def _make(light, std):
+            def f(visits):
+                if visits <= light:
+                    return "лёгкий"
+                if visits <= std:
+                    return "стандарт"
+                return "безлимит"
+            return f
+        missed = []
+        for name, broken in [("5 посещений — «лёгкий»", _make(5, 12)), ("4 посещения — «стандарт»", _make(3, 12)),
+                             ("12 посещений — «безлимит»", _make(4, 11)), ("13 посещений — «стандарт»", _make(4, 13))]:
+            try:
+                check_membership(broken)
+                missed.append(name)
+            except AssertionError:
+                pass
+        assert not missed, "Проверки не поймали сломанные версии: " + "; ".join(missed)
+  explain: 'Ошибка вида `<` вместо `<=` живёт на стыке групп, поэтому каждый стык проверяют с обеих сторон: 4 и 5, 12 и 13. В наборе была только одна сторона первого стыка, а второй не проверялся вовсе — `visits <= 5` или `visits < 12` проходили. Ноль посещений — край допустимых значений, его тоже стоит проверить, хотя ни одна сломанная версия здесь на нём не ошибается.'
+- id: code-fix-ai-expectation
+  type: code
+  q: |
+    Условие: «Скидка 10 % на заказы от 1000 ₽». ИИ-ассистент написал `order_total(total)` и набор `check_order_total(f)` — все проверки проходят. **Посчитайте ожидания по условию и исправьте набор, затем — функцию.**
+    ```input
+    order_total(500)
+    order_total(2000)
+    ```
+    ```output
+    500
+    1800.0
+    ```
+    - Добавьте проверки по обе стороны от границы скидки.
+    - Исправленный набор молчит на верной функции и падает на неверной.
+  starter: |
+    def check_order_total(f):
+        assert f(500) == 500, f"f(500) должна вернуть 500, а вернула {f(500)}"
+        assert f(1000) == 1000, f"f(1000) должна вернуть 1000, а вернула {f(1000)}"
+        assert f(2000) == 1800, f"f(2000) должна вернуть 1800, а вернула {f(2000)}"
+
+
+    def order_total(total):
+        if total > 1000:
+            return total * 0.9
+        return total
+
+
+    check_order_total(order_total)
+  solution: |
+    def check_order_total(f):
+        assert f(500) == 500, f"f(500) должна вернуть 500, а вернула {f(500)}"
+        assert f(999) == 999, f"f(999) должна вернуть 999, а вернула {f(999)}"
+        assert f(1000) == 900, f"f(1000) должна вернуть 900, а вернула {f(1000)}"
+        assert f(2000) == 1800, f"f(2000) должна вернуть 1800, а вернула {f(2000)}"
+
+
+    def order_total(total):
+        if total >= 1000:
+            return total * 0.9
+        return total
+
+
+    check_order_total(order_total)
+  tests:
+    asserts:
+    - name: Исправленная функция
+      code: |
+        for total, want in [(500, 500), (999, 999), (1000, 900), (2000, 1800), (0, 0)]:
+            r = order_total(total)
+            assert r == want, f"order_total({total}) должна вернуть {want}, а вернула {r!r}"
+    - name: Верную функцию проверки пропускают
+      code: |
+        def _ok(total):
+            if total >= 1000:
+                return total * 0.9
+            return total
+        try:
+            check_order_total(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную функцию: {e}"
+    - name: Сломанные версии проверки ловят
+      code: |
+        def _strict(total):              # как у ассистента: 1000 без скидки
+            if total > 1000:
+                return total * 0.9
+            return total
+        def _early(total):               # скидка уже с 999
+            if total >= 999:
+                return total * 0.9
+            return total
+        def _twenty(total):              # скидка 20 %
+            if total >= 1000:
+                return total * 0.8
+            return total
+        missed = []
+        for name, broken in [("1000 ₽ без скидки", _strict), ("скидка уже с 999 ₽", _early), ("скидка 20 %", _twenty)]:
+            try:
+                check_order_total(broken)
+                missed.append(name)
+            except AssertionError:
+                pass
+        assert not missed, "Проверки не поймали сломанные версии: " + "; ".join(missed)
+  explain: '«От 1000» включает саму 1000: по условию `order_total(1000)` — 900. Ассистент понял условие как «больше 1000» и с этим пониманием написал и функцию, и ожидание, поэтому неверная проверка проходила. Ожидание считают по условию, а не берут из вывода функции. Граница проверяется с двух сторон: 999 — ещё без скидки, 1000 — уже со скидкой. Проверка для 2000 была верной.'
+- id: code-write-message-check
+  type: code
+  q: |
+    `parse_mark(text)` переводит оценку из текста в число от 1 до 5. При неверном тексте она выбрасывает `ValueError`, **в тексте которого есть слова** `от 1 до 5`, — так учитель поймёт, что исправить. Допишите `check_parse_mark(f)`, чтобы он проверял и тип исключения, и эти слова.
+    ```input
+    check_parse_mark(parse_mark)
+    check_parse_mark(функция, которая на "6" выбрасывает ValueError("ошибка"))
+    ```
+    ```output
+    (ничего)
+    AssertionError: текст исключения для "6" — «ошибка», в нём нет «от 1 до 5»
+    ```
+    - «Плохие» входы: `"0"`, `"6"`, `"пять"`.
+    - Набор падает с `AssertionError`, если функция вернула значение, выбросила `ValueError` без этих слов или неверно ответила на верной оценке.
+  starter: |
+    def check_parse_mark(f):
+        for mark in [1, 3, 5]:
+            assert f(str(mark)) == mark, f"f(\"{mark}\") должна вернуть {mark}, а вернула {f(str(mark))}"
+        # «плохие» входы: "0", "6", "пять"
+
+
+    def parse_mark(text):
+        try:
+            mark = int(text)
+        except ValueError:
+            raise ValueError(f"оценка — целое число от 1 до 5, а не «{text}»")
+        if mark < 1 or mark > 5:
+            raise ValueError(f"оценка должна быть от 1 до 5, а не {mark}")
+        return mark
+
+
+    check_parse_mark(parse_mark)
+  solution: |
+    def check_parse_mark(f):
+        for mark in [1, 3, 5]:
+            assert f(str(mark)) == mark, f"f(\"{mark}\") должна вернуть {mark}, а вернула {f(str(mark))}"
+        for bad in ["0", "6", "пять"]:
+            msg = None
+            try:
+                f(bad)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"f(\"{bad}\") должна выбросить ValueError"
+            assert "от 1 до 5" in msg, f"Текст исключения для \"{bad}\" — «{msg}», в нём нет «от 1 до 5»"
+
+
+    def parse_mark(text):
+        try:
+            mark = int(text)
+        except ValueError:
+            raise ValueError(f"оценка — целое число от 1 до 5, а не «{text}»")
+        if mark < 1 or mark > 5:
+            raise ValueError(f"оценка должна быть от 1 до 5, а не {mark}")
+        return mark
+
+
+    check_parse_mark(parse_mark)
+  tests:
+    asserts:
+    - name: Верную функцию проверки пропускают
+      code: |
+        def _ok(text):
+            try:
+                mark = int(text)
+            except ValueError:
+                raise ValueError(f"нужна оценка от 1 до 5, а не «{text}»")
+            if mark < 1 or mark > 5:
+                raise ValueError(f"нужна оценка от 1 до 5, а не {mark}")
+            return mark
+        try:
+            check_parse_mark(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную функцию: {e}"
+    - name: Сломанные версии проверки ловят
+      code: |
+        def _returns_none(text):         # вне диапазона — None вместо исключения
+            mark = int(text)
+            if mark < 1 or mark > 5:
+                return None
+            return mark
+        def _no_upper(text):             # 6 принимается
+            mark = int(text)
+            if mark < 1:
+                raise ValueError(f"оценка должна быть от 1 до 5, а не {mark}")
+            return mark
+        def _int_message(text):          # для «пять» — текст от int
+            mark = int(text)
+            if mark < 1 or mark > 5:
+                raise ValueError(f"оценка должна быть от 1 до 5, а не {mark}")
+            return mark
+        def _vague(text):                # текст ничего не объясняет
+            try:
+                mark = int(text)
+            except ValueError:
+                raise ValueError("ошибка")
+            if mark < 1 or mark > 5:
+                raise ValueError("ошибка")
+            return mark
+        missed = []
+        for name, broken in [("None вместо исключения", _returns_none), ("6 принимается", _no_upper),
+                             ("для «пять» — непонятный текст от int", _int_message), ("текст «ошибка»", _vague)]:
+            try:
+                check_parse_mark(broken)
+                missed.append(name)
+            except AssertionError:
+                pass
+        assert not missed, "Проверки не поймали сломанные версии: " + "; ".join(missed)
+  explain: 'Флаг из темы говорит только, было ли исключение. Чтобы проверить и текст, вместо флага сохраняют сам текст: `except ValueError as e` и `msg = str(e)`. После конструкции — две проверки: `msg` не `None` (исключение было) и нужные слова в нём есть. Оба `assert` стоят вне `try`, поэтому их `AssertionError` никто не перехватит. Для «пять» исключение выбрасывает сам `int` со своим текстом — проверка ловит функцию, которая не заменила его понятным.'

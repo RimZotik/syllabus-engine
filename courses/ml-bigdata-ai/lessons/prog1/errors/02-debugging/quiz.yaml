@@ -1,31 +1,7 @@
 title: Проверка темы
 pass: 0.85
-minutes: 18
+minutes: 40
 questions:
-- id: tariff-traceback
-  type: multi
-  q: |
-    Программа считает счёт за связь. Какие утверждения верны по этому traceback?
-    ```
-    Traceback (most recent call last):
-      File "C:\work\tariff.py", line 14, in <module>
-        print(month_bill(calls))
-      File "C:\work\tariff.py", line 10, in month_bill
-        total += call_cost(c)
-      File "C:\work\tariff.py", line 5, in call_cost
-        return RATES[kind] * minutes
-    KeyError: 'роуминг'
-    ```
-  options:
-  - 'В момент ошибки ещё не закончили работу основная программа, `month_bill` и `call_cost`'
-  - '`call_cost` вызвали из строки 10, когда очередь дошла до звонка с видом «роуминг»'
-  - 'Вызовы `call_cost` для звонков до этого тоже есть в traceback — в тех же строках'
-  - 'Ошибка точно в строке 5: исключение возникло именно там'
-  - '`month_bill` вызвали из `call_cost`: пара `call_cost` стоит ниже'
-  answer:
-  - 0
-  - 1
-  explain: 'Пары traceback — незаконченные вызовы в момент исключения: программа, `month_bill`, `call_cost`, последний — внизу; пара над нижней показывает, откуда его вызвали. Вызовы для прежних звонков закончились и ушли из стека вызовов. Строка 5 — где заметили: возможно, в `RATES` забыли тариф или вид звонка записан неверно.'
 - id: none-from-branch
   type: single
   q: |
@@ -49,63 +25,37 @@ questions:
   - 'В `seconds`: `split(":")` не делит «2:00», ведь после двоеточия нули'
   answer: 1
   explain: 'Python складывает внутри `sum` и замечает `None` в строке 8, но `None` пришёл из `seconds`: для «2:00» условие ложно, функция дошла до конца без `return` и вернула `None`. Пары `in seconds` в traceback нет, потому что этот вызов давно закончился. «2:00» — обычная запись времени, и любое ровное число минут («3:00») снова даст `None`. `sum` складывает любые числа из списка — откуда бы он ни взялся.'
-- id: library-pair
+- id: predict-traceback
   type: multi
   q: |
-    Средний балл по журналу (`"н"` — пропуск). Какие утверждения верны?
+    Программа печатает стоимость доставки по заказам. Что будет в выводе?
     ```python
-    import statistics
+    def fee(kind):
+        return {"обычный": 50, "срочный": 150}[kind]
 
-    def class_average(marks):
-        real = [int(m) for m in marks if m != "н"]
-        return statistics.mean(real)
+    def order_total(items):
+        total = 0
+        for kind in items:
+            total += fee(kind)
+        return total
 
-    def report(journal):
-        for name, marks in journal.items():
-            print(name, class_average(marks))
+    def receipt(orders):
+        for name, items in orders.items():
+            print(name, order_total(items))
 
-    journal = {"Аня": ["5", "н", "4"], "Борис": ["н", "н"]}
-    report(journal)
-    ```
-    ```
-    Аня 4.5
-    Traceback (most recent call last):
-      File "C:\work\school.py", line 12, in <module>
-        report(journal)
-      File "C:\work\school.py", line 9, in report
-        print(name, class_average(marks))
-      File "C:\work\school.py", line 5, in class_average
-        return statistics.mean(real)
-      File "C:\Python312\Lib\statistics.py", line 486, in mean
-        raise StatisticsError('mean requires at least one data point')
-    statistics.StatisticsError: mean requires at least one data point
+    receipt({"Аня": ["обычный"], "Борис": ["срочный", "экспресс"]})
     ```
   options:
-  - 'Пустой список попал в `mean` из строки 5, в `class_average`'
-  - 'Первая пара с вашим файлом, если читать снизу, — `report`, строка 9'
-  - 'Список стал пустым ещё в строке 4: у Бориса одни пропуски, а строку 4 traceback не показывает'
-  - 'Ошибка в библиотеке: `raise` стоит в `statistics.py`'
+  - 'Строка `Аня 50` перед traceback'
+  - 'Пары в traceback сверху вниз: основная программа, `receipt`, `order_total`, `fee`'
+  - 'Пара вызова `fee` для «срочный»: он был до ошибки'
+  - 'Последняя строка — `KeyError: ''экспресс''`'
+  - 'Пара вызова `order_total` для заказа Ани'
   answer:
   - 0
-  - 2
-  explain: 'Снизу первая пара вашего файла — `class_average`, строка 5: отсюда `mean` получила пустой список. Но пара показывает только строку, на которой вызов остановился; строка 4 уже выполнилась и в traceback не видна, а именно она выбросила оба «н». `mean` выбросила исключение сама: среднее пустого списка не определено, это сигнал, а не ошибка библиотеки.'
-- id: read-the-message
-  type: single
-  q: |
-    Программа печатает разницу между самой высокой и самой низкой температурой за неделю и падает:
-    ```
-      File "C:\work\temps.py", line 9, in <module>
-        print(max(temps) - min(temps))
-    TypeError: '>' not supported between instances of 'str' and 'int'
-    ```
-    Строка 9 выглядит верной. Где вероятнее причина?
-  options:
-  - 'Там, где заполняли `temps`: одно значение осталось текстом'
-  - 'Список `temps` пуст, и `max` нечего сравнивать'
-  - '`max` и `min` не сравнивают отрицательные температуры с положительными'
-  - 'В строке 9: `max` нужно заменить на `sorted(temps)[-1]`'
-  answer: 0
-  explain: 'Сообщение говорит, что сравнивали текст с целым числом: в списке смешаны `str` и `int`. Значит, где-то при чтении забыли `int`. Для пустого списка сообщение было бы другим — `ValueError` о пустом аргументе. Отрицательные числа сравниваются как обычно, а `sorted` упадёт на том же сравнении.'
+  - 1
+  - 3
+  explain: 'Заказ Ани посчитан и напечатан до ошибки. На «экспресс» ключа в словаре нет — `KeyError`, и в этот момент не закончены четыре вызова: программа, `receipt`, `order_total` для Бориса и `fee`. Вызовы `fee("срочный")` и `order_total` для Ани уже закончились и ушли из стека вызовов — в traceback их нет.'
 - id: first-step
   type: single
   q: 'Кассир жалуется: сумма по чеку «иногда на несколько рублей меньше». Какой вход лучше всего подходит, чтобы начать искать ошибку?'
@@ -140,82 +90,331 @@ questions:
   - 1
   - 3
   explain: 'Данные после `clean` верны — значит, первые два шага на этом входе отработали правильно, и ошибка дальше по пути. `total` выдаёт итог, но могла получить неверный список из `convert`. Это и покажет `print` после `convert` — снова половина оставшегося пути. Возвращаться к `read_rows` незачем: что бы она ни выдала, до `convert` дошли верные данные, а итог испортился позже.'
-- id: ai-silence-fix
-  type: multi
-  q: 'Отчёт со средним баллом падает с `ZeroDivisionError`: у Бориса нет оценок. По условию для ученика без оценок отчёт печатает «нет оценок». ИИ-ассистент предложил правки. Какие из них исправляют ошибку, а не прячут её?'
-  options:
-  - 'Перед делением `if not marks:` печатать имя и «нет оценок», иначе — среднее'
-  - 'Обернуть печать среднего в `try` с `except ZeroDivisionError: pass`'
-  - 'Обернуть печать среднего в `try` с `except ZeroDivisionError:` и печатать в нём имя и «нет оценок»'
-  - 'Для пустого списка возвращать из функции среднего 0'
-  answer:
-  - 0
-  - 2
-  explain: 'Исправление делает то, что требует условие для этого случая. Проверка пустого списка заранее и перехват конкретного `ZeroDivisionError` с печатью «нет оценок» — два способа это сделать. С `pass` тип тоже конкретный, но Борис молча пропадёт из отчёта. 0 спрячет отсутствие оценок под настоящий ноль — в отчёте не отличить «нет оценок» от плохих оценок.'
-- id: last-element-lost
-  type: multi
+- id: code-fix-swapped-unpack
+  type: code
   q: |
-    Функция должна считать опоздания — значения больше нуля. На каких входах она вернёт верный ответ?
-    ```python
-    def count_late(minutes):
-        count = 0
-        for i in range(len(minutes) - 1):
-            if minutes[i] > 0:
-                count += 1
-        return count
+    Программа читает позиции чека `название;цена` до пустой строки и печатает сумму. На примере ниже она падает:
     ```
-  options:
-  - '`[0, 5, 0]`'
-  - '`[5, 0]`'
-  - '`[0, 5]`'
-  - '`[]`'
-  - '`[7]`'
-  answer:
-  - 0
-  - 1
-  - 3
-  explain: '`range(len(minutes) - 1)` не доходит до последнего индекса. Если последнее значение не опоздание, ответ верный: `[0, 5, 0]` → 1, `[5, 0]` → 1. Для `[]` диапазон пуст, 0 — верно. Ошибка видна, только когда опоздание стоит последним: `[0, 5]` и `[7]` дают 0 вместо 1. Самый маленький вход, на котором ошибка воспроизводится, — `[7]`.'
-- id: predict-traceback
-  type: multi
-  q: |
-    Программа печатает стоимость доставки по заказам. Что будет в выводе?
-    ```python
-    def fee(kind):
-        return {"обычный": 50, "срочный": 150}[kind]
+    Traceback (most recent call last):
+      File "C:\work\receipt.py", line 5, in <module>
+        total += int(price)
+    ValueError: invalid literal for int() with base 10: 'хлеб'
+    ```
+    **Строка 5 верна — найдите, откуда пришло неверное значение**, и исправьте программу.
+    ```input
+    хлеб;45
+    сыр;320
 
-    def order_total(items):
+    ```
+    ```output
+    Итого: 365
+    ```
+  starter: |
+    total = 0
+    line = input()
+    while line != "":
+        price, name = line.split(";")
+        total += int(price)
+        line = input()
+    print("Итого:", total)
+  solution: |
+    total = 0
+    line = input()
+    while line != "":
+        name, price = line.split(";")
+        total += int(price)
+        line = input()
+    print("Итого:", total)
+  tests:
+    io:
+    - name: Пример
+      stdin: "хлеб;45\nсыр;320\n\n"
+      stdout: "Итого: 365"
+    - name: Одна позиция
+      stdin: "чай;99\n\n"
+      stdout: "Итого: 99"
+      hidden: true
+    - name: Пустой чек
+      stdin: "\n"
+      stdout: "Итого: 0"
+      hidden: true
+  explain: 'В сообщении в кавычках — то, что получил `int`: название товара, а не цена. Значит, неверное значение пришло в `price` раньше — при распаковке в строке 4 имена стоят в обратном порядке. Строка 5 только заметила ошибку. Менять её, например оборачивать в `try`, бесполезно: цена так и останется в имени `name`.'
+- id: code-fix-visits
+  type: code
+  q: |
+    Турникет фитнес-клуба: программа читает имена до пустой строки и печатает, сколько раз пришёл каждый, — в порядке первого прихода. **Программа не падает, но у всех выходит по одному посещению.** Воспроизведите ошибку на маленьком входе и исправьте программу.
+    ```input
+    Аня
+    Борис
+    Аня
+
+    ```
+    ```output
+    Аня 2
+    Борис 1
+    ```
+  starter: |
+    visits = {}
+    name = input()
+    while name != "":
+        visits[name] = 1
+        name = input()
+    for name, count in visits.items():
+        print(name, count)
+  solution: |
+    visits = {}
+    name = input()
+    while name != "":
+        visits[name] = visits.get(name, 0) + 1
+        name = input()
+    for name, count in visits.items():
+        print(name, count)
+  tests:
+    io:
+    - name: Аня пришла дважды
+      stdin: "Аня\nБорис\nАня\n\n"
+      stdout: "Аня 2\nБорис 1"
+    - name: Три прихода одного
+      stdin: "Вера\nВера\nВера\n\n"
+      stdout: "Вера 3"
+      hidden: true
+    - name: Все по разу
+      stdin: "Гоша\nДина\n\n"
+      stdout: "Гоша 1\nДина 1"
+      hidden: true
+    - name: Никто не пришёл
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+  explain: 'Самый маленький вход, где ошибка видна, — одно имя дважды: `Аня`, `Аня` даёт 1 вместо 2. Значит, второй приход не прибавился, а записал значение заново: `visits[name] = 1` при каждом приходе. Нужно прибавлять к прежнему числу, а для нового имени начинать с нуля — это и делает `get(name, 0)`.'
+- id: code-fix-coldest
+  type: code
+  q: |
+    `coldest(temps)` возвращает самую низкую температуру за неделю. Зимой она отвечала верно, **а для тёплой недели вернула 0, хотя такого дня не было.** Найдите маленький вход, на котором ошибка повторяется, и исправьте функцию.
+    ```input
+    coldest([-3, -8, 2, -1])
+    coldest([18, 22, 15, 20])
+    ```
+    ```output
+    -8
+    15
+    ```
+    - Список не пустой; числа — любые целые.
+    - Готовую `min` не используйте.
+  starter: |
+    def coldest(temps):
+        lowest = 0
+        for t in temps:
+            if t < lowest:
+                lowest = t
+        return lowest
+
+
+    print(coldest([-3, -8, 2, -1]))   # -8
+    print(coldest([18, 22, 15, 20]))  # 15
+  solution: |
+    def coldest(temps):
+        lowest = temps[0]
+        for t in temps:
+            if t < lowest:
+                lowest = t
+        return lowest
+
+
+    print(coldest([-3, -8, 2, -1]))   # -8
+    print(coldest([18, 22, 15, 20]))  # 15
+  tests:
+    forbid: [min]
+    asserts:
+    - name: Есть мороз
+      code: |
+        for temps, want in [([-3, -8, 2, -1], -8), ([-2], -2), ([0, -1], -1)]:
+            r = coldest(temps)
+            assert r == want, f"coldest({temps}) должна вернуть {want}, а вернула {r!r}"
+    - name: Все дни тёплые
+      code: |
+        for temps, want in [([18, 22, 15, 20], 15), ([7], 7), ([5, 5], 5), ([0, 3], 0)]:
+            r = coldest(temps)
+            assert r == want, f"coldest({temps}) должна вернуть {want}, а вернула {r!r}"
+    - name: Любые целые числа
+      code: |
+        for temps, want in [([1500, 1200, 1800], 1200), ([5000], 5000)]:
+            r = coldest(temps)
+            assert r == want, f"coldest({temps}) должна вернуть {want}, а вернула {r!r}: начальное значение должно браться из самого списка"
+  explain: 'Самый маленький вход с ошибкой — один тёплый день: `coldest([7])` возвращает 0. Ноль не из списка: это начальное значение `lowest`, и тёплая температура никогда не бывает меньше него. Начинать нужно с настоящего значения из списка — с первого дня. Зимой ошибка пряталась, потому что мороз ниже нуля сразу заменял начальный 0.'
+- id: code-fix-empty-marks
+  type: code
+  q: |
+    Отчёт печатает средний балл каждого ученика (`"н"` — пропуск) и падает:
+    ```
+    Аня 4.5
+    Traceback (most recent call last):
+      File "C:\work\school.py", line 12, in <module>
+        report(journal)
+      File "C:\work\school.py", line 9, in report
+        print(name, class_average(marks))
+      File "C:\work\school.py", line 5, in class_average
+        return statistics.mean(real)
+      File "C:\Python312\Lib\statistics.py", line 486, in mean
+        raise StatisticsError('mean requires at least one data point')
+    statistics.StatisticsError: mean requires at least one data point
+    ```
+    **Ученику без оценок отчёт должен печатать имя и** `нет оценок`, остальным — средний балл, как сейчас. Исправьте программу.
+    ```output
+    Аня 4.5
+    Борис нет оценок
+    ```
+    - `report` проверят и на другом журнале.
+  starter: |
+    import statistics
+
+    def class_average(marks):
+        real = [int(m) for m in marks if m != "н"]
+        return statistics.mean(real)
+
+    def report(journal):
+        for name, marks in journal.items():
+            print(name, class_average(marks))
+
+    journal = {"Аня": ["5", "н", "4"], "Борис": ["н", "н"]}
+    report(journal)
+  solution: |
+    import statistics
+
+    def class_average(marks):
+        real = [int(m) for m in marks if m != "н"]
+        return statistics.mean(real)
+
+    def report(journal):
+        for name, marks in journal.items():
+            try:
+                print(name, class_average(marks))
+            except statistics.StatisticsError:
+                print(name, "нет оценок")
+
+    journal = {"Аня": ["5", "н", "4"], "Борис": ["н", "н"]}
+    report(journal)
+  tests:
+    io:
+    - name: Журнал из примера
+      stdout: "Аня 4.5\nБорис нет оценок"
+    asserts:
+    - name: Другой журнал
+      code: |
+        import io, contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            report({"Вера": [], "Гоша": ["3", "5"], "Дина": ["н"], "Егор": ["н", "2"]})
+        got = buf.getvalue().strip()
+        want = "Вера нет оценок\nГоша 4\nДина нет оценок\nЕгор 2"
+        assert got == want, f"report напечатал:\n{got}\nа нужно:\n{want}"
+  explain: 'Нижняя пара указывает в `statistics.py`, но это сигнал библиотеки: среднее пустого списка не определено. Первая пара с вашим файлом снизу — строка 5: сюда пришёл пустой `real`. Пустым его сделала строка 4 — у Бориса одни пропуски, — а её traceback не показывает. Исправление делает то, что требует условие: пустой случай проверяют заранее или ловят `statistics.StatisticsError` в `report` и печатают «нет оценок». Вернуть 0 нельзя: в отчёте не отличить «нет оценок» от настоящего нуля, а `except` с `pass` молча потерял бы ученика.'
+- id: code-fix-total-reset
+  type: code
+  q: |
+    `order_totals(orders)` возвращает словарь «покупатель → сумма заказа». **У первого покупателя сумма верная, а Борис получает 450 вместо 300.** Найдите причину и исправьте функцию.
+    ```input
+    order_totals({"Аня": [100, 50], "Борис": [300]})
+    ```
+    ```output
+    {'Аня': 150, 'Борис': 300}
+    ```
+    - Пустой список покупок — сумма 0.
+  starter: |
+    def order_totals(orders):
+        totals = {}
         total = 0
-        for kind in items:
-            total += fee(kind)
-        return total
-
-    def receipt(orders):
         for name, items in orders.items():
-            print(name, order_total(items))
+            for price in items:
+                total += price
+            totals[name] = total
+        return totals
 
-    receipt({"Аня": ["обычный"], "Борис": ["срочный", "экспресс"]})
+
+    print(order_totals({"Аня": [100, 50], "Борис": [300]}))
+  solution: |
+    def order_totals(orders):
+        totals = {}
+        for name, items in orders.items():
+            total = 0
+            for price in items:
+                total += price
+            totals[name] = total
+        return totals
+
+
+    print(order_totals({"Аня": [100, 50], "Борис": [300]}))
+  tests:
+    asserts:
+    - name: Пример
+      code: |
+        r = order_totals({"Аня": [100, 50], "Борис": [300]})
+        assert r == {"Аня": 150, "Борис": 300}, f"Вернула {r}, а нужно {{'Аня': 150, 'Борис': 300}}"
+    - name: Три покупателя, пустой заказ в середине
+      code: |
+        r = order_totals({"Вера": [10], "Гоша": [], "Дина": [5, 5]})
+        want = {"Вера": 10, "Гоша": 0, "Дина": 10}
+        assert r == want, f"Вернула {r}, а нужно {want}"
+    - name: Нет заказов
+      code: |
+        r = order_totals({})
+        assert r == {}, f"order_totals({{}}) должна вернуть пустой словарь, а вернула {r}"
+  explain: 'Борис получил свои 300 плюс 150 Ани: сумма не обнулилась между покупателями. `total = 0` стоит до внешнего цикла и выполняется один раз на всех. Начинать с нуля нужно для каждого покупателя — внутри внешнего цикла, перед циклом по его покупкам. Для первого покупателя ошибка не видна, поэтому проверять нужно хотя бы на двух.'
+- id: code-fix-two-bugs
+  type: code
+  q: |
+    Шагомер: программа читает строки `день шаги` до пустой строки и печатает, сколько дней выполнена цель в 10000 шагов, и среднее число шагов в день. **Программа падает, а когда исправите падение, ответ всё ещё будет неверным: ошибок две.**
+    ```input
+    пн 8000
+    вт 12000
+    ср 10000
+
     ```
-  options:
-  - 'Строка `Аня 50` перед traceback'
-  - 'Пары в traceback сверху вниз: основная программа, `receipt`, `order_total`, `fee`'
-  - 'Пара вызова `fee` для «срочный»: он был до ошибки'
-  - 'Последняя строка — `KeyError: ''экспресс''`'
-  - 'Пара вызова `order_total` для заказа Ани'
-  answer:
-  - 0
-  - 1
-  - 3
-  explain: 'Заказ Ани посчитан и напечатан до ошибки. На «экспресс» ключа в словаре нет — `KeyError`, и в этот момент не закончены четыре вызова: программа, `receipt`, `order_total` для Бориса и `fee`. Вызовы `fee("срочный")` и `order_total` для Ани уже закончились и ушли из стека вызовов — в traceback их нет.'
-- id: open-debug-plan
-  type: open
-  q: 'Программа считает сумму заказа и выдаёт 1260 вместо 1350. Она не падает, сообщения об ошибке нет. Опишите, как вы будете искать ошибку, не меняя код наугад.'
-  rubric:
-  - воспроизвести ошибку и сузить вход — найти небольшой заказ, на котором сумма неверна каждый раз
-  - выдвинуть предположение об одной конкретной причине и проверить его — print промежуточного значения (например, посередине пути данных), assert или прогон вручную на маленьком входе
-  wrong_answers:
-  - раз сообщения об ошибке нет, нужно обернуть расчёт в try/except
-  - поменять несколько строк и посмотреть, станет ли сумма верной
-  - переписать программу заново
-  followups:
-  - Как понять, в какой части программы искать, если данные проходят несколько функций?
-  - Что делать, если проверка не подтвердила предположение?
+    ```output
+    Цель выполнена: 2 дн.
+    В среднем: 10000.0
+    ```
+  starter: |
+    goal_days = 0
+    total = 0
+    count = 0
+    line = input()
+    while line != "":
+        day, steps = line.split(";")
+        steps = int(steps)
+        total += steps
+        count += 1
+        if steps >= 10000:
+            goal_days += 1
+        line = input()
+    print("Цель выполнена:", goal_days, "дн.")
+    print("В среднем:", total / goal_days)
+  solution: |
+    goal_days = 0
+    total = 0
+    count = 0
+    line = input()
+    while line != "":
+        day, steps = line.split()
+        steps = int(steps)
+        total += steps
+        count += 1
+        if steps >= 10000:
+            goal_days += 1
+        line = input()
+    print("Цель выполнена:", goal_days, "дн.")
+    print("В среднем:", total / count)
+  tests:
+    io:
+    - name: Пример
+      stdin: "пн 8000\nвт 12000\nср 10000\n\n"
+      stdout: "Цель выполнена: 2 дн.\nВ среднем: 10000.0"
+    - name: Цель не выполнена ни разу
+      stdin: "пн 3000\n\n"
+      stdout: "Цель выполнена: 0 дн.\nВ среднем: 3000.0"
+      hidden: true
+    - name: На один шаг меньше цели
+      stdin: "пн 10000\nвт 9999\n\n"
+      stdout: "Цель выполнена: 1 дн.\nВ среднем: 9999.5"
+      hidden: true
+  explain: 'Первая ошибка видна по traceback: `ValueError: not enough values to unpack` в строке с `split(";")` — в строке нет точки с запятой, день и шаги разделены пробелом. Вторая молчит: на примере программа печатает 15000.0 вместо 10000.0. Предположение «делим не на то число» проверяется вручную: 30000 / 2 — деление на дни с выполненной целью, а нужно на все дни, `count`. Если цель не выполнена ни разу, старая версия упала бы ещё и с `ZeroDivisionError`.'

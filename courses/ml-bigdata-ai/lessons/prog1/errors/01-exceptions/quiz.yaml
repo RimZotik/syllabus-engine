@@ -1,6 +1,6 @@
 title: Проверка темы
 pass: 0.85
-minutes: 20
+minutes: 40
 questions:
 - id: skip-in-loop
   type: single
@@ -24,73 +24,6 @@ questions:
   - '`+ 3`, `пропуск два` — и программа остановится с `ValueError`'
   answer: 0
   explain: 'На «два» `int` выбрасывает исключение, остаток блока `try` — печать `+ два` — пропускается, и выполняется `except`. Исключение поймано внутри цикла, поэтому цикл продолжается со следующего элемента и прибавляет 5. Остановиться программа могла бы, только если бы подходящего `except` не нашлось.'
-- id: which-inputs-hint
-  type: multi
-  q: |
-    `prices = {"хлеб": 45}`. При каких значениях `name` и `qty` программа напечатает подсказку?
-    ```python
-    try:
-        cost = prices[name] * int(qty)
-    except ValueError:
-        print("Количество — целое число")
-    ```
-  options:
-  - '`name = "хлеб"`, `qty = "два"`'
-  - '`name = "хлеб"`, `qty = "2.5"`'
-  - '`name = "сыр"`, `qty = "два"`'
-  - '`name = "хлеб"`, `qty = ""`'
-  - '`name = "хлеб"`, `qty = " 3 "`'
-  answer:
-  - 0
-  - 1
-  - 3
-  traps:
-  - 2
-  explain: '`int` не разбирает «два», «2.5» и пустую строку — это `ValueError`, его и ловит `except`. Пробелы по краям `int` пропускает: `" 3 "` даёт 3, исключения нет. Для «сыр» до `int` дело не доходит: выражение вычисляется слева направо, и `prices["сыр"]` раньше выбрасывает `KeyError`. Его `except ValueError` не ловит — программа остановится.'
-- id: bare-vs-typed
-  type: multi
-  q: |
-    Две версии программы отличаются только строкой `except`: в версии А — `except:`, в версии Б — `except ValueError:`. В обеих есть опечатка. Пользователь вводит `3`. Какие утверждения верны?
-    ```python
-    PRICE = 40
-    text = input()
-    try:
-        qty = int(text)
-        total = qty * PRICE
-        print(f"Итого: {totl}")
-    except ...:      # А: except:    Б: except ValueError:
-        print("Нужно целое число")
-    ```
-  options:
-  - 'Версия А напечатает «Нужно целое число», хотя ввод верный'
-  - 'Версия Б остановится с `NameError` и покажет опечатку `totl`'
-  - 'Версия Б тоже напечатает «Нужно целое число»: `NameError` — разновидность `ValueError`'
-  - 'Обе версии остановятся: опечатку в имени `try` не ловит, как и синтаксическую ошибку'
-  answer:
-  - 0
-  - 1
-  explain: '`totl` не существует — при выполнении строки возникает `NameError`. `except` без типа ловит и его, поэтому версия А выдаёт опечатку в коде за неверный ввод. `except ValueError` пропускает чужой тип дальше, и версия Б честно останавливается. Опечатку в имени Python находит только при выполнении строки — это не синтаксическая ошибка, и `try` с подходящим `except` её поймал бы.'
-- id: break-moved-out
-  type: single
-  q: |
-    В цикле повторного ввода `break` вынесли из `try` на уровень цикла. Что будет, если первым ввести `пять`?
-    ```python
-    while True:
-        text = input("Сколько минут? ")
-        try:
-            minutes = int(text)
-        except ValueError:
-            print("Нужно целое число")
-        break
-    print("Таймер на", minutes)
-    ```
-  options:
-  - 'Программа напечатает подсказку и спросит снова — как было, пока `break` стоял внутри `try`'
-  - 'Программа напечатает подсказку, а потом остановится с `NameError`'
-  - 'Программа напечатает подсказку и затем `Таймер на пять`'
-  - 'Программа сразу остановится с `ValueError`: `except` уже не внутри цикла'
-  answer: 1
-  explain: 'После `except` выполнение идёт дальше по циклу, а там теперь `break` — цикл кончается после первой попытки при любом вводе. Имя `minutes` так и не появилось: `int("пять")` выбросил исключение раньше присваивания. Поэтому `print` падает с `NameError: name ''minutes'' is not defined`. `except` по-прежнему внутри цикла и ловит `ValueError`.'
 - id: finally-with-return
   type: single
   q: |
@@ -115,26 +48,6 @@ questions:
   - '`неверно`, `принято`, `запись в журнал`, `0`'
   answer: 2
   explain: '`finally` выполняется при любом выходе из `try`, в том числе через `return` из `except`: функция возвращает 0 только после него. Внешний `print` получает 0, когда функция уже закончила работу, поэтому 0 — последним. `else` работает, только если исключения не было, — «принято» здесь не печатается.'
-- id: wrong-blame
-  type: multi
-  q: |
-    Цена из каталога записана как `price_text = "45,90"`. Покупатель ввёл `3`, а увидел «Количество — целое число». Какие утверждения верны?
-    ```python
-    try:
-        qty = int(input())
-        unit = float(price_text)
-    except ValueError:
-        print("Количество — целое число")
-    ```
-  options:
-  - 'Исключение выбросил `float`: он не разбирает число с запятой'
-  - 'Если перенести строку с `float` в `else`, программа остановится с `ValueError` о «45,90»'
-  - 'Исключение выбросил `int`: `input()` вернул текст «3», а не число'
-  - 'Если заменить `except ValueError:` на `except:`, покупатель увидит настоящую причину'
-  answer:
-  - 0
-  - 1
-  explain: '`int("3")` работает: он и нужен, чтобы перевести текст в число. Падает `float("45,90")` — Python ждёт точку. `except` ловит `ValueError` из любой строки блока `try`, поэтому вину свалили на покупателя. Из `else` исключение уже не попадает в этот `except` и останавливает программу с честным сообщением. `except` без типа ловит ещё больше — та же подсказка, причина спрятана.'
 - id: propagate-caught-in-loop
   type: single
   q: |
@@ -176,40 +89,6 @@ questions:
   - 1
   - 3
   explain: 'Что делать с неверной оценкой, знает только вызывающий, и у троих ответы разные — поэтому ловят у себя журнал и форма. Отчёту остановка и нужна, а текст из `raise` объяснит причину. Ноль из `read_mark` молча попадёт в средний балл и в отчёт. Переспрашивать через `input()` годится только форме: у журнала и отчёта нет человека, которого можно спросить.'
-- id: tariff-negative
-  type: single
-  q: 'Функция `call_cost(minutes)` считает цену звонка. Её вызвали с `minutes = -5`. Какая строка в функции лучше всего сообщит об этом?'
-  options:
-  - '`raise TypeError(f"минут не может быть меньше нуля, а пришло {minutes}")`'
-  - '`raise ValueError("ошибка в данных")`'
-  - '`raise ValueError(f"минут не может быть меньше нуля, а пришло {minutes}")`'
-  - '`return -1`, чтобы вызывающий код понял: данные неверные'
-  answer: 2
-  explain: '−5 — число, тип верный, а значение неподходящее: это `ValueError`; `TypeError` — когда пришло значение не того типа. Тип верный и у варианта «ошибка в данных», но текст не говорит, что ожидалось и что пришло, — по traceback не понять, какие данные искать. −1 легко забыть проверить, и он попадёт в сумму счёта.'
-- id: raise-flow
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    def set_volume(level):
-        if level < 0 or level > 10:
-            raise ValueError(f"громкость от 0 до 10, а не {level}")
-        print("громкость", level)
-        return level
-
-    try:
-        v = set_volume(12)
-        print("готово")
-    except ValueError as e:
-        print("Ошибка:", e)
-    ```
-  options:
-  - '`Ошибка: громкость от 0 до 10, а не 12`, затем `готово`'
-  - '`Ошибка: громкость от 0 до 10, а не 12`'
-  - '`громкость 12`, затем `готово`'
-  - '`Ошибка: ValueError`'
-  answer: 1
-  explain: '`raise` прерывает функцию так же, как исключение от `int`: ни печать громкости, ни `return` не выполняются. Остаток блока `try` — `print("готово")` — тоже пропускается. Имя `e` указывает на пойманное исключение, и `print` выводит его текст, а не название типа.'
 - id: syntax-not-caught
   type: single
   q: |
@@ -228,15 +107,385 @@ questions:
   - '`Старт`, затем программа будет ждать ввода'
   answer: 1
   explain: 'Незакрытую скобку Python находит, когда читает весь текст программы, — до выполнения первой строки. Поэтому не выполняется даже `print("Старт")`, и до `try` дело не доходит: `except SyntaxError` не срабатывает. Ловить можно только исключения, которые возникают во время работы программы.'
-- id: open-narrow-except
-  type: open
-  q: 'Начинающий программист обернул всю программу в один `try` с `except:` без типа, «чтобы она никогда не падала». Объясните, чем это плохо и как поступить вместо этого.'
-  rubric:
-  - такой except ловит не только ожидаемые исключения от неверного ввода, но и ошибки в самом коде (опечатку — NameError, TypeError и т. п.) и выдаёт их за другое или молча прячет, поэтому о баге не узнать
-  - вместо этого — ловить конкретный ожидаемый тип (например, ValueError), чтобы остальные ошибки останавливали программу; короткий try — плюс, но для зачёта достаточно конкретного типа
-  wrong_answers:
-  - except без типа плох только тем, что программа работает медленнее
-  - Python запрещает except без типа
-  - достаточно заменить except на except Exception — тогда ошибки в коде будут видны
-  followups:
-  - Что увидит пользователь, если в коде внутри такого try опечатка в имени переменной?
+- id: code-fix-except-type
+  type: code
+  q: |
+    Кофейня: `cups_cost(text)` получает число чашек текстом и возвращает сумму — чашка стоит 150 ₽. **На неверный текст функция должна вернуть подсказку**, а сейчас программа падает. Исправьте её.
+    ```input
+    2
+    ```
+    ```output
+    К оплате: 300
+    ```
+    ```input
+    две
+    ```
+    ```output
+    Нужно целое число чашек
+    ```
+    - Пробелы по краям числа допустимы: ` 3 ` → `К оплате: 450`.
+    - Не текст (например, `None`) — ошибка в программе: такой вызов падает с `TypeError`, как сам `int`.
+  starter: |
+    def cups_cost(text):
+        try:
+            cups = int(text)
+            return f"К оплате: {cups * 150}"
+        except TypeError:
+            return "Нужно целое число чашек"
+
+
+    print(cups_cost(input()))
+  solution: |
+    def cups_cost(text):
+        try:
+            cups = int(text)
+            return f"К оплате: {cups * 150}"
+        except ValueError:
+            return "Нужно целое число чашек"
+
+
+    print(cups_cost(input()))
+  tests:
+    stdin: "2\n"
+    asserts:
+    - name: Не текст — TypeError
+      code: |
+        what = None
+        try:
+            what = "вернула " + repr(cups_cost(None))
+        except TypeError:
+            what = "TypeError"
+        assert what == "TypeError", f"cups_cost(None) должна упасть с TypeError, как сам int, а {what}: ловите только тот тип, который int выбрасывает на неверном тексте"
+    io:
+    - name: Число
+      stdin: "2\n"
+      stdout: "К оплате: 300"
+    - name: Слово
+      stdin: "две\n"
+      stdout: "Нужно целое число чашек"
+    - name: Пробелы по краям
+      stdin: " 3 \n"
+      stdout: "К оплате: 450"
+      hidden: true
+    - name: Дробное число
+      stdin: "2.5\n"
+      stdout: "Нужно целое число чашек"
+      hidden: true
+    - name: Пустой ввод
+      stdin: "\n"
+      stdout: "Нужно целое число чашек"
+      hidden: true
+  explain: '`int("две")` выбрасывает `ValueError`: тип у значения подходящий — текст, — но число из него не получается. `TypeError` — когда пришло значение не того типа, например `None`. `except` ловит только свой тип, поэтому `except TypeError` пропускал `ValueError` дальше, и программа останавливалась. «2.5» и пустую строку `int` тоже не разбирает, а пробелы по краям пропускает сам.'
+- id: code-fix-break-place
+  type: code
+  q: |
+    Таймер спрашивает число минут, **пока не введут целое число**, и печатает `Таймер на N мин`. На неверный ввод он печатает `Нужно целое число` и спрашивает снова. Сейчас после первого же неверного ввода программа падает с `NameError`. Исправьте её.
+    ```input
+    пять
+    5.5
+    10
+    ```
+    ```output
+    Нужно целое число
+    Нужно целое число
+    Таймер на 10 мин
+    ```
+  starter: |
+    while True:
+        text = input()
+        try:
+            minutes = int(text)
+        except ValueError:
+            print("Нужно целое число")
+        break
+    print("Таймер на", minutes, "мин")
+  solution: |
+    while True:
+        text = input()
+        try:
+            minutes = int(text)
+            break
+        except ValueError:
+            print("Нужно целое число")
+    print("Таймер на", minutes, "мин")
+  tests:
+    io:
+    - name: Две неудачные попытки
+      stdin: "пять\n5.5\n10\n"
+      stdout: "Нужно целое число\nНужно целое число\nТаймер на 10 мин"
+    - name: Сразу число
+      stdin: "25\n"
+      stdout: "Таймер на 25 мин"
+    - name: Пустая строка и слово
+      stdin: "\nдесять\n3\n"
+      stdout: "Нужно целое число\nНужно целое число\nТаймер на 3 мин"
+      hidden: true
+  explain: '`break` стоял на уровне цикла и выполнялся после любой попытки — и удачной, и неудачной. После неверного ввода имя `minutes` так и не появилось: `int` выбросил исключение раньше присваивания, — отсюда `NameError`. `break` должен выполняться, только если перевод удался: в `try` сразу после `int` или в блоке `else`.'
+- id: code-fix-unknown-item
+  type: code
+  q: |
+    `line_cost(name, qty_text)` возвращает стоимость позиции заказа по словарю `PRICES`, а при неверном количестве — подсказку `количество — целое число`. **Неизвестный товар должен выбрасывать** `KeyError`, а сейчас на него тоже приходит подсказка про количество. Исправьте функцию.
+    ```input
+    line_cost("хлеб", "2")
+    line_cost("хлеб", "два")
+    line_cost("кофе", "2")
+    ```
+    ```output
+    90
+    количество — целое число
+    KeyError: 'кофе'
+    ```
+    - Количество не текстом (например, `None`) — ошибка в программе: `TypeError`, как у самого `int`.
+  starter: |
+    PRICES = {"хлеб": 45, "молоко": 89, "сыр": 320}
+
+
+    def line_cost(name, qty_text):
+        try:
+            return PRICES[name] * int(qty_text)
+        except:
+            return "количество — целое число"
+
+
+    print(line_cost("хлеб", "2"))
+    print(line_cost("хлеб", "два"))
+    print(line_cost("кофе", "2"))
+  solution: |
+    PRICES = {"хлеб": 45, "молоко": 89, "сыр": 320}
+
+
+    def line_cost(name, qty_text):
+        try:
+            return PRICES[name] * int(qty_text)
+        except ValueError:
+            return "количество — целое число"
+
+
+    print(line_cost("хлеб", "2"))
+    print(line_cost("хлеб", "два"))
+  tests:
+    asserts:
+    - name: Верный заказ
+      code: |
+        r = line_cost("хлеб", "2")
+        assert r == 90, f"line_cost(\"хлеб\", \"2\") должна вернуть 90, а вернула {r!r}"
+        r = line_cost("сыр", " 1 ")
+        assert r == 320, f"line_cost(\"сыр\", \" 1 \") должна вернуть 320, а вернула {r!r}"
+    - name: Неверное количество
+      code: |
+        for qty in ["два", "1.5", ""]:
+            r = line_cost("молоко", qty)
+            assert r == "количество — целое число", f"line_cost(\"молоко\", {qty!r}) должна вернуть подсказку, а вернула {r!r}"
+    - name: Неизвестный товар — KeyError
+      code: |
+        what = None
+        try:
+            what = "вернула " + repr(line_cost("кофе", "2"))
+        except KeyError:
+            what = "KeyError"
+        assert what == "KeyError", f"line_cost(\"кофе\", \"2\") должна выбросить KeyError, а {what}"
+    - name: Не текст вместо количества — TypeError
+      code: |
+        what = None
+        try:
+            what = "вернула " + repr(line_cost("хлеб", None))
+        except TypeError:
+            what = "TypeError"
+        assert what == "TypeError", f"line_cost(\"хлеб\", None) должна упасть с TypeError, как сам int, а {what}: ловите только ожидаемый тип"
+  explain: '`except` без типа ловит всё: и `ValueError` от `int`, и `KeyError` от словаря, и `TypeError`, если вместо текста пришёл `None`. Поэтому неизвестный товар выдавался за неверное количество. После `except` нужен тот тип, который вы ожидаете и знаете, как обработать, — `ValueError`. Остальные исключения уходят к вызывающему коду. `except Exception` здесь тоже не годится: он ловит и `KeyError`.'
+- id: code-change-raise-minutes
+  type: code
+  q: |
+    `call_cost(minutes)` возвращает цену звонка: 3 ₽ за минуту. При отрицательных минутах она возвращает −1, и однажды это −1 попало в сумму счёта. **Измените функцию: при отрицательных минутах она выбрасывает исключение** — `ValueError` с текстом `минут не может быть меньше нуля, а пришло <минуты>`.
+    ```input
+    call_cost(10)
+    call_cost(-5)
+    ```
+    ```output
+    30
+    ValueError: минут не может быть меньше нуля, а пришло -5
+    ```
+    - Звонок в 0 минут стоит 0 ₽.
+  starter: |
+    def call_cost(minutes):
+        if minutes < 0:
+            return -1
+        return minutes * 3
+
+
+    print(call_cost(10))
+  solution: |
+    def call_cost(minutes):
+        if minutes < 0:
+            raise ValueError(f"минут не может быть меньше нуля, а пришло {minutes}")
+        return minutes * 3
+
+
+    print(call_cost(10))
+  tests:
+    asserts:
+    - name: Обычный звонок и ноль минут
+      code: |
+        for m, cost in [(10, 30), (1, 3), (0, 0)]:
+            r = call_cost(m)
+            assert r == cost, f"call_cost({m}) должна вернуть {cost}, а вернула {r!r}"
+    - name: Отрицательные минуты — ValueError с текстом
+      code: |
+        for m in [-5, -1]:
+            msg = None
+            try:
+                r = call_cost(m)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"call_cost({m}) должна выбросить ValueError, а вернула {r!r}"
+            want = f"минут не может быть меньше нуля, а пришло {m}"
+            assert msg == want, f"Текст исключения для {m}: «{msg}». Нужен: {want}"
+  explain: 'Особое значение вроде −1 вызывающий код может забыть проверить, и оно смешается с настоящими ценами. Исключение забыть нельзя: его либо поймают, либо программа остановится с понятным текстом. Тип — `ValueError`: число минут — число, тип верный, неподходящее значение. В тексте — что ожидалось и что пришло, поэтому нужна f-строка с `minutes`. После `raise` функция прерывается, `return` уже не выполняется.'
+- id: code-fix-else-seats
+  type: code
+  q: |
+    `book(text, free)` получает число гостей из формы и число свободных мест. Если в форме не число, она возвращает `Введите число гостей`. **Если мест не хватает, исключение из** `check_free` **должно дойти до вызывающего кода** — а сейчас гость видит «Введите число гостей». Исправьте `book`, `check_free` не меняйте.
+    ```input
+    book("4", 6)
+    book("четыре", 6)
+    book("8", 6)
+    ```
+    ```output
+    Столик на 4
+    Введите число гостей
+    ValueError: свободно только 6 мест, а гостей 8
+    ```
+  starter: |
+    def check_free(guests, free):
+        if guests > free:
+            raise ValueError(f"свободно только {free} мест, а гостей {guests}")
+
+
+    def book(text, free):
+        try:
+            guests = int(text)
+            check_free(guests, free)
+        except ValueError:
+            return "Введите число гостей"
+        return f"Столик на {guests}"
+
+
+    print(book("4", 6))
+    print(book("четыре", 6))
+  solution: |
+    def check_free(guests, free):
+        if guests > free:
+            raise ValueError(f"свободно только {free} мест, а гостей {guests}")
+
+
+    def book(text, free):
+        try:
+            guests = int(text)
+        except ValueError:
+            return "Введите число гостей"
+        else:
+            check_free(guests, free)
+        return f"Столик на {guests}"
+
+
+    print(book("4", 6))
+    print(book("четыре", 6))
+  tests:
+    asserts:
+    - name: Места есть
+      code: |
+        for text, free, want in [("4", 6, "Столик на 4"), ("6", 6, "Столик на 6"), (" 2 ", 3, "Столик на 2")]:
+            r = book(text, free)
+            assert r == want, f"book({text!r}, {free}) должна вернуть «{want}», а вернула {r!r}"
+    - name: В форме не число
+      code: |
+        for text in ["четыре", "", "2.5"]:
+            r = book(text, 6)
+            assert r == "Введите число гостей", f"book({text!r}, 6) должна вернуть «Введите число гостей», а вернула {r!r}"
+    - name: Мест не хватает — ValueError от check_free
+      code: |
+        for text, free in [("8", 6), ("1", 0)]:
+            msg = None
+            try:
+                r = book(text, free)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"book({text!r}, {free}) должна выбросить ValueError, а вернула {r!r}"
+            want = f"свободно только {free} мест, а гостей {text}"
+            assert msg == want, f"Текст исключения: «{msg}». Нужен текст от check_free: {want}"
+  explain: '`except ValueError` ловит исключение этого типа из любой строки блока `try` — и от `int`, и из глубины `check_free`. В `try` должна остаться только строка, где ожидается неверный ввод. Работу с удачным результатом переносят в `else` — или после всей конструкции, ведь `except` заканчивается `return`. Тогда `ValueError` от `check_free` уже не попадает в этот `except` и уходит к вызывающему коду.'
+- id: code-write-average-mark
+  type: code
+  q: |
+    `read_mark(text)` переводит запись журнала в оценку от 1 до 5, а иначе выбрасывает `ValueError`. Напишите `average_mark(records)` — **средний балл по верным записям; неверные записи пропускаются.** `read_mark` не меняйте.
+    ```input
+    average_mark(["5", "4", "отл", "7", "3"])
+    average_mark(["н", "0"])
+    ```
+    ```output
+    4.0
+    ValueError: нет ни одной верной оценки
+    ```
+    - Средний балл округлён до двух знаков: `round(x, 2)`.
+    - Нет ни одной верной записи (в том числе пустой список) — `ValueError` с текстом `нет ни одной верной оценки`.
+    - Не текст в списке (например, `None`) — ошибка в программе: `TypeError` не ловите.
+  starter: |
+    def read_mark(text):
+        mark = int(text)
+        if mark < 1 or mark > 5:
+            raise ValueError(f"оценка должна быть от 1 до 5, а не {mark}")
+        return mark
+
+
+    def average_mark(records):
+        pass
+
+
+    print(average_mark(["5", "4", "отл", "7", "3"]))   # 4.0
+  solution: |
+    def read_mark(text):
+        mark = int(text)
+        if mark < 1 or mark > 5:
+            raise ValueError(f"оценка должна быть от 1 до 5, а не {mark}")
+        return mark
+
+
+    def average_mark(records):
+        marks = []
+        for r in records:
+            try:
+                marks.append(read_mark(r))
+            except ValueError:
+                continue
+        if not marks:
+            raise ValueError("нет ни одной верной оценки")
+        return round(sum(marks) / len(marks), 2)
+
+
+    print(average_mark(["5", "4", "отл", "7", "3"]))   # 4.0
+  tests:
+    asserts:
+    - name: Неверные записи пропускаются
+      code: |
+        for records, want in [(["5", "4", "отл", "7", "3"], 4.0), (["5", "4"], 4.5), (["2", "3", "3"], 2.67), (["н", "5", "0"], 5)]:
+            r = average_mark(records)
+            assert r == want, f"average_mark({records}) должна вернуть {want}, а вернула {r!r}"
+    - name: Верных записей нет — ValueError
+      code: |
+        for records in [["н", "0", "6"], []]:
+            msg = None
+            try:
+                r = average_mark(records)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"average_mark({records}) должна выбросить ValueError, а вернула {r!r}"
+            assert msg == "нет ни одной верной оценки", f"Текст исключения для {records}: «{msg}». Нужен: нет ни одной верной оценки"
+    - name: Не текст в журнале — TypeError
+      code: |
+        what = None
+        try:
+            what = "вернула " + repr(average_mark(["5", None]))
+        except TypeError:
+            what = "TypeError"
+        assert what == "TypeError", f"average_mark([\"5\", None]) должна упасть с TypeError, а {what}: ловите только ValueError"
+  explain: 'Что делать с неверной записью, решает тот, кто знает задачу: `read_mark` только сообщает о ней, а `average_mark` пропускает. Поэтому `try` стоит внутри цикла, вокруг одного вызова: исключение поднимается из `read_mark`, ловится, и цикл идёт к следующей записи. Пустой список верных оценок — отдельный случай: без проверки деление на `len(marks)` дало бы `ZeroDivisionError` с непонятным для журнала текстом.'

@@ -1,6 +1,6 @@
 title: Контрольная раздела «Ошибки и отладка»
 pass: 0.85
-minutes: 26
+minutes: 60
 questions:
 - id: s-finally-log
   type: single
@@ -32,79 +32,6 @@ questions:
   traps:
   - 0
   explain: '`finally` выполняется при любом выходе из `try`: и перед `return`, и когда исключение уходит из функции непойманным — внутри `minutes` его никто не ловит. Поймано оно в цикле, поэтому цикл продолжается и прибавляет 15. `finally` без `except` не перехватывает исключение, а только выполняет свой блок по пути.'
-- id: s-duplicates-counterexample
-  type: multi
-  q: |
-    Ассистент написал проверку «есть ли в списке повторы». На каких входах она ответит неверно?
-    ```python
-    def has_duplicates(items):
-        for i in range(len(items) - 1):
-            if items[i] == items[i + 1]:
-                return True
-        return False
-    ```
-  options:
-  - '`[1, 2, 1]`'
-  - '`[3, 3]`'
-  - '`[]`'
-  - '`["а", "б", "а", "б"]`'
-  - '`[5, 5, 1]`'
-  answer:
-  - 0
-  - 3
-  explain: 'Функция сравнивает только соседей. Повторы, стоящие не рядом, она не видит: `[1, 2, 1]` и `["а", "б", "а", "б"]` — ответ `False` вместо `True`. В `[3, 3]` и `[5, 5, 1]` повтор рядом — ответ верный. Для пустого списка цикл не выполняется, `False` — тоже верно. Самый короткий контрпример — `[1, 2, 1]`.'
-- id: s-bug-report-to-check
-  type: single
-  q: 'Все ваши проверки функции проходят, но пользователь прислал вход, на котором функция ошибается. Что сделать до любых правок кода?'
-  options:
-  - 'Ничего: проверки прошли — значит, неверны данные пользователя'
-  - 'Сделать из этого входа проверку с ответом по условию и убедиться, что она падает'
-  - 'Удалить старые проверки: раз ошибка есть, они ничего не стоят'
-  - 'Ничего: исправить функцию, а старые проверки покажут, если исправление что-то сломает'
-  answer: 1
-  explain: 'Это и есть воспроизведение ошибки: проверка, которая падает каждый раз, показывает ошибку, а после исправления подтвердит, что её больше нет, — и останется в наборе на будущее. Прошедшие проверки говорят только о своих входах: старые не мешают, они ловят другие ошибки, но этот вход не проверяют — их уже прошла версия с ошибкой, и исправленную на нём они тоже не проверят.'
-- id: s-message-check-silent
-  type: single
-  q: |
-    Проверка должна убедиться, что `set_timer(-5)` выбрасывает `ValueError` с понятным текстом. Что с ней не так?
-    ```python
-    try:
-        set_timer(-5)
-    except ValueError as e:
-        assert "больше нуля" in str(e), f"непонятное сообщение: {e}"
-    ```
-  options:
-  - 'Если `set_timer` выбросит `TypeError`, проверка молча пройдёт'
-  - '`str(e)` не даёт текст исключения, поэтому `in` всегда ложно'
-  - 'Если исключения не будет вовсе, проверка молча пройдёт'
-  - 'Всё в порядке: она проверяет и тип исключения, и текст'
-  answer: 2
-  explain: 'Если исключения нет, `except` не выполняется, и `assert` внутри него тоже — проверка ничего не замечает. Нужен ещё флаг: поднять его в `except` и после всей конструкции проверить. `TypeError` этот `except` не ловит — проверка упадёт с ним, это правильно. `str(e)` — текст исключения, тот же, что выводит `print`.'
-- id: s-whole-order-lost
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    def read_order(lines):
-        order = {}
-        for line in lines:
-            name, qty = line.split()
-            order[name] = int(qty)
-        return order
-
-    try:
-        order = read_order(["чай 2", "сахар много", "мёд 1"])
-    except ValueError:
-        order = {}
-    print(order)
-    ```
-  options:
-  - "`{'чай': 2, 'мёд': 1}`"
-  - "`{'чай': 2}`"
-  - '`{}`'
-  - 'Ничего: программа остановится с `ValueError`'
-  answer: 2
-  explain: 'На «сахар много» `int` выбрасывает исключение, `read_order` прерывается и ничего не возвращает — словарь, собранный внутри, теряется. `except` в основной программе привязывает `order` к пустому словарю. Чтобы пропускать только неверную строку, `try` ставят внутри цикла — там, где известно, что делать с одной позицией.'
 - id: s-empty-literal
   type: single
   q: 'Программа разбирает тысячу строк с ценами и падает: `ValueError: invalid literal for int() with base 10: ''''`. Что, вероятнее всего, случилось?'
@@ -125,49 +52,6 @@ questions:
   - 'В наборе нет проверки для 12 лет — его нужно дополнить'
   answer: 3
   explain: 'Версии расходятся только на 12: одна даёт детский билет, другая — нет, а условие говорит, что двенадцатилетнему он положен. Раз ни одна проверка не заметила разницы, 12 в наборе нет. Проверки прошли на обеих версиях — значит, о границе они молчат, и уверенности в функции не прибавляют; перечитывание кода этого не заменит.'
-- id: s-taxi-who-catches
-  type: single
-  q: |
-    Ночью программа печатает чеки за все поездки такси и падает на одной записи. Бухгалтеру нужны чеки остальных поездок. Куда поставить `try` с `except ValueError`?
-    ```
-    Traceback (most recent call last):
-      File "C:\work\taxi.py", line 18, in <module>
-        print_receipts(rides)
-      File "C:\work\taxi.py", line 13, in print_receipts
-        cost = ride_cost(ride)
-      File "C:\work\taxi.py", line 8, in ride_cost
-        km = parse_km(ride["km"])
-      File "C:\work\taxi.py", line 4, in parse_km
-        raise ValueError(f"километры должны быть больше нуля, а не {km}")
-    ValueError: километры должны быть больше нуля, а не -3
-    ```
-  options:
-  - 'В `parse_km` — вокруг строки с `raise`'
-  - 'В основной программе — вокруг `print_receipts(rides)`'
-  - 'В `print_receipts` — вокруг `ride_cost(ride)` в цикле'
-  - 'В `ride_cost` — вокруг вызова `parse_km`, а в `except` вернуть 0'
-  answer: 2
-  explain: 'Решение «пропустить поездку и печатать дальше» принимается там, где идёт цикл по поездкам, — в `print_receipts`. В основной программе исключение поймается уже после выхода из цикла: остальные чеки не напечатаются. Ловить собственный `raise` в `parse_km` бессмысленно — функция сообщает о неверных данных, это её работа. Ноль из `ride_cost` превратится в чек на 0 ₽, похожий на настоящий.'
-- id: s-passed-min-assert
-  type: single
-  q: |
-    Учитель жалуется: для класса с оценками `[5, 3, 4, 2]` программа говорит, что сдали двое, а сдали трое. Какая проверка покажет ошибку на самом маленьком входе?
-    ```python
-    def passed(marks):
-        """Сколько учеников сдали: оценка 3 и выше."""
-        count = 0
-        for m in marks:
-            if m > 3:
-                count += 1
-        return count
-    ```
-  options:
-  - '`assert passed([5, 3, 4, 2]) == 2`'
-  - '`assert passed([2]) == 0`'
-  - '`assert passed([3]) == 1`'
-  - '`assert passed([5, 4]) == 2`'
-  answer: 2
-  explain: 'Ожидание берут из условия: тройка — «сдал», и `passed([3])` должна вернуть 1, а функция с `m > 3` вернёт 0 — проверка падает на входе из одного элемента. Для `[2]` и `[5, 4]` ошибочная и верная версии отвечают одинаково. Ожидание 2 для полного класса переписано из неверного вывода: такая проверка закрепит ошибку.'
 - id: s-finally-and-library
   type: multi
   q: |
@@ -221,11 +105,67 @@ questions:
   - 'Сообщение о −5, затем программа остановится с `ValueError` на «пять»: `except` написан для исключения из `raise`'
   answer: 0
   explain: 'Для «пять» исключение выбрасывает `int` — со своим текстом, до нашей проверки дело не доходит. Но тип у него тот же, `ValueError`, поэтому `except` ловит его так же, как наш `raise`, и флаг поднимается. 0 не больше нуля — наш `ValueError`. Все три проверки проходят.'
-- id: s-silent-skip
-  type: multi
+- id: s-code-fix-duplicates
+  type: code
   q: |
-    Итог продаж — 750 вместо 1950. Вы напечатали данные посередине пути: `print(lines)` дал `['450', '1 200', '300']`, `print(parse(lines))` — `[450, 300]`. Какие выводы верны?
-    ```python
+    Ассистент написал `has_duplicates(items)` — есть ли в списке повторы. На `[3, 3]` и `[1, 2, 3]` ответ верный, **а на список кодов скидок** `[1, 2, 1]` **ошибается** — возвращает `False`. Исправьте функцию.
+    ```input
+    has_duplicates([1, 2, 1])
+    has_duplicates([1, 2, 3])
+    ```
+    ```output
+    True
+    False
+    ```
+    - В пустом списке и в списке из одного элемента повторов нет.
+  starter: |
+    def has_duplicates(items):
+        for i in range(len(items) - 1):
+            if items[i] == items[i + 1]:
+                return True
+        return False
+
+
+    print(has_duplicates([1, 2, 1]))   # True
+  solution: |
+    def has_duplicates(items):
+        return len(set(items)) != len(items)
+
+
+    print(has_duplicates([1, 2, 1]))   # True
+  tests:
+    asserts:
+    - name: Повтор не рядом
+      code: |
+        for items in [[1, 2, 1], ["а", "б", "а", "б"], [5, 4, 3, 2, 5]]:
+            r = has_duplicates(items)
+            assert r is True, f"has_duplicates({items}) должна вернуть True, а вернула {r!r}"
+    - name: Повтор рядом
+      code: |
+        for items in [[3, 3], [5, 5, 1], [1, 2, 2]]:
+            r = has_duplicates(items)
+            assert r is True, f"has_duplicates({items}) должна вернуть True, а вернула {r!r}"
+    - name: Повторов нет
+      code: |
+        for items in [[], [7], [1, 2, 3], ["а", "б"]]:
+            r = has_duplicates(items)
+            assert r is False, f"has_duplicates({items}) должна вернуть False, а вернула {r!r}"
+  explain: 'Функция сравнивает только соседей, поэтому повтор через элемент она не видит — самый короткий контрпример как раз `[1, 2, 1]`. Повтор может стоять где угодно: надёжнее сравнить число разных значений с длиной списка — множество хранит каждое значение один раз. Подойдёт и двойной цикл по парам индексов. Для пустого списка и одного элемента повторов нет — оба способа отвечают `False`.'
+- id: s-code-fix-silent-skip
+  type: code
+  q: |
+    Итог продаж за день — 750 вместо 1950. Вы напечатали данные посередине пути: `lines` — `['450', '1 200', '300']`, а `parse(lines)` — `[450, 300]`. Исправьте `parse`: **цена с пробелами между разрядами — обычная запись, а по-настоящему неверная строка не должна пропадать молча.**
+    ```input
+    parse(["450", "1 200", "300"])
+    parse(["450", "сто"])
+    ```
+    ```output
+    [450, 1200, 300]
+    ValueError: не цена: «сто»
+    ```
+    - Пробелы между разрядами и по краям допустимы.
+    - Неверная строка — `ValueError` с текстом `не цена: «<исходная строка>»`.
+  starter: |
     def parse(lines):
         prices = []
         for line in lines:
@@ -234,16 +174,477 @@ questions:
             except ValueError:
                 continue
         return prices
+
+
+    print(sum(parse(["450", "1 200", "300"])))   # 1950
+  solution: |
+    def parse(lines):
+        prices = []
+        for line in lines:
+            try:
+                prices.append(int(line.replace(" ", "")))
+            except ValueError:
+                raise ValueError(f"не цена: «{line}»")
+        return prices
+
+
+    print(sum(parse(["450", "1 200", "300"])))   # 1950
+  tests:
+    asserts:
+    - name: Цены с пробелами между разрядами
+      code: |
+        for lines, want in [(["450", "1 200", "300"], [450, 1200, 300]), (["1 000 000"], [1000000]), ([" 15 "], [15]), ([], [])]:
+            r = parse(lines)
+            assert r == want, f"parse({lines}) должна вернуть {want}, а вернула {r!r}"
+    - name: Неверная строка — ValueError с текстом
+      code: |
+        for lines, bad in [(["450", "сто"], "сто"), (["12,5"], "12,5"), (["300", ""], "")]:
+            msg = None
+            try:
+                r = parse(lines)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"parse({lines}) должна выбросить ValueError, а вернула {r!r}"
+            assert msg == f"не цена: «{bad}»", f"Текст исключения для {lines}: «{msg}». Нужен: не цена: «{bad}»"
+  explain: 'Данные до `parse` верны, после — без одной цены: ошибка между двумя `print`. `int` не принимает пробел внутри числа, а `except` с `continue` выбросил строку без следа — такой `except` прячет ошибку в данных. Пробелы убирают до `int`, а неверную строку не пропускают: `raise` внутри `except` заменяет непонятный текст `int` своим, с самой строкой. Пропускать её или останавливать отчёт, решит тот, кто вызвал `parse`.'
+- id: s-code-change-read-order
+  type: code
+  q: |
+    `read_order(lines)` собирает заказ «товар → количество» из строк вида `чай 2`. Сейчас одна неверная строка роняет весь заказ: основная программа ловит `ValueError` и остаётся с пустым словарём. **Измените функцию: неверные строки пропускаются, а она возвращает пару — заказ и список пропущенных строк.** Основную программу поправьте под новую функцию.
+    ```input
+    read_order(["чай 2", "сахар много", "мёд 1"])
     ```
-  options:
-  - 'До `parse` данные верны: искать ошибку раньше неё незачем'
-  - '`int` не разобрал «1 200» из-за пробела, и `except` молча выбросил эту строку'
-  - 'Ошибка в сложении: итог считает неверно функция суммы'
-  - 'Если заменить `except ValueError:` на `except:`, итог станет верным'
-  answer:
-  - 0
-  - 1
-  explain: 'Данные до `parse` верны, после — без одной цены: ошибка между этими двумя `print`. `int` не принимает пробел внутри числа, а `except` с `continue` пропустил строку без следа — такой `except` прячет ошибку в данных. Сумма честно сложила 450 и 300. `except` без типа поймает то же самое — итог не изменится; нужно убрать пробелы перед `int` или хотя бы сообщить о пропущенной строке.'
+    ```output
+    ({'чай': 2, 'мёд': 1}, ['сахар много'])
+    ```
+    - Неверная строка — та, на которой разбор выбрасывает `ValueError`: не два слова или количество не целое число.
+    - Пропущенные строки — в том порядке, в каком встретились.
+  starter: |
+    def read_order(lines):
+        order = {}
+        for line in lines:
+            name, qty = line.split()
+            order[name] = int(qty)
+        return order
+
+
+    try:
+        order = read_order(["чай 2", "сахар много", "мёд 1"])
+    except ValueError:
+        order = {}
+    print(order)
+  solution: |
+    def read_order(lines):
+        order = {}
+        skipped = []
+        for line in lines:
+            try:
+                name, qty = line.split()
+                order[name] = int(qty)
+            except ValueError:
+                skipped.append(line)
+        return order, skipped
+
+
+    order, skipped = read_order(["чай 2", "сахар много", "мёд 1"])
+    print(order)
+    print("пропущено:", skipped)
+  tests:
+    asserts:
+    - name: Неверное количество
+      code: |
+        r = read_order(["чай 2", "сахар много", "мёд 1"])
+        want = ({"чай": 2, "мёд": 1}, ["сахар много"])
+        assert r == want, f"Вернула {r!r}, а нужно {want!r}"
+    - name: Не два слова в строке
+      code: |
+        r = read_order(["печенье", "хлеб 1", "сыр 1 2", "соль 2.5"])
+        want = ({"хлеб": 1}, ["печенье", "сыр 1 2", "соль 2.5"])
+        assert r == want, f"Вернула {r!r}, а нужно {want!r}"
+    - name: Все строки верные и пустой заказ
+      code: |
+        r = read_order(["вода 6", "сок 2"])
+        assert r == ({"вода": 6, "сок": 2}, []), f"Вернула {r!r}, а нужно ({{'вода': 6, 'сок': 2}}, [])"
+        r = read_order([])
+        assert r == ({}, []), f"read_order([]) должна вернуть ({{}}, []), а вернула {r!r}"
+  explain: 'Исключение из `read_order` прерывало её целиком: словарь, собранный внутри, терялся, и основной программе оставалось только начать с пустого. Решение «пропустить строку» принимается там, где известно, что делать с одной строкой, — внутри цикла. Распаковка тоже в `try`: строка без пробела или из трёх слов выбрасывает тот же `ValueError`. Список пропущенных строк сохраняет следы: заказ не теряется молча, и можно сказать покупателю, что не разобрано.'
+- id: s-code-write-alarm
+  type: code
+  q: |
+    Будильник спрашивает время вида `ч:мм`, пока не получит верное. Напишите функцию `parse_alarm(text)` **и программу, которая переспрашивает.**
+
+    `parse_alarm(text)` возвращает пару `(часы, минуты)` целыми числами, иначе выбрасывает `ValueError` с текстом ровно такого вида:
+    - не две части через двоеточие или не целые числа — `нужно время в виде ч:мм, а не «семь»`;
+    - часы вне 0..23 — `часы должны быть от 0 до 23, а не 25`;
+    - минуты вне 0..59 — `минуты должны быть от 0 до 59, а не 75`.
+
+    Программа читает строки: на неверную печатает текст исключения, на верной печатает `Будильник на <время как ввели>` и заканчивает.
+    ```input
+    семь
+    25:00
+    7:75
+    7:05
+    ```
+    ```output
+    нужно время в виде ч:мм, а не «семь»
+    часы должны быть от 0 до 23, а не 25
+    минуты должны быть от 0 до 59, а не 75
+    Будильник на 7:05
+    ```
+    - `-1` — целое число, поэтому `-1:30` — ошибка часов, а не формата.
+  starter: |
+    def parse_alarm(text):
+        pass
+
+
+    # программа: спрашивать, пока parse_alarm не вернёт время
+  solution: |
+    def parse_alarm(text):
+        try:
+            h_text, m_text = text.split(":")
+            hours = int(h_text)
+            minutes = int(m_text)
+        except ValueError:
+            raise ValueError(f"нужно время в виде ч:мм, а не «{text}»")
+        if hours < 0 or hours > 23:
+            raise ValueError(f"часы должны быть от 0 до 23, а не {hours}")
+        if minutes < 0 or minutes > 59:
+            raise ValueError(f"минуты должны быть от 0 до 59, а не {minutes}")
+        return (hours, minutes)
+
+
+    while True:
+        text = input()
+        try:
+            parse_alarm(text)
+        except ValueError as e:
+            print(e)
+        else:
+            break
+    print("Будильник на", text)
+  tests:
+    stdin: "7:05\n"
+    io:
+    - name: Пример
+      stdin: "семь\n25:00\n7:75\n7:05\n"
+      stdout: "нужно время в виде ч:мм, а не «семь»\nчасы должны быть от 0 до 23, а не 25\nминуты должны быть от 0 до 59, а не 75\nБудильник на 7:05"
+    - name: Края суток
+      stdin: "24:00\n-1:30\n23:60\n23:59\n"
+      stdout: "часы должны быть от 0 до 23, а не 24\nчасы должны быть от 0 до 23, а не -1\nминуты должны быть от 0 до 59, а не 60\nБудильник на 23:59"
+      hidden: true
+    - name: Не время
+      stdin: "7:ab\n12\n1:2:3\n\n0:00\n"
+      stdout: "нужно время в виде ч:мм, а не «7:ab»\nнужно время в виде ч:мм, а не «12»\nнужно время в виде ч:мм, а не «1:2:3»\nнужно время в виде ч:мм, а не «»\nБудильник на 0:00"
+      hidden: true
+    asserts:
+    - name: parse_alarm возвращает пару чисел
+      code: |
+        for text, want in [("7:05", (7, 5)), ("0:00", (0, 0)), ("23:59", (23, 59))]:
+            r = parse_alarm(text)
+            assert r == want, f"parse_alarm({text!r}) должна вернуть {want}, а вернула {r!r}"
+  explain: 'Три вида неверного ввода замечают разные места: распаковку и `int` — Python, диапазоны — ваши проверки. Исключения Python с непонятным текстом заменяет своим `raise` внутри `except`; распаковка стоит в том же `try`, ведь «12» и «1:2:3» дают `ValueError` уже на ней. Программа ловит любой `ValueError` из `parse_alarm` и печатает его текст через `as e`; `break` — в `else`, когда исключения не было.'
+- id: s-code-catch-in-loop
+  type: code
+  q: |
+    Ночная печать чеков доставки падает на одной записи, и остальные чеки не печатаются:
+    ```
+    заказ 1: 175 ₽
+    Traceback (most recent call last):
+      File "C:\work\delivery.py", line 20, in <module>
+        print_receipts(orders)
+      File "C:\work\delivery.py", line 14, in print_receipts
+        cost = order_cost(order)
+      File "C:\work\delivery.py", line 8, in order_cost
+        km = parse_km(order["km"])
+      File "C:\work\delivery.py", line 4, in parse_km
+        raise ValueError(f"километры должны быть больше нуля, а не {text}")
+    ValueError: километры должны быть больше нуля, а не -3
+    ```
+    **Решите, где ловить исключение, и измените программу так, чтобы печатались чеки всех верных заказов.** `parse_km` не меняйте.
+    ```output
+    заказ 1: 175 ₽
+    заказ 2: ошибка — километры должны быть больше нуля, а не -3
+    заказ 3: 220 ₽
+    Итого: 395
+    ```
+    - Неверный заказ — строка `заказ N: ошибка — <текст исключения>`, в итог он не входит.
+    - Заказ без ключа `"km"` — ошибка в самой программе, а не в данных: её не прячьте.
+  starter: |
+    def parse_km(text):
+        km = float(text)
+        if km <= 0:
+            raise ValueError(f"километры должны быть больше нуля, а не {text}")
+        return km
+
+    def order_cost(order):
+        km = parse_km(order["km"])
+        return 100 + round(km * 30)
+
+    def print_receipts(orders):
+        total = 0
+        for i, order in enumerate(orders, 1):
+            cost = order_cost(order)
+            print(f"заказ {i}: {cost} ₽")
+            total += cost
+        print(f"Итого: {total}")
+
+    orders = [{"km": "2.5"}, {"km": "-3"}, {"km": "4"}]
+    print_receipts(orders)
+  solution: |
+    def parse_km(text):
+        km = float(text)
+        if km <= 0:
+            raise ValueError(f"километры должны быть больше нуля, а не {text}")
+        return km
+
+    def order_cost(order):
+        km = parse_km(order["km"])
+        return 100 + round(km * 30)
+
+    def print_receipts(orders):
+        total = 0
+        for i, order in enumerate(orders, 1):
+            try:
+                cost = order_cost(order)
+            except ValueError as e:
+                print(f"заказ {i}: ошибка — {e}")
+                continue
+            print(f"заказ {i}: {cost} ₽")
+            total += cost
+        print(f"Итого: {total}")
+
+    orders = [{"km": "2.5"}, {"km": "-3"}, {"km": "4"}]
+    print_receipts(orders)
+  tests:
+    io:
+    - name: Пример
+      stdout: "заказ 1: 175 ₽\nзаказ 2: ошибка — километры должны быть больше нуля, а не -3\nзаказ 3: 220 ₽\nИтого: 395"
+    asserts:
+    - name: Другие заказы
+      code: |
+        import io, contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            print_receipts([{"km": "пять"}, {"km": "1"}, {"km": "0"}])
+        got = buf.getvalue().strip()
+        want = "заказ 1: ошибка — could not convert string to float: 'пять'\nзаказ 2: 130 ₽\nзаказ 3: ошибка — километры должны быть больше нуля, а не 0\nИтого: 130"
+        assert got == want, f"print_receipts напечатала:\n{got}\nа нужно:\n{want}"
+    - name: Все заказы неверные
+      code: |
+        import io, contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            print_receipts([{"km": "-1"}])
+        got = buf.getvalue().strip()
+        want = "заказ 1: ошибка — километры должны быть больше нуля, а не -1\nИтого: 0"
+        assert got == want, f"print_receipts напечатала:\n{got}\nа нужно:\n{want}"
+    - name: Ошибка в самой программе не прячется
+      code: |
+        import io, contextlib
+        what = None
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                print_receipts([{"kms": "3"}])
+            what = "промолчала"
+        except KeyError:
+            what = "KeyError"
+        assert what == "KeyError", f"Заказ без ключа «km» — ошибка в программе, а не в данных: print_receipts должна упасть с KeyError, а {what}. Ловите только ValueError"
+  explain: 'Traceback показывает путь: основная программа → `print_receipts` → `order_cost` → `parse_km`, где сработал `raise`. Решение «отметить заказ и печатать дальше» принимается там, где идёт цикл по заказам, — в `print_receipts`, вокруг вызова для одного заказа. В основной программе исключение поймалось бы уже после выхода из цикла. Если в `order_cost` вернуть 0, чек на 100 ₽ будет похож на настоящий. `except ValueError` ловит и исключение от `float` для «пять», а `KeyError` — ошибку в самой программе — пропускает.'
+- id: s-code-report-to-check
+  type: code
+  q: |
+    Учитель жалуется: для оценок `[5, 3, 4, 2]` программа говорит, что сдали двое, а сдали трое. Сдал — оценка 3 и выше. **Сначала превратите жалобу в набор проверок** `check_passed(f)`, **потом исправьте функцию.**
+    ```input
+    passed([5, 3, 4, 2])
+    ```
+    ```output
+    3
+    ```
+    - В наборе: самый маленький вход, на котором видна ошибка; оценки по обе стороны от границы «сдал / не сдал»; пустой класс; один ученик.
+    - Ответы в проверках считайте по условию.
+  starter: |
+    def check_passed(f):
+        pass
+
+
+    def passed(marks):
+        """Сколько учеников сдали: оценка 3 и выше."""
+        count = 0
+        for m in marks:
+            if m > 3:
+                count += 1
+        return count
+
+
+    check_passed(passed)
+  solution: |
+    def check_passed(f):
+        for marks, want in [([3], 1), ([2], 0), ([], 0), ([5], 1), ([5, 3, 4, 2], 3), ([2, 2, 3], 1)]:
+            assert f(marks) == want, f"f({marks}) должна вернуть {want}, а вернула {f(marks)}"
+
+
+    def passed(marks):
+        """Сколько учеников сдали: оценка 3 и выше."""
+        count = 0
+        for m in marks:
+            if m >= 3:
+                count += 1
+        return count
+
+
+    check_passed(passed)
+  tests:
+    asserts:
+    - name: Исправленная функция
+      code: |
+        for marks, want in [([5, 3, 4, 2], 3), ([3], 1), ([2], 0), ([], 0), ([3, 3, 2, 5], 3)]:
+            r = passed(marks)
+            assert r == want, f"passed({marks}) должна вернуть {want}, а вернула {r!r}"
+    - name: Верную функцию проверки пропускают
+      code: |
+        def _ok(marks):
+            return len([m for m in marks if m >= 3])
+        try:
+            check_passed(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную функцию: {e}"
+    - name: Сломанные версии проверки ловят
+      code: |
+        def _strict(marks):              # тройка — не сдал
+            return len([m for m in marks if m > 3])
+        def _two_ok(marks):              # двойка — сдал
+            return len([m for m in marks if m >= 2])
+        def _skip_last(marks):           # последний ученик не проверяется
+            return len([m for m in marks[:-1] if m >= 3])
+        def _start_one(marks):           # счёт начинается с единицы
+            return 1 + len([m for m in marks if m >= 3])
+        missed = []
+        for name, broken in [("тройка — не сдал", _strict), ("двойка — сдал", _two_ok),
+                             ("последний не проверяется", _skip_last), ("счёт с единицы", _start_one)]:
+            try:
+                check_passed(broken)
+                missed.append(name)
+            except AssertionError:
+                pass
+        assert not missed, "Проверки не поймали сломанные версии: " + "; ".join(missed)
+  explain: 'Ошибку воспроизводят до правки: жалоба превращается в проверку, которая падает каждый раз, а после исправления остаётся в наборе на будущее. Самый маленький вход — `[3]`: тройка — «сдал», а `m > 3` её не считает. Граница проверяется с двух сторон: 2 — не сдал, 3 — сдал. Пустой класс ловит счёт, начатый не с нуля, а один ученик — цикл, который теряет последний элемент. Ожидание 2 для `[5, 3, 4, 2]` переписано из неверного вывода — такая проверка закрепила бы ошибку.'
+- id: s-code-fix-ai-checks
+  type: code
+  q: |
+    Ассистент написал `parse_seat(text)` — разбор места в кинозале — и набор проверок `check_parse_seat(f)`. Проверки проходят, **но в функции есть ошибки. Сначала исправьте набор, чтобы он их ловил, потом — функцию.**
+    ```input
+    parse_seat("5-12")
+    parse_seat("11-5")
+    ```
+    ```output
+    (5, 12)
+    ValueError
+    ```
+    - Текст вида `ряд-место`; ряды 1–10, места 1–20; ряд или место вне диапазона или не число — `ValueError`.
+    - В наборе: края рядов и мест и по одному выходу за каждый край.
+    - Исправленный набор молчит на верной функции и падает на неверной.
+  starter: |
+    def check_parse_seat(f):
+        assert (f("5-12") == (5, 12), "«5-12» — ряд 5, место 12")
+        assert f("3-7") == (7, 3), f"f(\"3-7\") вернула {f('3-7')}"
+        try:
+            f("11-5")
+        except ValueError as e:
+            assert "ряд" in str(e), f"непонятное сообщение: {e}"
+
+
+    def parse_seat(text):
+        row_text, seat_text = text.split("-")
+        row = int(row_text)
+        seat = int(seat_text)
+        if row < 1:
+            raise ValueError(f"ряд должен быть от 1 до 10, а не {row}")
+        if seat < 1 or seat > 20:
+            raise ValueError(f"место должно быть от 1 до 20, а не {seat}")
+        return (seat, row)
+
+
+    check_parse_seat(parse_seat)
+  solution: |
+    def check_parse_seat(f):
+        for text, want in [("5-12", (5, 12)), ("3-7", (3, 7)), ("1-1", (1, 1)), ("10-20", (10, 20))]:
+            assert f(text) == want, f"f(\"{text}\") должна вернуть {want}, а вернула {f(text)}"
+        for bad in ["0-5", "11-5", "5-0", "5-21", "пять-3"]:
+            raised = False
+            try:
+                f(bad)
+            except ValueError:
+                raised = True
+            assert raised, f"f(\"{bad}\") должна выбросить ValueError"
+
+
+    def parse_seat(text):
+        row_text, seat_text = text.split("-")
+        row = int(row_text)
+        seat = int(seat_text)
+        if row < 1 or row > 10:
+            raise ValueError(f"ряд должен быть от 1 до 10, а не {row}")
+        if seat < 1 or seat > 20:
+            raise ValueError(f"место должно быть от 1 до 20, а не {seat}")
+        return (row, seat)
+
+
+    check_parse_seat(parse_seat)
+  tests:
+    asserts:
+    - name: Исправленная функция — верные места
+      code: |
+        for text, want in [("5-12", (5, 12)), ("3-7", (3, 7)), ("1-1", (1, 1)), ("10-20", (10, 20))]:
+            r = parse_seat(text)
+            assert r == want, f"parse_seat({text!r}) должна вернуть {want}, а вернула {r!r}"
+    - name: Исправленная функция — неверные места
+      code: |
+        for bad in ["0-5", "11-5", "5-0", "5-21", "пять-3"]:
+            raised = False
+            try:
+                parse_seat(bad)
+            except ValueError:
+                raised = True
+            assert raised, f"parse_seat({bad!r}) должна выбросить ValueError"
+    - name: Верную функцию проверки пропускают
+      code: |
+        def _ok(text):
+            r, s = text.split("-")
+            r, s = int(r), int(s)
+            if not (1 <= r <= 10 and 1 <= s <= 20):
+                raise ValueError("нет такого места")
+            return (r, s)
+        try:
+            check_parse_seat(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную функцию: {e}"
+    - name: Сломанные версии проверки ловят
+      code: |
+        def _make(swap=False, max_row=10, max_seat=20, min_seat=1):
+            def f(text):
+                r, s = text.split("-")
+                r, s = int(r), int(s)
+                if r < 1 or r > max_row or s < min_seat or s > max_seat:
+                    raise ValueError("нет такого места")
+                return (s, r) if swap else (r, s)
+            return f
+        missed = []
+        for name, broken in [("ряд и место переставлены", _make(swap=True)), ("11-й ряд принимается", _make(max_row=11)),
+                             ("21-е место принимается", _make(max_seat=21)), ("мест только 10", _make(max_seat=10)),
+                             ("место 0 принимается", _make(min_seat=0)), ("рядов только 9", _make(max_row=9))]:
+            try:
+                check_parse_seat(broken)
+                missed.append(name)
+            except (AssertionError, ValueError):
+                pass
+        assert not missed, "Проверки не поймали сломанные версии: " + "; ".join(missed)
+  explain: |
+    В наборе ассистента три изъяна, и каждый прячет ошибку функции:
+    - первый `assert` в скобках — непустой кортеж, он истинен всегда и не замечает переставленные ряд и место;
+    - ожидание `(7, 3)` переписано из неверного вывода и закрепляет ту же перестановку;
+    - `assert` внутри `except` не выполняется, если исключения нет, — а 11-й ряд функция принимает молча.
+
+    Исправленный набор берёт ожидания из условия, проверяет края (1 и 10 рядов, 1 и 20 мест) и выход за каждый край флагом. Он падает на функции ассистента — тогда видно, что исправить: порядок в `return` и верхнюю границу ряда.
 - id: s-open-raise-and-check
   type: open
   q: 'Функция `parse_mark(text)` получила оценку «7» при шкале от 1 до 5. Почему ей лучше выбросить `ValueError`, чем вернуть `None`? И как проверить `assert`-ом, что она действительно так поступает?'
