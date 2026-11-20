@@ -3,19 +3,18 @@ title: Помощник для проверки исключений
 sandbox: python-browser
 difficulty: 3
 statement: |
-  Проверка «функция выбрасывает `ValueError`» каждый раз занимает пять строк с флагом. Спрячем их в функцию-помощник.
+  **Напишите `raises_value_error(func, arg)`: вызвать `func(arg)` ровно один раз и вернуть `True`, если вызов выбросил `ValueError`, и `False`, если исключения не было.**
 
-  Напишите `raises_value_error(func, arg)`: она вызывает `func(arg)` ровно один раз и возвращает `True`, если вызов выбросил `ValueError`, и `False`, если вызов закончился без исключения. Исключение другого типа помощник не ловит: оно идёт дальше, и проверка с ним упадёт — так она сообщит, что функция ломается не так, как обещано.
+  Исключение другого типа функция не ловит — оно уходит дальше. С таким помощником проверка «функция выбрасывает `ValueError`» умещается в одну строку: `assert raises_value_error(parse_age, "200")`.
 
-  ```python
-  print(raises_value_error(int, "сто"))   # True
-  print(raises_value_error(int, "100"))   # False
+  Пример 1
+  ```input
+  raises_value_error(int, "сто")
+  raises_value_error(int, "100")
   ```
-
-  Теперь проверка в одну строку:
-
-  ```python
-  assert raises_value_error(parse_age, "200"), "parse_age(\"200\") должна выбросить ValueError"
+  ```output
+  True
+  False
   ```
 starter: |
   def raises_value_error(func, arg):
@@ -88,4 +87,4 @@ hints:
   - level: 2
     text: 'Помощнику нужны три исхода: исключение нужного типа, исключения нет, исключение другого типа. Какой из них обрабатывает `except`, какой — строка после всей конструкции, а какой не должен обрабатываться вовсе?'
   - level: 3
-    text: '`try: func(arg)` / `except ValueError: return True` / после конструкции — `return False`.'
+    text: '`True` возвращают из `except ValueError:`, а `False` — после всей конструкции `try`: туда выполнение доходит, только если исключения не было.'
