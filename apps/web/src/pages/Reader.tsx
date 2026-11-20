@@ -7,13 +7,39 @@ import { to } from "../current";
 import { useApp, type TopicPlace } from "../state";
 import { content, type TopicModule } from "../content/registry";
 import { mdxComponents, Page } from "../content/components";
+import { Sandbox } from "../components/Sandbox";
 import { Quiz, type ExamPhase } from "../components/Quiz";
 import { isFreeOrder, isOpen, nextStep } from "../content/order";
 import { ExamLock, useExamInProgress } from "../content/reference";
 import { StepLocked, useStepOpen } from "../content/gate";
 import { Drawer, FeedbackDrawer, NotesDrawer } from "../components/Drawers";
 
-type PageDef = { title: string; minutes?: number; node: ReactNode };
+type PageDef = { title: string; minutes?: number; node: ReactNode; wide?: boolean };
+
+/**
+ * A page with coding tasks is split: every task gets a page of its own laid out as a workspace (statement on
+ * the left, editor and tests on the right). Text right before a task goes into its left column; text after
+ * the last task stays a normal page.
+ */
+function splitTasks(el: ReactElement<{ title: string; minutes?: number; children?: ReactNode }>): PageDef[] {
+  const kids = Children.toArray(el.props.children);
+  const tasks = kids.filter((k) => isValidElement(k) && k.type === Sandbox) as ReactElement<{ task: string }>[];
+  if (!tasks.length) return [{ title: el.props.title, minutes: el.props.minutes, node: el }];
+  const each = el.props.minutes ? Math.max(1, Math.round(el.props.minutes / tasks.length)) : undefined;
+  const out: PageDef[] = [];
+  let buf: ReactNode[] = [];
+  for (const k of kids) {
+    if (isValidElement(k) && k.type === Sandbox) {
+      const id = (k as ReactElement<{ task: string }>).props.task;
+      const t = content.task(id);
+      out.push({ title: `Задача: ${t?.title ?? id}`, minutes: each, wide: true, node: <Sandbox key={id} task={id} intro={buf.length ? <>{buf}</> : undefined} /> });
+      buf = [];
+    } else buf.push(k);
+  }
+  // text after the last task: a page of its own, if there is anything besides blank lines
+  if (buf.some((k) => isValidElement(k) || String(k).trim())) out.push({ title: el.props.title, node: <>{buf}</> });
+  return out;
+}
 
 /** During a section test (контрольная) the lessons are closed, as at a real exam. */
 export function Reader() {
@@ -54,7 +80,7 @@ function TopicReader() {
     // a topic with a single <Page> comes back as that element itself, not as a list of pages
     const body: PageDef[] = (tree.type === Page ? [tree] : Children.toArray(tree.props.children))
       .filter((el): el is ReactElement<{ title: string; minutes?: number }> => isValidElement(el) && el.type === Page)
-      .map((el) => ({ title: el.props.title, minutes: el.props.minutes, node: el }));
+      .flatMap((el) => splitTasks(el));
     const quiz = content.quiz(topicId);
     const all = [...body];
     if (quiz) all.push({ title: "Проверка", minutes: quiz.minutes ?? 15, node: <Quiz key={topicId} scope={topicId} data={quiz} onPassed={() => api.setProgress(topicId, "done", all.length - 1, 0).then(refreshProgress)} /> });
@@ -99,7 +125,9 @@ function TopicReader() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest("input,textarea") || panel) return;
+      // keys typed in a field or in the code editor belong to it: arrows move the cursor there, not the pages
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || panel) return;
+      if ((e.target as HTMLElement).closest?.("input,textarea,select,[contenteditable],.cm-editor,[role=tablist]")) return;
       if (e.key === "ArrowRight") go(cur + 1);
       if (e.key === "ArrowLeft") go(cur - 1);
     };
@@ -125,7 +153,7 @@ function TopicReader() {
         <button className="icon-btn" aria-label="Предложить правку" title="Предложить правку" onClick={() => setPanel("feedback")}><Flag size={17} /></button>
       </div></div>
 
-      <div className="page" key={cur}><div className="read">{page.node}</div></div>
+      <div className={`page${page.wide ? " ws-page" : ""}`} key={cur}><div className={page.wide ? "ws-wrap" : "read"}>{page.node}</div></div>
 
       <div className="reader-nav-wrap"><div className="read reader-nav">
         <button className="btn soft" id="prev" onClick={() => go(cur - 1)} disabled={cur === 0} aria-label="Назад"><ArrowLeft size={16} /><span className="pl">Назад</span></button>

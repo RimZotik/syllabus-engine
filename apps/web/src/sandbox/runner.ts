@@ -4,7 +4,7 @@ import type { WorkerRequest } from "./py.worker";
 export type PyError = { type: string; line: number | null; msg: string };
 export type RunResult = { stdout: string; error: PyError | null };
 export type TestResult = { name: string; ok: boolean; error?: PyError; message?: string; stdin?: string; expected?: string; got?: string; hidden?: boolean };
-export type CheckResult = { results: TestResult[] };
+export type CheckResult = { results: TestResult[]; stdout?: string | null };
 export class Timeout extends Error {}
 
 const spawn = () => new Worker(new URL("./py.worker.ts", import.meta.url), { type: "module" });

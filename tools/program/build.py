@@ -426,8 +426,22 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
                 fs = q.get("fields") or []
                 if not fs or any(not isinstance(f, dict) or not isinstance(f.get("label"), str) or f.get("answer") in (None, "", []) for f in fs):
                     errors.append(f"{where}: fields question needs fields: [{{label: текст, answer: ответ или [варианты]}}]")
+            elif q["type"] == "code":
+                # a code question is graded by its tests: the reference solution passes them all, the starter does not
+                tests = q.get("tests") or {}
+                if not (tests.get("io") or tests.get("asserts")) or not isinstance(q.get("solution"), str):
+                    errors.append(f"{where}: code question needs tests (io or asserts) and a solution")
+                else:
+                    res = run_task(q["solution"], tests)
+                    if isinstance(res, str) or not res or not all(r["ok"] for r in res):
+                        bad = res if isinstance(res, str) else [r["name"] for r in res if not r["ok"]]
+                        errors.append(f"{where}: reference solution fails its tests: {bad}")
+                    if q.get("starter"):
+                        res = run_task(q["starter"], tests)
+                        if not isinstance(res, str) and res and all(r["ok"] for r in res):
+                            errors.append(f"{where}: the starter code already passes all tests")
             elif q["type"] not in ("open",):
-                errors.append(f"{where}: unknown question type {q['type']!r} (single, multi, open, fields)")
+                errors.append(f"{where}: unknown question type {q['type']!r} (single, multi, open, fields, code)")
             elif q["type"] == "open" and not q.get("rubric"):
                 errors.append(f"{where}: open question needs a rubric for the teacher")
     errors += check_tasks()

@@ -198,8 +198,10 @@ def check(code, tests_json):
             ok = _norm(out) == _norm(case.get("stdout", ""))
             results.append({"name": name, "ok": ok, "stdin": case.get("stdin", ""), "expected": case.get("stdout", ""), "got": out, "hidden": case.get("hidden", False)})
     asserts = tests.get("asserts") or []
+    printed = None  # what the program itself printed while the asserts were prepared — shown for debugging
     if asserts:
         out, err, ns = _exec(code, tests.get("stdin", ""), False)
+        printed = out
         for i, t in enumerate(asserts):
             name = t.get("name") or f"Проверка {i + 1}"
             if err:
@@ -213,4 +215,4 @@ def check(code, tests_json):
                 results.append({"name": name, "ok": False, "message": str(e) or t.get("message", "")})
             except BaseException as e:
                 results.append({"name": name, "ok": False, "error": {"type": type(e).__name__, "line": None, "msg": str(e)}})
-    return json.dumps({"results": results}, ensure_ascii=False)
+    return json.dumps({"results": results, "stdout": printed}, ensure_ascii=False)

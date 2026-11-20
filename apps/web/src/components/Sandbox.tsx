@@ -1,60 +1,35 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, CircleAlert, CircleX, Footprints, Lightbulb, LoaderCircle, Play, RotateCcw, ListChecks } from "lucide-react";
+import { CheckCircle2, Footprints, Lightbulb, RotateCcw } from "lucide-react";
 import { TraceView } from "./TraceView";
 import { RichText } from "./RichText";
-import { EditorView, basicSetup } from "codemirror";
-import { python } from "@codemirror/lang-python";
-import { keymap } from "@codemirror/view";
-import { indentWithTab } from "@codemirror/commands";
+import { CodeRunner } from "./CodeRunner";
 import { api } from "../api";
 import { content, type Task } from "../content/registry";
-import { useDraft } from "../persist";
-import { checkPython, explainError, runPython, Timeout, warmUp, type PyError, type RunResult, type TestResult } from "../sandbox/runner";
+import type { TestResult } from "../sandbox/runner";
 
 /** What is stored per task, so the code and the result are there when the learner comes back. */
-type Saved = { code: string; passed: boolean; hints: number; results: TestResult[] | null; checks: number };
+type Saved = { code: string; passed: boolean; hints: number; results: TestResult[] | null; checks: number; stdout?: string | null };
 
-const theme = EditorView.theme({
-  "&": { fontSize: "15px", backgroundColor: "var(--paper)", color: "var(--ink)", borderRadius: "var(--r-m)" },
-  ".cm-content": { fontFamily: "var(--f-mono)", padding: "12px 0", caretColor: "var(--ink)" },
-  ".cm-gutters": { backgroundColor: "transparent", border: "none", color: "var(--ink-3)" },
-  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "color-mix(in srgb, var(--green-soft) 45%, transparent)" },
-  "&.cm-focused": { outline: "none" },
-  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": { backgroundColor: "var(--lav-soft) !important" },
-});
-
-function ErrorBox({ e }: { e: PyError }) {
-  return (
-    <div className="sb-error"><CircleAlert size={18} />
-      <div><b>{e.type}{e.line ? ` в строке ${e.line}` : ""}:</b> {e.msg}<span>{explainError(e)}</span></div>
-    </div>
-  );
-}
-
-function Block({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="sb-io"><span>{label}</span><pre>{children}</pre></div>;
-}
-
-/** A coding task: editor, «Запустить», «Проверить» with hidden tests, hint ladder. Python runs in the browser (Pyodide). */
-export function Sandbox({ task: id }: { task: string }) {
+/**
+ * A coding task as a workspace, like a LeetCode problem page: on the left the statement, the text around it
+ * (`intro`) and the hints; on the right the editor, «Проверить» and the tests as tabs. Python runs in the
+ * browser (Pyodide). The reader gives every task a page of its own.
+ */
+export function Sandbox({ task: id, intro }: { task: string; intro?: ReactNode }) {
   const task = content.task(id);
   if (!task) return <div className="needs-claude">Задача «{id}» не найдена.</div>;
-  return <TaskView task={task} />;
+  return <TaskView key={id} task={task} intro={intro} />;
 }
 
-function TaskView({ task }: { task: Task }) {
+function TaskView({ task, intro }: { task: Task; intro?: ReactNode }) {
   const scope = `task:${task.id}`;
-  const host = useRef<HTMLDivElement>(null);
-  const view = useRef<EditorView | null>(null);
   const saveTimer = useRef<number>(0);
   const [st, setSt] = useState<Saved>({ code: task.starter ?? "", passed: false, hints: 0, results: null, checks: 0 });
   const stRef = useRef(st);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState<"run" | "check" | null>(null);
-  const [run, setRun] = useDraft<RunResult | null>(`draft:run:${task.id}`, null); // last run's output survives leaving the page
-  const [notice, setNotice] = useState<string | null>(null);
+  const [initial, setInitial] = useState(task.starter ?? "");
   const [traceCode, setTraceCode] = useState<string | null>(null);
-  const [stdin, setStdin] = useDraft(`draft:stdin:${task.id}`, task.stdin ?? "");
+  const [resetN, setResetN] = useState(0); // «Начать заново» gives the editor a fresh start
 
   function update(patch: Partial<Saved>, immediate = false) {
     const next = { ...stRef.current, ...patch };
@@ -66,112 +41,50 @@ function TaskView({ task }: { task: Task }) {
   }
 
   useEffect(() => {
-    warmUp();
     let alive = true;
     api.quizState<Saved>(scope).then(({ state }) => {
-      if (alive && state && typeof state.code === "string") { stRef.current = state; setSt(state); }
+      if (alive && state && typeof state.code === "string") { stRef.current = state; setSt(state); setInitial(state.code); }
     }).catch(() => {}).finally(() => alive && setLoaded(true));
     return () => { alive = false; };
   }, [scope]);
 
-  useEffect(() => {
-    if (!loaded || !host.current) return;
-    const v = new EditorView({
-      doc: stRef.current.code,
-      parent: host.current,
-      extensions: [basicSetup, python(), keymap.of([indentWithTab]), theme,
-        EditorView.updateListener.of((u) => { if (u.docChanged) update({ code: u.state.doc.toString() }); })],
-    });
-    view.current = v;
-    return () => { v.destroy(); view.current = null; };
-  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const code = () => view.current?.state.doc.toString() ?? stRef.current.code;
-  const timeoutMs = task.timeout_ms ?? 5000;
-  const onFail = (e: unknown) => setNotice(e instanceof Timeout
-    ? `Программа работала дольше ${Math.round(timeoutMs / 1000)} с и была остановлена. Скорее всего, где-то бесконечный цикл.`
-    : `Не удалось выполнить код: ${String(e)}`);
-
-  async function doRun() {
-    setBusy("run"); setNotice(null); setRun(null);
-    try { setRun(await runPython(code(), stdin, timeoutMs)); } catch (e) { onFail(e); } finally { setBusy(null); }
-  }
-
-  async function doCheck() {
-    setBusy("check"); setNotice(null);
-    const started = Date.now();
-    try {
-      const { results } = await checkPython(code(), task.tests, timeoutMs * 2);
-      const ok = results.length > 0 && results.every((r) => r.ok);
-      update({ results, passed: stRef.current.passed || ok, checks: stRef.current.checks + 1 }, true);
-      api.saveAttempts([{ scope, item_id: task.id, kind: "code", answer: code(), correct: ok, seconds: Math.round((Date.now() - started) / 1000) }]).catch(() => {});
-    } catch (e) { onFail(e); } finally { setBusy(null); }
-  }
-
-  function reset() {
-    view.current?.dispatch({ changes: { from: 0, to: view.current.state.doc.length, insert: task.starter ?? "" } });
-    setRun(null); setNotice(null);
-  }
-
   const hints = task.hints ?? [];
-  const results = st.results;
-  const okCount = results?.filter((r) => r.ok).length ?? 0;
+  // input for the step-by-step view: the task's own, else the first example's
+  const traceStdin = task.stdin ?? task.tests.io?.[0]?.stdin ?? task.tests.stdin ?? "";
 
   return (
-    <div className="sandbox">
-      <div className="sb-head">
-        <div><div className="eyebrow">Задача</div><h3>{task.title}</h3></div>
-        {st.passed ? <span className="chip green"><CheckCircle2 size={14} />Решено</span> : task.difficulty ? <span className="chip">сложность {task.difficulty} из 5</span> : null}
-      </div>
-      <div className="sb-statement"><RichText text={task.statement} block /></div>
-      {!loaded ? <div className="faint">Загружаю задачу…</div> : <div className="sb-editor" ref={host} />}
-      {task.stdin !== undefined && (
-        <label className="sb-stdin"><span>Ввод для запуска — каждая строка отдаётся одному input()</span>
-          <textarea value={stdin} rows={Math.max(2, stdin.split("\n").length)} onChange={(e) => setStdin(e.target.value)} /></label>
-      )}
-      <div className="sb-actions">
-        <button className="btn soft sm" onClick={doRun} disabled={!!busy || !loaded}>{busy === "run" ? <LoaderCircle size={16} className="spin" /> : <Play size={16} />}Запустить</button>
-        <button className="btn sm" onClick={doCheck} disabled={!!busy || !loaded}>{busy === "check" ? <LoaderCircle size={16} className="spin" /> : <ListChecks size={16} />}Проверить</button>
-        <button className="btn soft sm" onClick={() => setTraceCode(traceCode === null ? code() : null)} disabled={!!busy || !loaded}><Footprints size={16} />{traceCode === null ? "По шагам" : "Скрыть шаги"}</button>
-        <button className="btn soft sm" onClick={reset} disabled={!!busy}><RotateCcw size={16} />Начать заново</button>
+    <div className="workspace">
+      <div className="ws-left">
+        <div className="sb-head">
+          <div><div className="eyebrow">Задача</div><h2>{task.title}</h2></div>
+          {st.passed ? <span className="chip green"><CheckCircle2 size={14} />Решено</span> : task.difficulty ? <span className="chip">сложность {task.difficulty} из 5</span> : null}
+        </div>
+        {intro && <div className="ws-intro">{intro}</div>}
+        <div className="sb-statement"><RichText text={task.statement} block /></div>
+        {hints.slice(0, st.hints).map((h, i) => <div key={i} className="sb-hint"><Lightbulb size={16} /><div><b>Подсказка {i + 1}.</b> <RichText text={h.text} /></div></div>)}
         {hints.length > 0 && st.hints < hints.length && (
-          <button className="btn soft sm" onClick={() => update({ hints: st.hints + 1 }, true)}><Lightbulb size={16} />Подсказка {st.hints + 1} из {hints.length}</button>
+          <button className="btn soft sm ws-hint-btn" onClick={() => update({ hints: st.hints + 1 }, true)}><Lightbulb size={16} />Подсказка {st.hints + 1} из {hints.length}</button>
+        )}
+        {(st.checks > 0 || st.hints > 0) && <div className="faint ws-meta">Проверок: {st.checks}{st.hints ? ` · подсказок: ${st.hints}` : ""}</div>}
+      </div>
+      <div className="ws-right">
+        {!loaded ? <div className="faint">Загружаю задачу…</div> : (
+          <CodeRunner key={resetN} tall initial={initial} tests={task.tests} timeoutMs={task.timeout_ms ?? 5000} results={st.results} stdout={st.stdout}
+            onCode={(code) => update({ code })}
+            onChecked={(r, code) => {
+              const ok = r.results.length > 0 && r.results.every((x) => x.ok);
+              update({ code, results: r.results, stdout: r.stdout ?? null, passed: stRef.current.passed || ok, checks: stRef.current.checks + 1 }, true);
+              api.saveAttempts([{ scope, item_id: task.id, kind: "code", answer: code, correct: ok, seconds: 0 }]).catch(() => {});
+            }}
+            actions={(code, busy) => (
+              <>
+                <button className="btn soft sm" onClick={() => setTraceCode(traceCode === null ? code() : null)} disabled={busy}><Footprints size={16} />{traceCode === null ? "По шагам" : "Скрыть шаги"}</button>
+                <button className="btn soft sm" onClick={() => { setInitial(task.starter ?? ""); setResetN((n) => n + 1); update({ code: task.starter ?? "", results: null, stdout: null }); }} disabled={busy}><RotateCcw size={16} />Начать заново</button>
+              </>
+            )} />
         )}
       </div>
-      {busy && <div className="grading"><LoaderCircle size={18} />{busy === "run" ? "Выполняю…" : "Проверяю на тестах…"} Первый запуск загружает Python — несколько секунд.</div>}
-      {notice && <div className="verdict error"><CircleAlert size={22} /><div>{notice}</div></div>}
-      {hints.slice(0, st.hints).map((h, i) => <div key={i} className="sb-hint"><Lightbulb size={16} /><div><b>Подсказка {i + 1}.</b> <RichText text={h.text} /></div></div>)}
-      {traceCode !== null && <TraceView code={traceCode} stdin={stdin} />}
-      {run && (
-        <div className="sb-out">
-          <Block label="Вывод программы">{run.stdout || <span className="faint">(программа ничего не вывела)</span>}</Block>
-          {run.error && <ErrorBox e={run.error} />}
-        </div>
-      )}
-      {results && (
-        <div className="sb-results">
-          <div className={`verdict ${okCount === results.length ? "pass" : "revise"}`}>
-            {okCount === results.length ? <CheckCircle2 size={22} /> : <CircleAlert size={22} />}
-            <div><b>{okCount === results.length ? "Все тесты пройдены." : `Пройдено тестов: ${okCount} из ${results.length}.`}</b>
-              <span className="meta">Проверок: {st.checks}{st.hints ? ` · подсказок: ${st.hints}` : ""}</span></div>
-          </div>
-          {results.map((r, i) => (
-            <div key={i} className={`sb-test${r.ok ? " ok" : ""}`}>
-              <div className="sb-test-head">{r.ok ? <CheckCircle2 size={16} /> : <CircleX size={16} />}<span>{r.name}</span></div>
-              {!r.ok && !r.hidden && (
-                <div className="sb-test-body">
-                  {r.stdin ? <Block label="Ввод">{r.stdin}</Block> : null}
-                  {r.expected !== undefined && <Block label="Ожидалось">{r.expected}</Block>}
-                  {r.got !== undefined && <Block label="Получено">{r.got || <span className="faint">(программа ничего не вывела)</span>}</Block>}
-                  {r.message && <div className="explain">{r.message}</div>}
-                  {r.error && <ErrorBox e={r.error} />}
-                </div>
-              )}
-              {!r.ok && r.hidden && <div className="sb-test-body faint">Это скрытый тест: проверьте граничные случаи из условия.</div>}
-            </div>
-          ))}
-        </div>
-      )}
+      {traceCode !== null && <div className="ws-trace"><TraceView code={traceCode} stdin={traceStdin} /></div>}
     </div>
   );
 }

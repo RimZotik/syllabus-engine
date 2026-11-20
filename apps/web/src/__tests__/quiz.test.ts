@@ -85,3 +85,35 @@ describe("fields questions (a journal entry)", () => {
     expect(fieldRight(q, ["", "", ""], 2)).toBe(false);
   });
 });
+
+describe("code questions", () => {
+  const code: Question = { id: "c", type: "code", q: "Допишите", starter: "x = 1\n", tests: { io: [{ stdout: "2" }] }, solution: "print(2)" };
+  const one: Question = { id: "s", type: "single", q: "?", options: ["a", "b"], answer: 0 };
+  const open: Question = { id: "o", type: "open", q: "?", rubric: ["r"] };
+  const data: QuizData = { questions: [open, code, one] };
+
+  it("counts only code that passed its tests", () => {
+    expect(isRight(code, { code: "print(2)", ok: true })).toBe(true);
+    expect(isRight(code, { code: "print(2)" })).toBe(false); // changed since the last check
+    expect(isRight(code, undefined)).toBe(false);
+  });
+
+  it("goes after choice questions and before written ones", async () => {
+    const { freshOrder } = await import("../components/quizLogic");
+    expect(freshOrder(data).map((o) => o.id)).toEqual(["s", "c", "o"]);
+  });
+
+  it("the untouched starter is not an answer", () => {
+    const st: Saved = { order: [{ id: "c", perm: [] }], answers: { c: { code: "x = 1\n" } }, conf: {}, done: false, grades: {} };
+    expect(unanswered(st, { questions: [code] }, true)).toEqual([1]);
+    st.answers.c = { code: "print(2)" };
+    expect(unanswered(st, { questions: [code] }, true)).toEqual([]);
+  });
+
+  it("a passed program survives «Пройти заново», a failed one starts over", () => {
+    const prev: Saved = { order: [], answers: { c: { code: "print(2)", ok: true } }, conf: {}, done: true, grades: {} };
+    expect(restartState({ questions: [code] }, prev).answers.c).toEqual({ code: "print(2)", ok: true });
+    prev.answers.c = { code: "print(3)", ok: false };
+    expect(restartState({ questions: [code] }, prev).answers.c).toBeUndefined();
+  });
+});

@@ -4,7 +4,9 @@ import { api } from "../api";
 import { useApp } from "../state";
 import type { Question, QuizData } from "../content/registry";
 import { RichText } from "./RichText";
-import { accepted, examStarted, fieldRight, fits, fresh, isPartial, isRight, optionMark, restartState, unanswered, type Saved } from "./quizLogic";
+import { accepted, codeWritten, examStarted, fieldRight, fits, fresh, isPartial, isRight, optionMark, restartState, unanswered, type CodeAnswer, type Saved } from "./quizLogic";
+import { CodeRunner } from "./CodeRunner";
+import { checkPython } from "../sandbox/runner";
 import { Modal } from "./Modal";
 
 /** Grows with its text; the scrollbar appears only past ~3/4 of the screen height (CSS max-height). */
@@ -49,7 +51,9 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
   const byId = useMemo(() => new Map(data.questions.map((q) => [q.id, q])), [data]);
   const auto = data.questions.filter((q) => q.type !== "open");
   const open = data.questions.filter((q) => q.type === "open");
-  const score = auto.length ? auto.filter((q) => isRight(q, st.answers[q.id])).length / auto.length : 1;
+  const scoreOf = (answers: Saved["answers"]) => (auto.length ? auto.filter((q) => isRight(q, answers[q.id])).length / auto.length : 1);
+  const score = scoreOf(st.answers);
+  const [checkingCode, setCheckingCode] = useState(false);
   const written = (id: string) => String(st.answers[id] ?? "").trim().length > 0;
   // An unchecked written answer blocks only while the teacher can actually check it.
   const openOk = !teacher || open.every((q) => !written(q.id) || st.grades[q.id]?.verdict === "pass" || !!gradeErr[q.id]);
@@ -57,6 +61,7 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
   const passed = st.done && score >= pass && openOk && !pending;
   const complete = data.questions.every((q) => q.type === "open"
     ? !teacher || written(q.id)
+    : q.type === "code" ? codeWritten(q, st.answers[q.id])
     : q.type === "fields" ? (q.fields ?? []).every((_, i) => String(((st.answers[q.id] as string[]) ?? [])[i] ?? "").trim() !== "")
     : st.answers[q.id] !== undefined && (q.type !== "multi" || (st.answers[q.id] as number[]).length > 0));
   const correct = auto.filter((q) => isRight(q, st.answers[q.id])).length;
@@ -130,7 +135,25 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
   async function submit() {
     const seconds = Math.round((Date.now() - started.current) / 1000);
     const at = new Date().toISOString();
+    // a program changed since its last check (or never checked) is checked now: the score counts only tested code
+    const codeQs = data.questions.filter((q) => q.type === "code" && q.tests);
+    const unchecked = codeQs.filter((q) => { const a = stRef.current.answers[q.id] as CodeAnswer | undefined; return a?.code && a.ok === undefined; });
+    if (unchecked.length) {
+      setCheckingCode(true);
+      const answers = { ...stRef.current.answers };
+      for (const q of unchecked) {
+        const a = answers[q.id] as CodeAnswer;
+        try {
+          const r = await checkPython(a.code, q.tests, (q.timeout_ms ?? 5000) * 2);
+          answers[q.id] = { ...a, ok: r.results.length > 0 && r.results.every((x) => x.ok), results: r.results, stdout: r.stdout ?? null };
+        } catch { answers[q.id] = { ...a, ok: false, results: [] }; }
+      }
+      stRef.current = { ...stRef.current, answers };
+      setCheckingCode(false);
+    }
     const prev = stRef.current;
+    const score = scoreOf(prev.answers);
+    const correct = auto.filter((q) => isRight(q, prev.answers[q.id])).length;
     const history = [...(prev.history ?? []), { n: (prev.history?.length ?? 0) + 1, score, correct, total: auto.length, at, answers: prev.answers }];
     const next = { ...prev, done: true, score, submitted_at: at, history };
     // written answers are a separate part: checked in every attempt, so the learner sees what to fix
@@ -138,7 +161,7 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
     const needsTeacher = teacher && toCheck.length > 0;
     commit(next, score >= pass && !needsTeacher);
     api.saveAttempts(auto.map((q) => ({
-      scope, item_id: q.id, kind: q.type, answer: next.answers[q.id] ?? null, correct: isRight(q, next.answers[q.id]), seconds,
+      scope, item_id: q.id, kind: q.type, answer: q.type === "code" ? (next.answers[q.id] as CodeAnswer | undefined)?.code ?? null : next.answers[q.id] ?? null, correct: isRight(q, next.answers[q.id]), seconds,
     }))).catch(() => {});
     if (teacher) toCheck.forEach((q) => void grade(q));
   }
@@ -184,7 +207,7 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
         <ul>
           <li>Пока идёт контрольная, темы раздела и содержание недоступны: вернуться к теории можно только после сдачи.</li>
           <li>Сдать можно, не ответив на все вопросы, — вопросы без ответа засчитаются как неверные.</li>
-          <li>Контрольная из двух частей. <b>Тестовая</b> — вопросы с выбором ответа, нужно {Math.round(pass * 100)}% верных. Если не наберёте порог, увидите только счёт, без разбора: перечитайте раздел и пройдите тестовую часть снова. Разбор откроется после сдачи.</li>
+          <li>Контрольная из двух частей. <b>Тестовая</b> — вопросы с выбором ответа{data.questions.some((q) => q.type === "code") ? " и задачи с кодом (код засчитывается, если проходит все тесты)" : ""}, нужно {Math.round(pass * 100)}% верных. Если не наберёте порог, увидите только счёт, без разбора: перечитайте раздел и пройдите тестовую часть снова. Разбор откроется после сдачи.</li>
           {open.length > 0 && <li><b>Развёрнутые ответы</b> преподаватель проверяет сразу после сдачи в любой попытке: его замечания видны, ответ можно исправить и сдать снова. Принятые ответы сохраняются на следующие попытки.</li>}
           <li>Каждая попытка сохраняется{tries ? ` — это будет попытка ${tries + 1}` : ""}.</li>
         </ul>
@@ -236,8 +259,16 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
         const locked = g?.verdict === "pass"; // accepted earlier: kept through «Пройти заново», not checked again
         return (
           <div className="qitem" key={q.id}>
-            <div className="qtitle"><b>{n + 1}. <RichText text={q.q} /></b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : q.type === "fields" ? "заполните поля" : "развёрнутый ответ"}</span></div>
-            {q.type === "fields" ? (
+            <div className="qtitle"><b>{n + 1}. <RichText text={q.q} /></b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : q.type === "fields" ? "заполните поля" : q.type === "code" ? "код" : "развёрнутый ответ"}</span></div>
+            {q.type === "code" ? (
+              <div className="qcode">
+                <CodeRunner initial={(a as CodeAnswer | undefined)?.code ?? q.starter ?? ""} tests={q.tests ?? {}} timeoutMs={q.timeout_ms ?? 5000}
+                  results={(a as CodeAnswer | undefined)?.results ?? null} stdout={(a as CodeAnswer | undefined)?.stdout} readOnly={st.done}
+                  onCode={(code) => { if ((stRef.current.answers[q.id] as CodeAnswer | undefined)?.code !== code) edit({ answers: { ...stRef.current.answers, [q.id]: { code } } }); }}
+                  onChecked={(r, code) => edit({ answers: { ...stRef.current.answers, [q.id]: { code, ok: r.results.length > 0 && r.results.every((x) => x.ok), results: r.results, stdout: r.stdout ?? null } } })} />
+                {st.done && review && q.solution && <details className="solution"><summary>Эталонное решение</summary><pre>{q.solution}</pre></details>}
+              </div>
+            ) : q.type === "fields" ? (
               <div className="fields">
                 {(q.fields ?? []).map((f, i) => {
                   const val = ((a as string[]) ?? [])[i] ?? "";
@@ -316,7 +347,7 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
             <span className="faint tnum">{missing.length ? `Без ответа: ${missing.length} из ${data.questions.length}` : "Все вопросы отвечены"}</span>
             <button className="btn" id="next" onClick={() => setConfirm(true)}><Flag size={16} />Закончить попытку</button>
           </div></div>
-        ) : <button className="btn" onClick={submit} disabled={!complete}>Сдать</button>
+        ) : <button className="btn" onClick={submit} disabled={!complete || checkingCode}>{checkingCode ? <><LoaderCircle size={16} className="spin" />Проверяю код…</> : "Сдать"}</button>
       ) : (
         <>
           {parts}

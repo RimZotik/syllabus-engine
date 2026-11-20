@@ -1,7 +1,11 @@
 import type { Grade } from "../api";
 import type { Question, QuizData } from "../content/registry";
+import type { TestResult } from "../sandbox/runner";
 
-export type Answer = number | number[] | string | string[] | undefined;
+/** Answer to a code question: the code and the result of its last check (`ok` is reset when the code changes). */
+export type CodeAnswer = { code: string; ok?: boolean; results?: TestResult[]; stdout?: string | null };
+
+export type Answer = number | number[] | string | string[] | CodeAnswer | undefined;
 /** What is stored on the server, so a finished test stays finished after leaving the page. */
 export type Saved = {
   order: { id: string; perm: number[] }[];
@@ -37,6 +41,7 @@ export function fieldRight(q: Question, a: Answer, i: number): boolean {
 
 export function isRight(q: Question, a: Answer): boolean | null {
   if (q.type === "open") return null;
+  if (q.type === "code") return (a as CodeAnswer | undefined)?.ok === true;
   if (q.type === "fields") return (q.fields ?? []).every((_, i) => fieldRight(q, a, i));
   if (q.type === "single") return a === q.answer;
   const want = [...((q.answer as number[]) ?? [])].sort().join(",");
@@ -64,9 +69,10 @@ export function isPartial(q: Question, a: Answer): boolean {
 }
 
 // New order of questions and options on every attempt: no position bias, no memorising «the second one».
-// Auto-graded questions are shuffled; questions with a written answer always go last.
+// Choice questions are shuffled; code questions follow in the author's order (they grow harder), written answers go last.
 export function freshOrder(data: QuizData): Saved["order"] {
-  return [...shuffled(data.questions.filter((q) => q.type !== "open")), ...data.questions.filter((q) => q.type === "open")]
+  const choice = data.questions.filter((q) => q.type !== "open" && q.type !== "code");
+  return [...shuffled(choice), ...data.questions.filter((q) => q.type === "code"), ...data.questions.filter((q) => q.type === "open")]
     .map((q) => ({ id: q.id, perm: shuffled((q.options ?? []).map((_, i) => i)) }));
 }
 
@@ -82,6 +88,10 @@ export const accepted = (s: Saved, id: string) => s.grades[id]?.verdict === "pas
  */
 export function restartState(data: QuizData, prev: Saved): Saved {
   const next: Saved = { ...fresh(data), history: prev.history };
+  // a program that already passed its tests is kept too: nothing to retype
+  for (const q of data.questions.filter((x) => x.type === "code")) {
+    if ((prev.answers[q.id] as CodeAnswer | undefined)?.ok) next.answers[q.id] = prev.answers[q.id];
+  }
   for (const q of data.questions.filter((x) => x.type === "open")) {
     if (prev.answers[q.id] !== undefined) next.answers[q.id] = prev.answers[q.id];
     if (prev.conf[q.id] !== undefined) next.conf[q.id] = prev.conf[q.id];
@@ -100,6 +110,7 @@ export function unanswered(s: Saved, data: QuizData, openAvailable: boolean): nu
     const q = byId.get(id); const a = s.answers[id];
     if (!q) return [];
     const empty = q.type === "open" ? openAvailable && !String(a ?? "").trim()
+      : q.type === "code" ? !codeWritten(q, a)
       : q.type === "fields" ? (q.fields ?? []).some((_, j) => !String(((a as string[]) ?? [])[j] ?? "").trim())
       : a === undefined || (Array.isArray(a) && a.length === 0);
     return empty ? [i + 1] : [];
@@ -111,4 +122,10 @@ export function fits(s: Saved | null, data: QuizData): s is Saved {
   if (!s || !Array.isArray(s.order) || s.order.length !== data.questions.length) return false;
   const byId = new Map(data.questions.map((q) => [q.id, q]));
   return s.order.every((o) => byId.has(o.id) && o.perm.length === (byId.get(o.id)!.options ?? []).length);
+}
+
+/** A code question counts as answered once its code differs from the starter. */
+export function codeWritten(q: Question, a: Answer): boolean {
+  const code = (a as CodeAnswer | undefined)?.code ?? "";
+  return code.trim() !== "" && code.trim() !== (q.starter ?? "").trim();
 }

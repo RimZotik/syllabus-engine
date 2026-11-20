@@ -13,7 +13,9 @@ import { currentPackage } from "../current";
 export type TopicMeta = { minutes?: number; lead?: string };
 export type TopicModule = { default: ComponentType<{ components?: Record<string, unknown> }>; meta?: TopicMeta };
 export type Question = {
-  id: string; type: "single" | "multi" | "open" | "fields"; q: string; options?: string[];
+  id: string; type: "single" | "multi" | "open" | "fields" | "code"; q: string; options?: string[];
+  /** type `code`: write, complete, fix or change a program; graded by running its tests (same format as a task's) */
+  starter?: string; solution?: string; tests?: Task["tests"]; timeout_ms?: number;
   /** type `fields`: fill in named fields (a journal entry: Дебет, Кредит, КОСГУ, КФО; a value and its unit…).
    *  Each field accepts one or several equivalent answers; compared without spaces, case and with «,» = «.». */
   fields?: { label: string; answer: string | string[]; placeholder?: string }[];
