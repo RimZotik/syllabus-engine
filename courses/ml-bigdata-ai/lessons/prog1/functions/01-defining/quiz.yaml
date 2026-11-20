@@ -1,25 +1,7 @@
 title: Проверка темы
 pass: 0.85
-minutes: 15
+minutes: 35
 questions:
-- id: def-body-waits
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    def greet():
-        print("Привет")
-        return "готово"
-
-    print("Начало")
-    ```
-  options:
-  - '`Начало`'
-  - '`Привет`, потом `Начало` — каждое в своей строке'
-  - '`Начало`, потом `Привет` — каждое в своей строке'
-  - '`Привет`, `готово` и `Начало` — каждое в своей строке'
-  answer: 0
-  explain: 'Инструкция `def` только привязывает имя `greet` к функции. Тело выполнилось бы при вызове `greet()`, а вызова в программе нет.'
 - id: param-or-arg
   type: multi
   q: |
@@ -81,58 +63,6 @@ questions:
   - 'Ошибку: второй вызов не дошёл до `return`'
   answer: 0
   explain: 'В первом вызове `return` на втором дне сразу завершает и цикл, и вызов: до `-7` дело не доходит. Во втором вызове мороза нет, функция доходит до конца тела без `return` и возвращает `None` — это не ошибка.'
-- id: return-indent
-  type: single
-  q: |
-    ИИ-ассистент написал функцию для среднего балла. Что вернёт `average([3, 5, 4])`?
-    ```python
-    def average(marks):
-        total = 0
-        for m in marks:
-            total += m
-            return total / len(marks)
-    ```
-  options:
-  - '`1.0`'
-  - '`4.0`'
-  - '`None`'
-  - '`12`'
-  answer: 0
-  explain: '`return` стоит в теле цикла. На первой же итерации `total` равен 3, и `return` отдаёт 3 / 3 — вызов закончен, остальные оценки не сложены. Чтобы получить `4.0`, `return` нужно сдвинуть на уровень `for`, после цикла.'
-- id: default-order
-  type: multi
-  q: Какие пары «определение — вызов» выполнятся без ошибки? Выберите все.
-  options:
-  - '`def bonus(salary, percent=10):` и вызов `bonus(percent=5, salary=1000)`'
-  - '`def bonus(percent=10, salary):` и вызов `bonus(salary=1000)`'
-  - '`def bonus(salary=0, percent=10):` и вызов `bonus()`'
-  - '`def bonus(salary, percent=10):` и вызов `bonus(1000, 5, 1)`'
-  - '`def bonus(salary, percent=10):` и вызов `bonus(percent=5, 1000)`'
-  answer:
-  - 0
-  - 2
-  explain: 'Именованные аргументы сопоставляются по имени, порядок в вызове неважен. Если значения по умолчанию есть у всех параметров, можно не передавать ничего. Определение `bonus(percent=10, salary)` Python не примет: параметр без значения по умолчанию стоит после параметра со значением, — и именованный вызов этого не исправит. В `bonus(1000, 5, 1)` аргументов три, а параметров два — `TypeError`. А в `bonus(percent=5, 1000)` позиционный аргумент стоит после именованного: позиционные идут первыми, иначе Python не примет вызов.'
-- id: name-without-call
-  type: single
-  q: |
-    Программа выводит `отдыхаем` даже в понедельник. Какая правка строки с `if` её исправит?
-    ```python
-    def is_weekend(day):
-        return day == "сб" or day == "вс"
-
-    day = "пн"
-    if is_weekend:
-        print("отдыхаем")
-    else:
-        print("работаем")
-    ```
-  options:
-  - '`if is_weekend(day):`'
-  - '`if is_weekend():`'
-  - '`if is_weekend == True:`'
-  - '`if is_weekend(day) == "сб":`'
-  answer: 0
-  explain: 'В условии стоит имя функции без скобок — сама функция, а не вызов, и она считается истиной. Нужен вызов с аргументом. `is_weekend()` упадёт с `TypeError`: аргумента не хватает. `is_weekend == True` сравнивает с `True` саму функцию и всегда ложно — программа всегда выведет `работаем`. А `is_weekend(day) == "сб"` сравнивает со строкой `"сб"` результат вызова — `True` или `False`, — и равенства не будет никогда.'
 - id: append-returns-none
   type: single
   q: |
@@ -167,16 +97,248 @@ questions:
   - '`считаю 1`, `считаю 10` — каждое в своей строке'
   answer: 0
   explain: 'Внешний `print` сначала вычисляет свой аргумент: оба вызова `log` выполняются по очереди и печатают свои строки. Возвращённые 2 и 20 никто не печатает, их складывают. Только потом `print` выводит 22.'
-- id: open-print-return
-  type: open
+- id: code-complete-seconds
+  type: code
   q: |
-    Однокурсник написал функцию `vat(price)`, которая печатает НДС от цены, и говорит: «На экране всё правильно, значит, функция работает. Зачем мне `return`?» Объясните ему, чем `print` внутри функции отличается от `return`, и приведите пример, где его функция подведёт.
-  rubric:
-  - print только показывает текст человеку на экране, а return отдаёт значение в то место программы, где функцию вызвали
-  - пример, где результат нужен программе дальше — сложить, сравнить, сохранить в переменную или проверить через assert, — и почему там функция подведёт — без return вызов возвращает None (TypeError при действии с None или непройденная проверка)
-  wrong_answers:
-  - print и return делают одно и то же, разница только в оформлении
-  - return тоже выводит значение на экран
-  - функция без return вернёт 0
-  followups:
-  - Что напечатает print(vat(1000)), если внутри vat стоит print, а не return?
+    Таймер показывает минуты и секунды. Функция `to_seconds(minutes, seconds)` должна возвращать, сколько это всего секунд: `to_seconds(2, 5)` — это `125`. Замените `...` в теле функции.
+  starter: |
+    def to_seconds(minutes, seconds):
+        return ...
+  solution: |
+    def to_seconds(minutes, seconds):
+        return minutes * 60 + seconds
+  tests:
+    asserts:
+    - name: Две минуты пять секунд
+      code: |
+        r = to_seconds(2, 5)
+        assert r == 125, "to_seconds(2, 5) должна вернуть 125, а вернула " + repr(r)
+    - name: Только секунды
+      code: |
+        r = to_seconds(0, 59)
+        assert r == 59, "to_seconds(0, 59) должна вернуть 59, а вернула " + repr(r)
+    - name: Ровно десять минут
+      code: |
+        r = to_seconds(10, 0)
+        assert r == 600, "to_seconds(10, 0) должна вернуть 600, а вернула " + repr(r)
+    - name: Ноль
+      code: |
+        r = to_seconds(0, 0)
+        assert r == 0, "to_seconds(0, 0) должна вернуть 0, а вернула " + repr(r)
+  explain: |
+    В минуте 60 секунд: `minutes * 60 + seconds`. Проверки смотрят на то, что функция вернула, поэтому выражение стоит после `return`; `print` вместо `return` проверку не пройдёт — вызов вернёт `None`.
+- id: code-fix-def-order
+  type: code
+  q: |
+    Программа читает цену без НДС и выводит цену с НДС 20%. При запуске она падает с `NameError`. Исправьте её, не меняя формулу.
+  starter: |
+    price = int(input())
+    print(with_vat(price))
+
+    def with_vat(price):
+        return price + price * 20 / 100
+  solution: |
+    def with_vat(price):
+        return price + price * 20 / 100
+
+    price = int(input())
+    print(with_vat(price))
+  tests:
+    io:
+    - name: Цена 1000
+      stdin: "1000\n"
+      stdout: "1200.0"
+    - name: Цена 150
+      stdin: "150\n"
+      stdout: "180.0"
+      hidden: true
+    - name: Цена 45
+      stdin: "45\n"
+      stdout: "54.0"
+      hidden: true
+    - name: Бесплатно
+      stdin: "0\n"
+      stdout: "0.0"
+      hidden: true
+  explain: |
+    Python выполняет программу сверху вниз, а `def` — тоже инструкция: имя `with_vat` появляется, только когда она выполнится. Вызов стоял выше, и имени ещё не было. Определение функции нужно поставить до вызова.
+- id: name-without-call
+  type: code
+  q: |
+    Программа читает день недели — `пн`, `вт`, `ср`, `чт`, `пт`, `сб` или `вс` — и выводит `отдыхаем` в субботу и воскресенье, а в остальные дни `работаем`. Но она выводит `отдыхаем` даже в понедельник. Исправьте программу, функцию `is_weekend` не меняйте.
+  starter: |
+    def is_weekend(day):
+        return day == "сб" or day == "вс"
+
+    day = input()
+    if is_weekend:
+        print("отдыхаем")
+    else:
+        print("работаем")
+  solution: |
+    def is_weekend(day):
+        return day == "сб" or day == "вс"
+
+    day = input()
+    if is_weekend(day):
+        print("отдыхаем")
+    else:
+        print("работаем")
+  tests:
+    io:
+    - name: Понедельник
+      stdin: "пн\n"
+      stdout: "работаем"
+    - name: Суббота
+      stdin: "сб\n"
+      stdout: "отдыхаем"
+      hidden: true
+    - name: Воскресенье
+      stdin: "вс\n"
+      stdout: "отдыхаем"
+      hidden: true
+    - name: Пятница
+      stdin: "пт\n"
+      stdout: "работаем"
+      hidden: true
+  explain: |
+    В условии стоит имя функции без скобок — сама функция, а не её вызов, и в условии она считается истиной. Поэтому всегда выполняется первая ветка. Нужен вызов с аргументом: `if is_weekend(day):`. Вызов `is_weekend()` без аргумента упал бы с `TypeError`, а сравнение `is_weekend == True` всегда ложно — тогда программа всегда выводила бы `работаем`.
+- id: code-fix-default-order
+  type: code
+  q: |
+    Функция `tip` считает чаевые: обычно 10% от счёта, но можно указать другой процент. Её вызывают так: `tip(1000)`, `tip(1000, 15)`, `tip(percent=20, bill=500)`. Python не принимает определение функции. Исправьте строку с `def`.
+  starter: |
+    def tip(percent=10, bill):
+        return bill * percent / 100
+  solution: |
+    def tip(bill, percent=10):
+        return bill * percent / 100
+  tests:
+    asserts:
+    - name: Обычный процент
+      code: |
+        r = tip(1000)
+        assert r == 100.0, "tip(1000) должна вернуть 100.0, а вернула " + repr(r)
+    - name: Свой процент
+      code: |
+        r = tip(1000, 15)
+        assert r == 150.0, "tip(1000, 15) должна вернуть 150.0, а вернула " + repr(r)
+    - name: Аргументы по имени
+      code: |
+        r = tip(percent=20, bill=500)
+        assert r == 100.0, "tip(percent=20, bill=500) должна вернуть 100.0, а вернула " + repr(r)
+    - name: Пустой счёт
+      code: |
+        r = tip(0)
+        assert r == 0.0, "tip(0) должна вернуть 0.0, а вернула " + repr(r)
+  explain: |
+    Параметры со значением по умолчанию пишут после остальных, иначе Python не примет определение. Вызов `tip(1000, 15)` передаёт аргументы по порядку, поэтому первым должен стоять счёт: `def tip(bill, percent=10):`. Вызов с именами `percent=20, bill=500` работает при любом порядке параметров.
+- id: code-write-phone-bill
+  type: code
+  q: |
+    Тариф связи: в месяц `free` минут бесплатно, обычно 300. Каждая минута сверх них стоит `rate` рублей, обычно 2. Напишите функцию `phone_bill(minutes, free=300, rate=2)`, которая возвращает сумму за месяц. Например, `phone_bill(400)` — это `200`, а `phone_bill(400, rate=3)` — `300`.
+  starter: |
+    def phone_bill(minutes, free=300, rate=2):
+        # Сколько минут сверх бесплатных? Если таких нет, платить нечего
+        return 0
+  solution: |
+    def phone_bill(minutes, free=300, rate=2):
+        if minutes <= free:
+            return 0
+        return (minutes - free) * rate
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        r = phone_bill(400)
+        assert r == 200, "phone_bill(400) должна вернуть 200, а вернула " + repr(r)
+    - name: Другая цена минуты
+      code: |
+        r = phone_bill(400, rate=3)
+        assert r == 300, "phone_bill(400, rate=3) должна вернуть 300, а вернула " + repr(r)
+    - name: Меньше бесплатных
+      code: |
+        r = phone_bill(250)
+        assert r == 0, "phone_bill(250) должна вернуть 0 — минуты в пределах бесплатных, а вернула " + repr(r)
+    - name: Ровно бесплатные
+      code: |
+        r = phone_bill(300)
+        assert r == 0, "phone_bill(300) должна вернуть 0, а вернула " + repr(r)
+    - name: Одна минута сверх
+      code: |
+        r = phone_bill(301)
+        assert r == 2, "phone_bill(301) должна вернуть 2, а вернула " + repr(r)
+    - name: Другой пакет минут
+      code: |
+        r = phone_bill(400, free=100)
+        assert r == 600, "phone_bill(400, free=100) должна вернуть 600, а вернула " + repr(r)
+    - name: Все аргументы по порядку
+      code: |
+        r = phone_bill(50, 0, 1)
+        assert r == 50, "phone_bill(50, 0, 1) должна вернуть 50, а вернула " + repr(r)
+    - name: Аргументы по имени
+      code: |
+        r = phone_bill(rate=5, minutes=310)
+        assert r == 50, "phone_bill(rate=5, minutes=310) должна вернуть 50, а вернула " + repr(r)
+  explain: |
+    Платят только за минуты сверх бесплатных: `(minutes - free) * rate`. Если минут не больше `free`, разность получится нулевой или отрицательной — поэтому сначала проверка и `return 0`, а после неё `return` с формулой. Значения по умолчанию подставляются, только когда аргумент не передали, а именованный аргумент меняет один нужный параметр.
+- id: code-write-coldest
+  type: code
+  q: |
+    Уличный термометр показывает температуру по Фаренгейту. Напишите две функции:
+
+    - `to_celsius(f)` возвращает температуру по Цельсию, округлённую до десятых: `(f - 32) * 5 / 9`, затем `round(…, 1)`;
+    - `coldest(temps)` получает список температур по Фаренгейту и возвращает самую низкую из них по Цельсию, переводя каждую через `to_celsius`. Для пустого списка она возвращает `None`.
+
+    Например, `to_celsius(50)` — это `10.0`, а `coldest([50, 23, 68])` — `-5.0`.
+  starter: |
+    def to_celsius(f):
+        ...
+
+    def coldest(temps):
+        ...
+  solution: |
+    def to_celsius(f):
+        return round((f - 32) * 5 / 9, 1)
+
+    def coldest(temps):
+        if len(temps) == 0:
+            return None
+        lowest = to_celsius(temps[0])
+        for f in temps:
+            c = to_celsius(f)
+            if c < lowest:
+                lowest = c
+        return lowest
+  tests:
+    asserts:
+    - name: Перевод 50 °F
+      code: |
+        r = to_celsius(50)
+        assert r == 10.0, "to_celsius(50) должна вернуть 10.0, а вернула " + repr(r)
+    - name: Перевод с округлением
+      code: |
+        r = to_celsius(0)
+        assert r == -17.8, "to_celsius(0) должна вернуть -17.8, а вернула " + repr(r)
+    - name: Пример из условия
+      code: |
+        r = coldest([50, 23, 68])
+        assert r == -5.0, "coldest([50, 23, 68]) должна вернуть -5.0, а вернула " + repr(r)
+    - name: Пустой список
+      code: |
+        r = coldest([])
+        assert r is None, "coldest([]) должна вернуть None, а вернула " + repr(r)
+    - name: Одна температура
+      code: |
+        r = coldest([77])
+        assert r == 25.0, "coldest([77]) должна вернуть 25.0, а вернула " + repr(r)
+    - name: Самая низкая в середине
+      code: |
+        r = coldest([14, -4, 5])
+        assert r == -20.0, "coldest([14, -4, 5]) должна вернуть -20.0, а вернула " + repr(r)
+    - name: Самая низкая в конце
+      code: |
+        r = coldest([41, 32, 23])
+        assert r == -5.0, "coldest([41, 32, 23]) должна вернуть -5.0, а вернула " + repr(r)
+  explain: |
+    `to_celsius` возвращает число, поэтому её вызов можно поставить куда угодно — в присваивание, в сравнение. В `coldest` — знакомый поиск наименьшего: начать с первой температуры и сравнивать с каждой следующей. Пустой список проверяют до того, как брать `temps[0]`, иначе будет `IndexError`.

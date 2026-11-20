@@ -1,6 +1,6 @@
 title: Проверка темы
 pass: 0.85
-minutes: 15
+minutes: 40
 questions:
 - id: same-name-total
   type: single
@@ -24,28 +24,6 @@ questions:
   - 'Ошибку `UnboundLocalError`'
   answer: 0
   explain: 'В теле `receipt` имени `total` присваивают, поэтому оно локальное — своё у каждого вызова. Глобальный `total` никто не трогал, он по-прежнему 0. Ошибки нет: локальный `total` получил значение до первого чтения.'
-- id: local-gone
-  type: single
-  q: |
-    Что произойдёт при запуске?
-    ```python
-    def to_fahrenheit(celsius):
-        fahrenheit = celsius * 9 / 5 + 32
-        return fahrenheit
-
-    def report(celsius):
-        to_fahrenheit(celsius)
-        return f"{celsius} °C = {fahrenheit} °F"
-
-    print(report(20))
-    ```
-  options:
-  - 'Ошибка `NameError`'
-  - 'Выведется `20 °C = 68.0 °F`'
-  - 'Выведется `20 °C = None °F`'
-  - 'Ошибка `UnboundLocalError`'
-  answer: 0
-  explain: '`fahrenheit` — локальное имя вызова `to_fahrenheit`: когда вызов закончился, оно исчезло, и другой функции его не видно. В `report` имени `fahrenheit` ничего не присваивают, значит, оно не локальное — Python ищет его среди глобальных и встроенных, не находит и выдаёт `NameError`, а не `UnboundLocalError`. Возвращённое значение `68.0` никуда не сохранили; нужно `f = to_fahrenheit(celsius)`.'
 - id: which-unbound
   type: single
   q: |
@@ -74,67 +52,6 @@ questions:
   - '`d`'
   answer: 2
   explain: 'В `c` имени `count` присваивают ниже, поэтому оно локальное во всём теле — и в строке с `print`, где ещё ни к чему не привязано. `a` и `d` только читают глобальный `count`, а `b` сначала присваивает, потом читает.'
-- id: shadow-max-local
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    def best_mark(marks):
-        max = marks[0]
-        for m in marks:
-            if m > max:
-                max = m
-        return max
-
-    print(best_mark([3, 5, 4]), max([1, 2]))
-    ```
-  options:
-  - '`5 2`'
-  - '`5 5`'
-  - "Ошибку `TypeError: 'int' object is not callable`"
-  - 'Ошибку `UnboundLocalError`'
-  answer: 0
-  explain: 'Локальный `max` перекрывает встроенный только внутри вызова `best_mark`. Когда вызов закончился, имя исчезло, и `max([1, 2])` вне функции — снова встроенная функция. Так называть имена всё равно не стоит.'
-- id: append-inside
-  type: single
-  q: |
-    Что выведет программа? А что — если строку `marks.append(5)` заменить на `marks = marks + [5]`?
-    ```python
-    def add_bonus(marks):
-        marks.append(5)
-        return len(marks)
-
-    journal = [4, 3]
-    n = add_bonus(journal)
-    print(n, journal)
-    ```
-  options:
-  - '`3 [4, 3, 5]`, а после замены — `3 [4, 3]`'
-  - '`3 [4, 3, 5]` в обоих случаях'
-  - '`3 [4, 3, 5]`, а после замены — ошибку `UnboundLocalError`'
-  - '`2 [4, 3]`, а после замены — `3 [4, 3, 5]`'
-  answer: 0
-  explain: '`marks` и `journal` — два имени одного списка. `append` меняет сам этот список, и изменение видно снаружи. `marks + [5]` собирает новый список, и к нему привязывается только локальное `marks`: длина нового списка — 3, а `journal` остаётся прежним. Ошибки нет: `marks` — параметр, он привязан к значению с начала вызова.'
-- id: plus-assign-global
-  type: single
-  q: |
-    Программа падает с `UnboundLocalError`. Какая правка тела `add_entry` без инструкции `global` сделает так, что программа выведет `['вход']`?
-    ```python
-    log = []
-
-    def add_entry(name):
-        log += [name]
-
-    add_entry("вход")
-    print(log)
-    ```
-  options:
-  - '`log.append(name)` вместо `log += [name]`'
-  - '`log = log + [name]` вместо `log += [name]`'
-  - '`log = [name]` вместо `log += [name]`'
-  - 'Строка `log = []` первой в теле функции'
-  answer: 0
-  explain: '`log += [name]` — присваивание, поэтому `log` в функции локальное. `log = log + [name]` — тоже присваивание, и ошибка останется. `log = [name]` и `log = []` в теле ошибку уберут, но создадут свой, локальный список: глобальный `log` останется пустым, и выведется `[]`. А `append` имени ничего не присваивает — он меняет сам глобальный список.'
 - id: when-local
   type: single
   q: |
@@ -187,34 +104,293 @@ questions:
   - 0
   - 1
   explain: '`label` читает глобальное `UNITS`, но его никто не меняет, поэтому при одном аргументе результат всегда один. `remember` меняет список `history`, `show` печатает — это побочные эффекты, даже если `remember` возвращает правильное значение.'
-- id: why-none
-  type: single
+- id: code-fix-lost-result
+  type: code
   q: |
-    Что выведет программа?
-    ```python
-    name = "анна"
-    cart = ["хлеб"]
-    a = name.upper()
-    b = cart.append("сыр")
-    print(name, a, b)
+    Программа читает расстояние в километрах и выводит, сколько минут ехать со скоростью 40 км/ч. Она падает с `NameError`. Исправьте программу, функцию не меняйте.
+  starter: |
+    def trip_minutes(km):
+        minutes = km / 40 * 60
+        return round(minutes)
+
+    km = int(input())
+    trip_minutes(km)
+    print("В пути:", minutes, "мин")
+  solution: |
+    def trip_minutes(km):
+        minutes = km / 40 * 60
+        return round(minutes)
+
+    km = int(input())
+    minutes = trip_minutes(km)
+    print("В пути:", minutes, "мин")
+  tests:
+    io:
+    - name: 30 километров
+      stdin: "30\n"
+      stdout: "В пути: 45 мин"
+    - name: 10 километров
+      stdin: "10\n"
+      stdout: "В пути: 15 мин"
+      hidden: true
+    - name: 100 километров
+      stdin: "100\n"
+      stdout: "В пути: 150 мин"
+      hidden: true
+    - name: Никуда не едем
+      stdin: "0\n"
+      stdout: "В пути: 0 мин"
+      hidden: true
+  explain: |
+    `minutes` — локальное имя вызова `trip_minutes`: когда вызов закончился, оно исчезло. Наружу попадает только возвращённое значение, а программа его выбросила. Его нужно сохранить: `minutes = trip_minutes(km)`. Глобальное `minutes` — уже другое имя, которое просто пишется так же.
+- id: code-fix-sum-shadow
+  type: code
+  q: |
+    ИИ-ассистент написал функцию, которая возвращает средний чек по списку сумм покупок. Вызов падает с `UnboundLocalError`. Исправьте функцию.
+  starter: |
+    def average_check(checks):
+        total = sum(checks)
+        sum = total / len(checks)
+        return sum
+  solution: |
+    def average_check(checks):
+        total = sum(checks)
+        avg = total / len(checks)
+        return avg
+  tests:
+    asserts:
+    - name: Два чека
+      code: |
+        r = average_check([300, 500])
+        assert r == 400.0, "average_check([300, 500]) должна вернуть 400.0, а вернула " + repr(r)
+    - name: Один чек
+      code: |
+        r = average_check([120])
+        assert r == 120.0, "average_check([120]) должна вернуть 120.0, а вернула " + repr(r)
+    - name: Три чека
+      code: |
+        r = average_check([100, 200, 600])
+        assert r == 300.0, "average_check([100, 200, 600]) должна вернуть 300.0, а вернула " + repr(r)
+  explain: |
+    В теле есть присваивание `sum = …`, поэтому `sum` локальное во всём теле — и в первой строке, где его вызывают как встроенную функцию, а локальное `sum` ещё ни к чему не привязано. Своё имя не должно совпадать со встроенным: назовите результат, например, `avg`.
+- id: plus-assign-global
+  type: code
+  q: |
+    Программа ведёт журнал входов: читает имена по одному в строке, в конце — пустая строка. Функция `add_entry(name)` дописывает имя в конец глобального списка `log`, а в конце программа печатает журнал:
+    ```input
+    Аня
+    Борис
+
     ```
-  options:
-  - '`анна АННА None`'
-  - "`анна АННА ['хлеб', 'сыр']`"
-  - '`АННА АННА None`'
-  - "`АННА АННА ['хлеб', 'сыр']`"
-  answer: 0
-  explain: '`upper` не меняет строку `name`, а возвращает новую — её и получает `a`. `append` работает иначе: меняет сам список `cart` — это побочный эффект, ради него метод и вызывают, — а отдавать ему нечего, поэтому `b` указывает на `None`. Список `[''хлеб'', ''сыр'']` можно увидеть через `print(cart)`.'
-- id: open-global-rate
-  type: open
+    ```
+    Журнал: ['Аня', 'Борис']
+    ```
+    Программа падает с `UnboundLocalError`. Исправьте тело `add_entry` без инструкции `global`: функция должна дописывать имя в сам список `log`, а не создавать новый.
+  starter: |
+    log = []
+
+    def add_entry(name):
+        log += [name]
+
+    line = input()
+    while line != "":
+        add_entry(line)
+        line = input()
+    print("Журнал:", log)
+  solution: |
+    log = []
+
+    def add_entry(name):
+        log.append(name)
+
+    line = input()
+    while line != "":
+        add_entry(line)
+        line = input()
+    print("Журнал:", log)
+  tests:
+    stdin: "Аня\n\n"
+    io:
+    - name: Два входа
+      stdin: "Аня\nБорис\n\n"
+      stdout: "Журнал: ['Аня', 'Борис']"
+    - name: Один вход
+      stdin: "Вера\n\n"
+      stdout: "Журнал: ['Вера']"
+      hidden: true
+    - name: Три входа
+      stdin: "Аня\nБорис\nАня\n\n"
+      stdout: "Журнал: ['Аня', 'Борис', 'Аня']"
+      hidden: true
+    asserts:
+    - name: Тот же список, а не новый
+      code: |
+        before = log
+        add_entry("Гоша")
+        assert log is before, "add_entry должна дописывать имя в сам список log, а имя log теперь указывает на другой список"
+        assert log[-1] == "Гоша", "после add_entry('Гоша') последним в log должно быть 'Гоша', а log — " + repr(log)
+  explain: |
+    `log += [name]` — присваивание, поэтому имя `log` в теле функции локальное, и прочитать его до присваивания нельзя. `log = log + [name]` — тоже присваивание, ошибка останется. А `log.append(name)` имени ничего не присваивает: Python находит глобальное `log` и меняет сам список. `global` для этого не нужен — он нужен, только чтобы привязать глобальное имя к другому значению.
+- id: code-change-global-rate
+  type: code
   q: |
-    Функция `with_tax(price)` возвращает цену с налогом и берёт ставку из глобального имени `tax_rate`, которое программа меняет, когда пользователь выбирает регион. Проверка `assert with_tax(1000) == 1200` то проходит, то падает. Объясните, почему так происходит и как переделать функцию.
-  rubric:
-  - результат зависит не только от аргумента, но и от глобального tax_rate, которое программа меняет, поэтому при одном и том же аргументе функция возвращает разные значения — проверка проходит или нет в зависимости от того, какая ставка выбрана к моменту вызова
-  - переделать — сделать ставку параметром, например with_tax(price, tax_rate), и передавать её при вызове; тогда функция зависит только от аргументов
-  wrong_answers:
-  - добавить в функцию инструкцию global tax_rate
-  - переименовать tax_rate в TAX_RATE — тогда значение перестанет меняться
-  - Python не видит глобальные имена изнутри функции
-  followups:
-  - Как после переделки записать ту же проверку с assert, чтобы она не зависела от выбранного региона?
+    Магазин работает в двух регионах: на юге налог 20%, на севере — 10%. Программа читает регион (`юг` или `север`) и цену товара, а функция `with_tax(price)` берёт ставку из глобального имени `tax_rate`, которое программа меняет для севера. Из-за этого проверка `assert with_tax(1000) == 1200` то проходит, то падает — смотря какой регион выбран к её запуску.
+
+    Измените программу: функция `with_tax(price, rate)` получает ставку в процентах аргументом и возвращает цену с налогом, а глобальных имён не читает. Основная программа передаёт ставку выбранного региона. Вывод программы не должен измениться.
+  starter: |
+    tax_rate = 20
+
+    def with_tax(price):
+        return price + price * tax_rate / 100
+
+    region = input()
+    price = int(input())
+    if region == "север":
+        tax_rate = 10
+    print("К оплате:", with_tax(price))
+  solution: |
+    def with_tax(price, rate):
+        return price + price * rate / 100
+
+    region = input()
+    price = int(input())
+    rate = 20
+    if region == "север":
+        rate = 10
+    print("К оплате:", with_tax(price, rate))
+  tests:
+    stdin: "север\n1000\n"
+    io:
+    - name: Юг
+      stdin: "юг\n1000\n"
+      stdout: "К оплате: 1200.0"
+    - name: Север
+      stdin: "север\n1000\n"
+      stdout: "К оплате: 1100.0"
+      hidden: true
+    - name: Север, другая цена
+      stdin: "север\n500\n"
+      stdout: "К оплате: 550.0"
+      hidden: true
+    - name: Юг, бесплатно
+      stdin: "юг\n0\n"
+      stdout: "К оплате: 0.0"
+      hidden: true
+    asserts:
+    - name: Ставка юга
+      code: |
+        r = with_tax(1000, 20)
+        assert r == 1200.0, "with_tax(1000, 20) должна вернуть 1200.0, а вернула " + repr(r)
+    - name: Ставка по имени
+      code: |
+        r = with_tax(200, rate=5)
+        assert r == 210.0, "with_tax(200, rate=5) должна вернуть 210.0, а вернула " + repr(r)
+    - name: Глобальное имя не влияет
+      code: |
+        tax_rate = 99
+        r = with_tax(1000, 20)
+        assert r == 1200.0, "with_tax(1000, 20) должна зависеть только от аргументов: при глобальном tax_rate = 99 она вернула " + repr(r)
+  explain: |
+    Пока ставка приходит из глобального имени, результат `with_tax(1000)` зависит не только от аргумента, но и от того, что программа успела сделать до вызова: выбрали север — и та же проверка падает. Когда ставка — параметр, функция зависит только от аргументов, и проверка `assert with_tax(1000, 20) == 1200` проходит при любом регионе. Выбор ставки остаётся в основной программе. Инструкция `global` тут не помогла бы: функция и так видит глобальное имя, беда как раз в том, что она от него зависит.
+- id: code-fix-rebind-list
+  type: code
+  q: |
+    Магазин поднимает все цены на одну сумму. Функция `raise_prices(prices, amount)` должна изменить сам переданный список — переписать ценники на месте — и ничего не возвращать. Сейчас после вызова список остаётся прежним. Исправьте функцию.
+  starter: |
+    def raise_prices(prices, amount):
+        new_prices = []
+        for p in prices:
+            new_prices.append(p + amount)
+        prices = new_prices
+  solution: |
+    def raise_prices(prices, amount):
+        for i in range(len(prices)):
+            prices[i] = prices[i] + amount
+  tests:
+    asserts:
+    - name: Список изменился
+      code: |
+        shelf = [100, 250]
+        raise_prices(shelf, 10)
+        assert shelf == [110, 260], "после raise_prices(shelf, 10) список [100, 250] должен стать [110, 260], а он " + repr(shelf)
+    - name: Функция ничего не возвращает
+      code: |
+        shelf = [5]
+        r = raise_prices(shelf, 1)
+        assert r is None, "raise_prices меняет сам список и должна вернуть None, а вернула " + repr(r)
+    - name: Снижение цен
+      code: |
+        shelf = [100, 80, 300]
+        raise_prices(shelf, -20)
+        assert shelf == [80, 60, 280], "после raise_prices(shelf, -20) список [100, 80, 300] должен стать [80, 60, 280], а он " + repr(shelf)
+    - name: Пустая полка
+      code: |
+        shelf = []
+        raise_prices(shelf, 10)
+        assert shelf == [], "пустой список должен остаться пустым, а он " + repr(shelf)
+  explain: |
+    `prices = new_prices` привязывает к новому списку только локальное имя `prices`, а список, на который указывает имя снаружи, остаётся прежним. Чтобы изменение было видно снаружи, меняют сам этот список — присваиванием по индексу: `prices[i] = prices[i] + amount`. Функция работает ради побочного эффекта, поэтому возвращает `None`.
+- id: code-fix-spoiled-list
+  type: code
+  q: |
+    Программа читает цены товаров через пробел и выводит сумму без НДС и сумму с НДС 20%. Для ввода `100 250 50` она должна вывести:
+    ```
+    Без НДС: 400
+    С НДС: 480.0
+    ```
+    Но сумма без НДС выводится неверно, хотя её считает встроенная `sum`. Найдите причину и исправьте функцию `with_vat(prices)`: она должна возвращать новый список цен с НДС, а переданный не менять.
+  starter: |
+    def with_vat(prices):
+        for i in range(len(prices)):
+            prices[i] = prices[i] * 1.2
+        return prices
+
+    prices = input().split()
+    for i in range(len(prices)):
+        prices[i] = int(prices[i])
+    vat_prices = with_vat(prices)
+    print("Без НДС:", sum(prices))
+    print("С НДС:", round(sum(vat_prices), 2))
+  solution: |
+    def with_vat(prices):
+        result = []
+        for p in prices:
+            result.append(p * 1.2)
+        return result
+
+    prices = input().split()
+    for i in range(len(prices)):
+        prices[i] = int(prices[i])
+    vat_prices = with_vat(prices)
+    print("Без НДС:", sum(prices))
+    print("С НДС:", round(sum(vat_prices), 2))
+  tests:
+    stdin: "100 250 50\n"
+    io:
+    - name: Три товара
+      stdin: "100 250 50\n"
+      stdout: "Без НДС: 400\nС НДС: 480.0"
+    - name: Один товар
+      stdin: "1000\n"
+      stdout: "Без НДС: 1000\nС НДС: 1200.0"
+      hidden: true
+    - name: Два товара
+      stdin: "15 35\n"
+      stdout: "Без НДС: 50\nС НДС: 60.0"
+      hidden: true
+    asserts:
+    - name: Список программы не изменился
+      code: |
+        assert prices == [100, 250, 50], "для ввода 100 250 50 список prices после вызова with_vat должен остаться [100, 250, 50], а он " + repr(prices)
+    - name: Функция не меняет переданный список
+      code: |
+        p = [10, 20]
+        r = with_vat(p)
+        assert p == [10, 20], "with_vat не должна менять переданный список: [10, 20] стал " + repr(p)
+        assert r == [12.0, 24.0], "with_vat([10, 20]) должна вернуть [12.0, 24.0], а вернула " + repr(r)
+    - name: Пустой список
+      code: |
+        r = with_vat([])
+        assert r == [], "with_vat([]) должна вернуть [], а вернула " + repr(r)
+  explain: |
+    `prices` в функции и `prices` в программе — два имени одного списка. Присваивание по индексу меняет сам этот список, поэтому после вызова в программе остаются цены уже с НДС, и `sum(prices)` считает не то. Ошибка видна не в функции, а дальше — там, где список используют снова. Функция должна собирать новый список через `append` и возвращать его; тогда она чистая, а список программы не меняется.

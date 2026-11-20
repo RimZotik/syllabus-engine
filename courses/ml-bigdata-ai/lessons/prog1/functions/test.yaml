@@ -1,27 +1,7 @@
 title: Контрольная раздела «Функции»
 pass: 0.85
-minutes: 30
+minutes: 50
 questions:
-- id: s-def-below
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    def total_fee(days):
-        return days * daily_fee()
-
-    def daily_fee():
-        return 50
-
-    print(total_fee(3))
-    ```
-  options:
-  - '`150`'
-  - 'Ошибку `NameError`: `daily_fee` определена ниже, чем `total_fee`'
-  - '`None`'
-  - '`50`'
-  answer: 0
-  explain: 'Тело `total_fee` выполняется только при вызове, а к этому моменту обе инструкции `def` уже выполнены, и имя `daily_fee` есть. Важен порядок выполнения, а не порядок строк в файле.'
 - id: s-print-in-chain
   type: single
   q: |
@@ -46,71 +26,6 @@ questions:
   - 'Ошибку `TypeError` ещё до того, как что-то напечатается'
   answer: 0
   explain: 'Список собирается из результатов вызовов: каждый вызов `to_celsius` печатает своё число, но возвращает `None`, и `day` — это `[None, None]`. Ошибка проявляется не там, где её сделали, а дальше по цепочке: `average` пытается прибавить `None` к числу. Поэтому функции расчёта возвращают результат, а печатает программа в одном месте.'
-- id: s-all-passed-bug
-  type: single
-  q: |
-    Функция должна отвечать, все ли сдали зачёт (оценка 3 и выше):
-    ```python
-    def all_passed(marks):
-        for m in marks:
-            if m >= 3:
-                return True
-        return False
-    ```
-    На каком вызове она даст неверный ответ?
-  options:
-  - '`all_passed([5, 2, 4])`'
-  - '`all_passed([2, 2])`'
-  - '`all_passed([4, 5])`'
-  - '`all_passed([3])`'
-  answer: 0
-  explain: 'Первый же `return True` завершает вызов: на оценке 5 функция отвечает «да», не посмотрев на 2. Она проверяет «хотя бы один сдал», а не «все сдали». Для «все ли» ищут контрпример: `if m < 3: return False`, а `return True` — после цикла.'
-- id: s-loop-var-local
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    p = 0
-
-    def count_expensive(prices, limit=500):
-        n = 0
-        for p in prices:
-            if p > limit:
-                n += 1
-        return n
-
-    print(count_expensive([600, 200, 900]), count_expensive([600, 200, 900], limit=700), p)
-    ```
-  options:
-  - '`2 1 0`'
-  - '`2 1 900`'
-  - '`2 2 0`'
-  - 'Ошибку `UnboundLocalError`: `p` используется до присваивания'
-  answer: 0
-  explain: 'Переменная цикла `for` внутри функции — тоже локальное имя: цикл привязывает её заново на каждом шаге, а глобальный `p` остаётся 0. Ошибки нет: `p` получает значение от цикла раньше, чем его читают в `if`. В первом вызове порог по умолчанию, 500, — дороже него 600 и 900; во втором порог передан по имени, 700, — дороже только 900.'
-- id: s-none-not-found
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    def find_index(names, target):
-        for i in range(len(names)):
-            if names[i] == target:
-                return i
-
-    pos = find_index(["Аня", "Борис"], "Аня")
-    if pos:
-        print("нашли на месте", pos)
-    else:
-        print("нет в списке")
-    ```
-  options:
-  - '`нет в списке`'
-  - '`нашли на месте 0`'
-  - '`нашли на месте 1`'
-  - '`нашли на месте None`'
-  answer: 0
-  explain: '«Аня» стоит первой, и функция возвращает индекс 0. Но 0 в условии ложен — так же, как `None`, который вернулся бы, если бы имени в списке не было. Поэтому программа путает «нашли на первом месте» с «не нашли». Проверять нужно `if pos is None:` — это отличает «результата нет» от нуля.'
 - id: s-default-at-def
   type: single
   q: |
@@ -177,110 +92,461 @@ questions:
   - '`2 [''работа'']`'
   answer: 0
   explain: 'Первый `append` меняет сам список, на который указывает и `my_tasks`. Потом `tasks` привязывают к новому списку `["отдых"]`, и второй `append` меняет уже его — снаружи этого не видно. Функция возвращает длину нового списка — 2.'
-- id: s-global-total
-  type: multi
+- id: s-none-not-found
+  type: code
   q: |
-    ИИ-ассистент разбил подсчёт чека на функции так:
-    ```python
-    discount_from = 400
-    total = 0
-
-    def add_line(line):
-        global total
-        total += int(line.split()[-1])
-
-    def apply_discount():
-        if total >= discount_from:
-            return total * 0.95
-        return total
+    Программа читает очередь — имена через пробел — и во второй строке одно имя. Она выводит `Индекс: N`, где `N` — индекс первого такого имени в очереди, а если имени в очереди нет — `Нет в списке`:
+    ```input
+    Аня Борис Вера
+    Борис
     ```
-    Какие утверждения верны? Выберите все.
-  options:
-  - 'Результат `apply_discount()` зависит от того, сколько раз до этого вызывали `add_line`'
-  - 'В `apply_discount` тоже нужна строка `global total`, иначе вызов упадёт с `UnboundLocalError`'
-  - 'Без строки `global total` в `add_line` программа работала бы так же'
-  - 'Если `apply_discount` будет получать сумму параметром, её можно проверить одной строкой с `assert`'
-  answer:
-  - 0
-  - 3
-  explain: '`apply_discount` читает глобальное `total`, которое меняет `add_line`, поэтому её ответ зависит от истории вызовов, а проверка с `assert` — от того, что программа сделала до неё. Читать глобальное имя можно и без `global`: в `apply_discount` ему ничего не присваивают. А в `add_line` строка `total += …` — присваивание, и без `global` имя стало бы локальным — `UnboundLocalError`. Сумма в параметре делает `apply_discount` чистой: `assert apply_discount(400) == 380` верно при любом запуске.'
-- id: s-sum-shadowed
-  type: single
+    ```
+    Индекс: 1
+    ```
+    Но для того, кто стоит в очереди первым, программа выводит `Нет в списке`. Исправьте программу, функцию `find_index` не меняйте: она возвращает `None`, если имени в списке нет.
+  starter: |
+    def find_index(names, target):
+        for i in range(len(names)):
+            if names[i] == target:
+                return i
+
+    names = input().split()
+    target = input()
+    pos = find_index(names, target)
+    if pos:
+        print("Индекс:", pos)
+    else:
+        print("Нет в списке")
+  solution: |
+    def find_index(names, target):
+        for i in range(len(names)):
+            if names[i] == target:
+                return i
+
+    names = input().split()
+    target = input()
+    pos = find_index(names, target)
+    if pos is None:
+        print("Нет в списке")
+    else:
+        print("Индекс:", pos)
+  tests:
+    stdin: "Аня Борис\nАня\n"
+    io:
+    - name: Пример из условия
+      stdin: "Аня Борис Вера\nБорис\n"
+      stdout: "Индекс: 1"
+    - name: Первая в очереди
+      stdin: "Аня Борис Вера\nАня\n"
+      stdout: "Индекс: 0"
+      hidden: true
+    - name: Нет в очереди
+      stdin: "Аня Борис Вера\nГоша\n"
+      stdout: "Нет в списке"
+      hidden: true
+    - name: Имя встречается дважды
+      stdin: "Вера Аня Вера\nВера\n"
+      stdout: "Индекс: 0"
+      hidden: true
+    asserts:
+    - name: Функция не изменилась
+      code: |
+        r = find_index(["Аня", "Борис"], "Гоша")
+        assert r is None, "find_index для имени, которого нет, должна вернуть None, а вернула " + repr(r)
+        r = find_index(["Аня", "Борис"], "Аня")
+        assert r == 0, "find_index(['Аня', 'Борис'], 'Аня') должна вернуть 0, а вернула " + repr(r)
+  explain: |
+    Функция верна: для первого в очереди она возвращает индекс 0. Но в условии `if pos:` число 0 ложно — так же, как `None`, поэтому программа путает «нашли на первом месте» с «не нашли». «Результата нет» отличают от нуля проверкой `pos is None`. Ошибка не в функции, а в том, как программа читает её ответ.
+- id: s-all-passed-bug
+  type: code
   q: |
-    Что произойдёт при запуске?
-    ```python
+    Функция `all_passed(marks)` должна возвращать `True`, если зачёт сдали все — у каждого оценка 3 и выше, — и `False`, если хотя бы у одного оценка ниже 3. Для пустого списка она возвращает `True`: никто не получил оценку ниже 3. Сейчас `all_passed([5, 2, 4])` возвращает `True`. Исправьте функцию.
+  starter: |
+    def all_passed(marks):
+        for m in marks:
+            if m >= 3:
+                return True
+        return False
+  solution: |
+    def all_passed(marks):
+        for m in marks:
+            if m < 3:
+                return False
+        return True
+  tests:
+    asserts:
+    - name: Двойка в середине
+      code: |
+        r = all_passed([5, 2, 4])
+        assert r is False, "all_passed([5, 2, 4]) должна вернуть False, а вернула " + repr(r)
+    - name: Все сдали
+      code: |
+        r = all_passed([4, 5, 3])
+        assert r is True, "all_passed([4, 5, 3]) должна вернуть True, а вернула " + repr(r)
+    - name: Двойка в конце
+      code: |
+        r = all_passed([5, 4, 2])
+        assert r is False, "all_passed([5, 4, 2]) должна вернуть False, а вернула " + repr(r)
+    - name: Двойка в начале
+      code: |
+        r = all_passed([2, 5])
+        assert r is False, "all_passed([2, 5]) должна вернуть False, а вернула " + repr(r)
+    - name: Ровно тройка
+      code: |
+        r = all_passed([3])
+        assert r is True, "all_passed([3]) должна вернуть True, а вернула " + repr(r)
+    - name: Пустой список
+      code: |
+        r = all_passed([])
+        assert r is True, "all_passed([]) должна вернуть True, а вернула " + repr(r)
+  explain: |
+    Первый же `return True` завершал вызов: на оценке 5 функция отвечала «да», не посмотрев на двойку дальше. Так проверяют «хотя бы один сдал». Для «все ли» ищут контрпример: встретилась оценка ниже 3 — сразу `return False`, а `return True` стоит после цикла, когда просмотрены все оценки. Для пустого списка цикл не выполнится ни разу, и функция вернёт `True`.
+- id: s-sum-shadowed
+  type: code
+  q: |
+    Программа читает цены через пробел (хотя бы одну) и выводит сумму и среднюю цену:
+    ```input
+    120 80
+    ```
+    ```
+    Сумма: 200
+    Средняя: 100.0
+    ```
+    Сумму она выводит, а потом падает с `TypeError: 'int' object is not callable`. Найдите причину и исправьте программу так, чтобы встроенная функция `sum` снова работала везде — и в функции `average`, и после программы.
+  starter: |
+    prices = []
+    for word in input().split():
+        prices.append(int(word))
+
     sum = 0
-    for p in [120, 80]:
+    for p in prices:
         sum += p
+    print("Сумма:", sum)
 
     def average(prices):
         return sum(prices) / len(prices)
 
-    print(average([10, 20]))
-    ```
-  options:
-  - "Ошибка `TypeError: 'int' object is not callable`"
-  - 'Выведется `15.0`'
-  - 'Ошибка `UnboundLocalError`'
-  - 'Выведется `100.0`'
-  answer: 0
-  explain: 'Глобальное `sum = 0` занимает имя встроенной функции до конца программы. В `average` имени `sum` не присваивают, поэтому Python находит глобальное — число 200, а число вызвать нельзя.'
-- id: s-workflow
-  type: single
-  q: |
-    Парковка до 15 минут включительно бесплатна, дольше — 100 рублей. Программист написал функцию, запустил `parking(15)`, увидел `100` и записал под функцией проверку `assert parking(15) == 100`.
-    ```python
-    def parking(minutes):
-        if minutes >= 15:
-            return 100
-        return 0
-    ```
-    Что не так?
-  options:
-  - 'Ожидание в проверке взято из вывода кода, а не из правила'
-  - 'Ничего: проверка проходит, значит, функция считает по правилу парковки'
-  - 'Проверка на 15 минутах бесполезна: на самой границе `>` и `>=` отвечают одинаково'
-  - 'Проверку стоило поставить на 30 минутах: на самой границе ответ спорный и ничего не докажет'
-  answer: 0
-  explain: 'Ожидаемое значение в проверке берут из правила, а не из того, что выдал код, — поэтому проверки удобно придумывать по плану, ещё до кода. По правилу `parking(15)` должна вернуть 0, а функция с `>=` возвращает 100. Граница — как раз то место, где `>` и `>=` расходятся, и проверка на 15 минутах поймала бы ошибку, будь ожидание взято из правила. На 30 минутах обе версии отвечают одинаково.'
-- id: s-docstring-review
-  type: single
-  q: |
-    ИИ-ассистент снабдил функцию описанием. Какая его часть лишняя по советам раздела?
-    ```python
-    def bmi(weight, height):
-        """Вернуть индекс массы тела.
+    print("Средняя:", average(prices))
+  solution: |
+    prices = []
+    for word in input().split():
+        prices.append(int(word))
 
-        weight — вес в килограммах, height — рост в метрах.
-        Сначала height возводится в квадрат, потом weight делится на результат.
-        Пример: bmi(70, 1.75) даёт примерно 22.9.
+    total = 0
+    for p in prices:
+        total += p
+    print("Сумма:", total)
+
+    def average(prices):
+        return sum(prices) / len(prices)
+
+    print("Средняя:", average(prices))
+  tests:
+    stdin: "120 80\n"
+    io:
+    - name: Пример из условия
+      stdin: "120 80\n"
+      stdout: "Сумма: 200\nСредняя: 100.0"
+    - name: Три цены
+      stdin: "10 20 30\n"
+      stdout: "Сумма: 60\nСредняя: 20.0"
+      hidden: true
+    - name: Одна цена
+      stdin: "7\n"
+      stdout: "Сумма: 7\nСредняя: 7.0"
+      hidden: true
+    asserts:
+    - name: Средняя
+      code: |
+        r = average([10, 20])
+        assert r == 15.0, "average([10, 20]) должна вернуть 15.0, а вернула " + repr(r)
+    - name: Встроенная sum работает
+      code: |
+        assert callable(sum), "после программы имя sum должно указывать на встроенную функцию, а оно указывает на " + repr(sum)
+        r = sum([1, 2])
+        assert r == 3, "после программы sum([1, 2]) должна давать 3, а дала " + repr(r)
+  explain: |
+    Глобальное `sum = 0` занимает имя встроенной функции до конца программы. В `average` имени `sum` ничего не присваивают, поэтому Python ищет его по порядку: среди локальных нет, среди глобальных есть — это число, а число вызвать нельзя. Встроенные имена Python смотрит последними. Лекарство — своё имя для накопителя, например `total`.
+- id: s-code-write-from-doc
+  type: code
+  q: |
+    Коллега оставил только заголовок функции и её описание. Напишите тело так, чтобы функция делала то, что обещает описание.
+  starter: |
+    def rental_cost(minutes: int, start: int = 50, per_min: int = 8) -> int:
+        """Вернуть стоимость поездки на самокате в рублях.
+
+        minutes — длина поездки в целых минутах. Поездка 0 минут бесплатна:
+        самокат не поехал. Иначе платят start рублей за старт и per_min рублей
+        за каждую минуту; минуты сверх 60 стоят вдвое дешевле — per_min // 2.
+        Пример: rental_cost(10) даёт 130, rental_cost(70) даёт 570.
         """
-        return weight / height ** 2
-    ```
-  options:
-  - 'Строка о порядке вычислений'
-  - 'Пример вызова с результатом'
-  - 'Описание параметров с единицами измерения'
-  - 'Первая строка в форме команды'
-  answer: 0
-  explain: 'Строка документации говорит, *что* функция делает: результат, параметры, пример. *Как* она это делает, видно из кода.'
-- id: s-hints-ignored
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    def repeat(word: str, times=2) -> str:
-        return word * times
+        ...
+  solution: |
+    def rental_cost(minutes: int, start: int = 50, per_min: int = 8) -> int:
+        """Вернуть стоимость поездки на самокате в рублях.
 
-    print(repeat(3), repeat("ой"))
+        minutes — длина поездки в целых минутах. Поездка 0 минут бесплатна:
+        самокат не поехал. Иначе платят start рублей за старт и per_min рублей
+        за каждую минуту; минуты сверх 60 стоят вдвое дешевле — per_min // 2.
+        Пример: rental_cost(10) даёт 130, rental_cost(70) даёт 570.
+        """
+        if minutes == 0:
+            return 0
+        if minutes <= 60:
+            return start + minutes * per_min
+        return start + 60 * per_min + (minutes - 60) * (per_min // 2)
+  tests:
+    asserts:
+    - name: Пример из описания
+      code: |
+        r = rental_cost(10)
+        assert r == 130, "rental_cost(10) должна вернуть 130, а вернула " + repr(r)
+    - name: Второй пример из описания
+      code: |
+        r = rental_cost(70)
+        assert r == 570, "rental_cost(70) должна вернуть 570, а вернула " + repr(r)
+    - name: Самокат не поехал
+      code: |
+        r = rental_cost(0)
+        assert r == 0, "rental_cost(0) должна вернуть 0, а вернула " + repr(r)
+    - name: Одна минута
+      code: |
+        r = rental_cost(1)
+        assert r == 58, "rental_cost(1) должна вернуть 58, а вернула " + repr(r)
+    - name: Ровно час
+      code: |
+        r = rental_cost(60)
+        assert r == 530, "rental_cost(60) должна вернуть 530, а вернула " + repr(r)
+    - name: Минута сверх часа
+      code: |
+        r = rental_cost(61)
+        assert r == 534, "rental_cost(61) должна вернуть 534, а вернула " + repr(r)
+    - name: Своя цена минуты
+      code: |
+        r = rental_cost(10, per_min=5)
+        assert r == 100, "rental_cost(10, per_min=5) должна вернуть 100, а вернула " + repr(r)
+    - name: Без платы за старт
+      code: |
+        r = rental_cost(10, start=0)
+        assert r == 80, "rental_cost(10, start=0) должна вернуть 80, а вернула " + repr(r)
+    - name: Все аргументы, долгая поездка
+      code: |
+        r = rental_cost(61, 0, 10)
+        assert r == 605, "rental_cost(61, 0, 10) должна вернуть 605, а вернула " + repr(r)
+  explain: |
+    Описание — договор: по нему видно и крайние случаи (0 минут), и границу (ровно 60 минут — ещё по полной цене). Три случая — три `return`: бесплатно, не дольше часа, дольше часа. Во втором часе первые 60 минут всё равно стоят полную цену, дешевле только минуты сверх них. Параметры `start` и `per_min` нужно брать из аргументов, а не писать 50 и 8 числами: иначе вызовы со своими ценами вернут не то.
+- id: s-code-extend-discount
+  type: code
+  q: |
+    Программа считает чек со скидкой. В первой строке ввода — есть ли клубная карта (`да` или `нет`), дальше строки чека вида `название цена`, в конце пустая строка. Сейчас скидка всегда одна: 5% от 400 рублей. Доработайте программу:
+
+    - у `apply_discount` должны появиться параметры `threshold=400` (от какой суммы скидка) и `percent=5`; вызов с одним аргументом работает как раньше;
+    - с клубной картой скидка 10% от 200 рублей, без карты — как раньше.
+
+    Остальные функции не меняйте.
+  starter: |
+    def item_price(line):
+        return int(line.split()[-1])
+
+    def receipt_sum(lines):
+        total = 0
+        for line in lines:
+            total += item_price(line)
+        return total
+
+    def apply_discount(total):
+        if total >= 400:
+            return total - total * 5 / 100
+        return total
+
+    card = input()
+    lines = []
+    line = input()
+    while line != "":
+        lines.append(line)
+        line = input()
+    print("Итого:", apply_discount(receipt_sum(lines)))
+  solution: |
+    def item_price(line):
+        return int(line.split()[-1])
+
+    def receipt_sum(lines):
+        total = 0
+        for line in lines:
+            total += item_price(line)
+        return total
+
+    def apply_discount(total, threshold=400, percent=5):
+        if total >= threshold:
+            return total - total * percent / 100
+        return total
+
+    card = input()
+    lines = []
+    line = input()
+    while line != "":
+        lines.append(line)
+        line = input()
+    total = receipt_sum(lines)
+    if card == "да":
+        print("Итого:", apply_discount(total, threshold=200, percent=10))
+    else:
+        print("Итого:", apply_discount(total))
+  tests:
+    stdin: "нет\nхлеб 45\n\n"
+    io:
+    - name: Без карты
+      stdin: "нет\nмолоко 89\nхлеб 45\nсыр российский 320\n\n"
+      stdout: "Итого: 431.3"
+    - name: С картой
+      stdin: "да\nмолоко 89\nхлеб 45\nсыр российский 320\n\n"
+      stdout: "Итого: 408.6"
+      hidden: true
+    - name: С картой, ровно 200
+      stdin: "да\nкофе в зёрнах 200\n\n"
+      stdout: "Итого: 180.0"
+      hidden: true
+    - name: С картой, меньше 200
+      stdin: "да\nхлеб 45\nчай 150\n\n"
+      stdout: "Итого: 195"
+      hidden: true
+    - name: Без карты, 200
+      stdin: "нет\nкофе в зёрнах 200\n\n"
+      stdout: "Итого: 200"
+      hidden: true
+    - name: Пустой чек
+      stdin: "да\n\n"
+      stdout: "Итого: 0"
+      hidden: true
+    asserts:
+    - name: Порог по умолчанию
+      code: |
+        r = apply_discount(400)
+        assert r == 380.0, "apply_discount(400) должна вернуть 380.0, а вернула " + repr(r)
+    - name: Ниже порога по умолчанию
+      code: |
+        r = apply_discount(399)
+        assert r == 399, "apply_discount(399) должна вернуть 399, а вернула " + repr(r)
+    - name: Свой порог и процент
+      code: |
+        r = apply_discount(200, threshold=200, percent=10)
+        assert r == 180.0, "apply_discount(200, threshold=200, percent=10) должна вернуть 180.0, а вернула " + repr(r)
+    - name: Только свой процент
+      code: |
+        r = apply_discount(1000, percent=20)
+        assert r == 800.0, "apply_discount(1000, percent=20) должна вернуть 800.0, а вернула " + repr(r)
+  explain: |
+    Числа 400 и 5 становятся параметрами со значениями по умолчанию — поэтому старые вызовы с одним аргументом не меняются. Решение о карте — дело основной программы: она читает ввод и выбирает, с какими аргументами вызвать `apply_discount`. `item_price` и `receipt_sum` про скидку ничего не знают и остаются прежними. Именованные аргументы `threshold=200, percent=10` сразу говорят читателю, что означает каждое число.
+- id: s-code-fix-best-student
+  type: code
+  q: |
+    ИИ-ассистент написал программу для электронного журнала. Во вводе — строки вида `фамилия оценка оценка …` (хотя бы одна оценка), в конце пустая строка. Программа должна вывести фамилию ученика с самым высоким средним баллом; если таких несколько — того, кто выше в журнале:
+    ```input
+    Иванов 5 3 4
+    Петрова 4 5 5
+    Сидоров 3 5
+
     ```
-  options:
-  - '`6 ойой`'
-  - '`33 ойой`'
-  - 'Ошибку `TypeError`: первым аргументом ожидалась строка'
-  - '`3 ой`'
-  answer: 0
-  explain: 'В обоих вызовах `times` берёт значение по умолчанию, 2. Аннотации Python не проверяет и ничего не преобразует: в первый вызов пришло число 3, и `*` его умножил — 6. Строку `33` дал бы вызов `repeat("3")`.'
+    ```
+    Лучший средний балл: Петрова
+    ```
+    Программа падает. Разберитесь в ней и исправьте:
+
+    - `student_average(line)` должна возвращать средний балл из строки журнала;
+    - вместо `update_best` напишите чистую функцию `best_student(lines)`: она получает список строк журнала и возвращает фамилию лучшего ученика, для пустого списка — пустую строку `""`; глобальных имён она не меняет.
+  starter: |
+    best_name = ""
+    best_avg = 0
+
+    def student_average(line):
+        words = line.split()
+        total = 0
+        for i in range(1, len(words)):
+            total += int(words[i])
+            return total / (len(words) - 1)
+
+    def update_best(line):
+        avg = student_average(line)
+        if avg > best_avg:
+            best_avg = avg
+            best_name = line.split()[0]
+
+    line = input()
+    while line != "":
+        update_best(line)
+        line = input()
+    print("Лучший средний балл:", best_name)
+  solution: |
+    def student_average(line):
+        words = line.split()
+        total = 0
+        for i in range(1, len(words)):
+            total += int(words[i])
+        return total / (len(words) - 1)
+
+    def best_student(lines):
+        best_name = ""
+        best_avg = 0
+        for line in lines:
+            avg = student_average(line)
+            if avg > best_avg:
+                best_avg = avg
+                best_name = line.split()[0]
+        return best_name
+
+    lines = []
+    line = input()
+    while line != "":
+        lines.append(line)
+        line = input()
+    print("Лучший средний балл:", best_student(lines))
+  tests:
+    stdin: "Иванов 5 3 4\nПетрова 4 5 5\nСидоров 3 5\n\n"
+    io:
+    - name: Пример из условия
+      stdin: "Иванов 5 3 4\nПетрова 4 5 5\nСидоров 3 5\n\n"
+      stdout: "Лучший средний балл: Петрова"
+    - name: Лучший — последний
+      stdin: "Аксёнов 3 3\nБелова 2 5 5 5\n\n"
+      stdout: "Лучший средний балл: Белова"
+      hidden: true
+    - name: Равные средние
+      stdin: "Орлова 4 5\nЗайцев 5 4\n\n"
+      stdout: "Лучший средний балл: Орлова"
+      hidden: true
+    - name: Один ученик
+      stdin: "Ким 3\n\n"
+      stdout: "Лучший средний балл: Ким"
+      hidden: true
+    asserts:
+    - name: Средний балл
+      code: |
+        r = student_average("Иванов 5 3 4")
+        assert r == 4.0, "student_average('Иванов 5 3 4') должна вернуть 4.0, а вернула " + repr(r)
+    - name: Одна оценка
+      code: |
+        r = student_average("Ким 3")
+        assert r == 3.0, "student_average('Ким 3') должна вернуть 3.0, а вернула " + repr(r)
+    - name: Лучший ученик
+      code: |
+        r = best_student(["Аксёнов 3 3", "Белова 2 5 5 5"])
+        assert r == "Белова", "best_student(['Аксёнов 3 3', 'Белова 2 5 5 5']) должна вернуть 'Белова', а вернула " + repr(r)
+    - name: Повторный вызов — тот же ответ
+      code: |
+        a = best_student(["Орлова 4 5", "Зайцев 5 4"])
+        b = best_student(["Орлова 4 5", "Зайцев 5 4"])
+        assert a == "Орлова" and b == "Орлова", "best_student(['Орлова 4 5', 'Зайцев 5 4']) должна оба раза вернуть 'Орлова', а вернула " + repr(a) + " и " + repr(b)
+    - name: Предыдущий вызов не влияет
+      code: |
+        best_student(["Ким 5"])
+        r = best_student(["Аксёнов 3 3"])
+        assert r == "Аксёнов", "после best_student(['Ким 5']) вызов best_student(['Аксёнов 3 3']) должен вернуть 'Аксёнов', а вернул " + repr(r)
+    - name: Пустой журнал
+      code: |
+        r = best_student([])
+        assert r == "", "best_student([]) должна вернуть пустую строку, а вернула " + repr(r)
+  explain: |
+    Ошибок две. В `update_best` именам `best_avg` и `best_name` присваивают, поэтому они локальные во всём теле, и чтение `best_avg` в условии падает с `UnboundLocalError`. Лекарство — не `global`, а чистая функция: лучший результат копится в её локальных именах и возвращается через `return`, поэтому каждый вызов начинает с чистого листа. Вторая ошибка видна только после первой: `return` в `student_average` стоит в теле цикла и делит одну первую оценку на их количество — его место после цикла. Строгое `>` оставляет при равенстве того, кто выше в журнале.
 - id: s-open-tickets
   type: open
   q: |
