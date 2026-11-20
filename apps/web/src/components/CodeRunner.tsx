@@ -1,23 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CheckCircle2, CircleAlert, CircleX, ListChecks, LoaderCircle } from "lucide-react";
-import { EditorView, basicSetup } from "codemirror";
+import { EditorView, keymap } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
-import { python } from "@codemirror/lang-python";
-import { keymap } from "@codemirror/view";
-import { indentWithTab } from "@codemirror/commands";
+import { editorExtensions } from "./editorSetup";
 import type { Task } from "../content/registry";
 import { checkPython, explainError, Timeout, warmUp, type CheckResult, type PyError, type TestResult } from "../sandbox/runner";
 
 export type Tests = Task["tests"];
 
-const theme = EditorView.theme({
-  "&": { fontSize: "15px", backgroundColor: "var(--paper)", color: "var(--ink)", borderRadius: "var(--r-m)" },
-  ".cm-content": { fontFamily: "var(--f-mono)", padding: "12px 0", caretColor: "var(--ink)" },
-  ".cm-gutters": { backgroundColor: "transparent", border: "none", color: "var(--ink-3)" },
-  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "color-mix(in srgb, var(--green-soft) 45%, transparent)" },
-  "&.cm-focused": { outline: "none" },
-  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": { backgroundColor: "var(--lav-soft) !important" },
-});
 
 export function ErrorBox({ e }: { e: PyError }) {
   return (
@@ -63,12 +53,11 @@ export function CodeRunner({ initial, tests, timeoutMs = 5000, results, stdout, 
     const v = new EditorView({
       doc: initial,
       parent: host.current,
-      extensions: [
-        keymap.of([{ key: "Mod-Enter", run: () => { checkRef.current(); return true; } }, indentWithTab]),
-        basicSetup, python(), theme,
+      extensions: editorExtensions([
+        keymap.of([{ key: "Mod-Enter", run: () => { checkRef.current(); return true; } }]),
         editable.current.of(EditorView.editable.of(!readOnly)),
         EditorView.updateListener.of((u) => { if (u.docChanged) onCodeRef.current(u.state.doc.toString()); }),
-      ],
+      ]),
     });
     view.current = v;
     return () => { v.destroy(); view.current = null; };
@@ -112,13 +101,13 @@ export function CodeRunner({ initial, tests, timeoutMs = 5000, results, stdout, 
         {!readOnly && <button className="btn sm" onClick={check} disabled={busy} title="Ctrl+Enter">{busy ? <LoaderCircle size={16} className="spin" /> : <ListChecks size={16} />}Проверить</button>}
         {actions?.(code, busy)}
       </div>
-      {busy && <div className="grading"><LoaderCircle size={18} />Проверяю на тестах… Первый запуск загружает Python — несколько секунд.</div>}
       {notice && <div className="verdict error"><CircleAlert size={22} /><div>{notice}</div></div>}
       {cases.length > 0 && (
-        <div className="tests">
+        <div className={`tests${busy ? " busy" : ""}`} aria-busy={busy}>
           <div className="tests-head">
             <span className="eyebrow">Тесты</span>
-            {results && <b className={all ? "ok" : "bad"}>{all ? "Все тесты пройдены" : `Пройдено ${okCount} из ${results.length}`}</b>}
+            {busy ? <span className="faint">Проверяю… первый запуск загружает Python — несколько секунд</span>
+              : results && <b className={all ? "ok" : "bad"}>{all ? "Все тесты пройдены" : `Пройдено ${okCount} из ${results.length}`}</b>}
           </div>
           <div className="tabs" role="tablist">
             {cases.map((c, i) => (

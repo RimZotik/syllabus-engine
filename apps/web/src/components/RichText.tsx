@@ -1,9 +1,11 @@
 import { Fragment, type ReactNode } from "react";
 
-/** `inline code` inside a line of text. */
+/** `inline code` and **bold** inside a line of text. */
 function inline(line: string, key: string): ReactNode[] {
-  return line.split(/(`[^`\n]+`)/).map((s, j) =>
-    s.length > 2 && s.startsWith("`") && s.endsWith("`") ? <code key={`${key}-${j}`}>{s.slice(1, -1)}</code> : <Fragment key={`${key}-${j}`}>{s}</Fragment>);
+  return line.split(/(`[^`\n]+`)/).flatMap((s, j) =>
+    s.length > 2 && s.startsWith("`") && s.endsWith("`") ? [<code key={`${key}-${j}`}>{s.slice(1, -1)}</code>]
+      : s.split(/(\*\*[^*\n]+\*\*)/).map((t, m) => t.length > 4 && t.startsWith("**") && t.endsWith("**")
+        ? <b key={`${key}-${j}-${m}`}>{t.slice(2, -2)}</b> : <Fragment key={`${key}-${j}-${m}`}>{t}</Fragment>));
 }
 
 /**
@@ -27,7 +29,11 @@ export function RichText({ text, block = false }: { text: string; block?: boolea
     }
     if (i + 2 < parts.length) {
       const lang = parts[i + 1].toLowerCase();
-      out.push(<pre key={`f${i}`} className="rt-pre"><code className={lang ? `language-${lang}` : undefined}>{parts[i + 2].replace(/\n$/, "")}</code></pre>);
+      // ```input and ```output are labelled like an example on LeetCode; a plain fence right after an input is its output
+      const afterInput = !lang && i >= 3 && parts[i - 2]?.toLowerCase() === "input" && !trimmed;
+      const label = lang === "input" ? "Ввод" : lang === "output" || afterInput ? "Вывод" : null;
+      const pre = <pre key={`f${i}`} className="rt-pre"><code className={lang ? `language-${lang}` : undefined}>{parts[i + 2].replace(/\n$/, "")}</code></pre>;
+      out.push(label ? <div key={`f${i}`} className="rt-io"><span>{label}</span>{pre}</div> : pre);
     }
   }
   return <>{out}</>;

@@ -13,7 +13,9 @@ describe("RichText — text from YAML with code", () => {
     expect(out).toContain('<pre class="rt-pre"><code class="language-python">x = 5\ny = x\nprint(y)</code></pre>');
     expect(out).toContain("Что выведет программа?");
     expect(html("```input\n3725\n```\n```\n1 ч 2 мин 5 с\n```")).toBe(
-      '<pre class="rt-pre"><code class="language-input">3725</code></pre><pre class="rt-pre"><code>1 ч 2 мин 5 с</code></pre>');
+      '<div class="rt-io"><span>Ввод</span><pre class="rt-pre"><code class="language-input">3725</code></pre></div>' +
+      '<div class="rt-io"><span>Вывод</span><pre class="rt-pre"><code>1 ч 2 мин 5 с</code></pre></div>');
+    expect(html("**Копилка.** Выведите `x`")).toBe("<b>Копилка.</b> Выведите <code>x</code>");
   });
   it("keeps single line breaks and splits paragraphs in block mode", () => {
     expect(html("строка 1\nстрока 2")).toBe("строка 1<br/>строка 2");

@@ -53,6 +53,7 @@ function TaskView({ task, intro }: { task: Task; intro?: ReactNode }) {
   const traceStdin = task.stdin ?? task.tests.io?.[0]?.stdin ?? task.tests.stdin ?? "";
 
   return (
+    <div className="ws-outer">
     <div className="workspace">
       <div className="ws-left">
         <div className="sb-head">
@@ -84,7 +85,9 @@ function TaskView({ task, intro }: { task: Task; intro?: ReactNode }) {
             )} />
         )}
       </div>
-      {traceCode !== null && <div className="ws-trace"><TraceView code={traceCode} stdin={traceStdin} /></div>}
+    </div>
+    {/* below the two columns, so the sticky statement never covers it */}
+    {traceCode !== null && <div className="ws-trace"><TraceView code={traceCode} stdin={traceStdin} /></div>}
     </div>
   );
 }
