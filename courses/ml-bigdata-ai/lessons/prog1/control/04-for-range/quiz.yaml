@@ -1,40 +1,7 @@
 title: Проверка темы
 pass: 0.85
-minutes: 15
+minutes: 40
 questions:
-- id: range-step
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    print(list(range(10, 2, -3)))
-    ```
-  options:
-  - '`[10, 7, 4]`'
-  - '`[10, 7, 4, 1]`'
-  - '`[]`'
-  - '`[4, 7, 10]`'
-  answer: 0
-  explain: 'Шаг отрицательный, поэтому числа идут вниз от 10: 10, 7, 4. Следующее, 1, уже за концом 2 и не входит. Диапазон не пуст: при отрицательном шаге начало и должно быть больше конца.'
-- id: neighbor-from-zero
-  type: single
-  q: |
-    Программа считает дни, которые теплее предыдущего. Что она выведет?
-    ```python
-    temps = [7, 8, 6]
-    count = 0
-    for i in range(len(temps)):
-        if temps[i] > temps[i - 1]:
-            count += 1
-    print(count)
-    ```
-  options:
-  - '`2`'
-  - '`1`'
-  - Ошибку `IndexError`
-  - '`3`'
-  answer: 0
-  explain: 'При `i = 0` индекс `i - 1` равен `-1`, а это последний элемент: программа без ошибки сравнивает первый день с последним, 7 > 6, и засчитывает его. Дальше засчитан второй день (8 > 7), а третий нет (6 > 8 ложно). Итого 2, хотя по смыслу ответ 1 — перебор нужно начинать с `range(1, len(temps))`.'
 - id: loop-var-after
   type: single
   q: |
@@ -52,40 +19,6 @@ questions:
   - '`4 4`'
   answer: 0
   explain: 'В `total` собралась сумма 3 + 1 + 4 = 8. Переменная цикла после цикла не исчезает: она указывает на последний элемент, 4.'
-- id: rebind-loop-var
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    nums = [1, 2, 3]
-    for n in nums:
-        n = n * 10
-    print(nums)
-    ```
-  options:
-  - '`[10, 20, 30]`'
-  - '`[1, 2, 3]`'
-  - '`[1, 2, 30]`'
-  - '`30`'
-  answer: 1
-  explain: 'Присваивание `n = n * 10` перепривязывает только имя `n`, а элементы списка остаются прежними. Изменить список можно через индекс: `nums[i] = nums[i] * 10`.'
-- id: change-by-index
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    nums = [1, 2, 3]
-    for i in range(len(nums)):
-        nums[i] = nums[i] + i
-    print(nums)
-    ```
-  options:
-  - '`[1, 3, 5]`'
-  - '`[1, 2, 3]`'
-  - '`[2, 4, 6]`'
-  - '`[0, 1, 2]`'
-  answer: 0
-  explain: 'Индексы 0, 1, 2. К каждому элементу прибавляется его индекс: 1 + 0, 2 + 1, 3 + 2. Присваивание по индексу меняет место в списке.'
 - id: nested-count
   type: single
   q: |
@@ -125,22 +58,6 @@ questions:
   - '`1`'
   answer: 1
   explain: 'Цикл перебирает символы по одному. Маленькая `а` встречается дважды; большая `А` — другой символ, она не равна `"а"`.'
-- id: empty-range
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    for i in range(5, 1):
-        print(i)
-    print("конец")
-    ```
-  options:
-  - Числа 5, 4, 3, 2, затем `конец`
-  - Только `конец`
-  - Числа 5, 4, 3, 2, 1, затем `конец`
-  - Ошибку `ValueError`
-  answer: 1
-  explain: 'Шаг по умолчанию — `+1`, а начало 5 уже не меньше конца 1. Диапазон пуст, тело не выполняется ни разу. Чтобы идти вниз, нужен отрицательный шаг: `range(5, 1, -1)`.'
 - id: for-or-while
   type: single
   q: |
@@ -158,38 +75,250 @@ questions:
   - '`for i in range(10, -1, -2):`'
   answer: 0
   explain: '`while` печатает 10, 8, 6, 4, 2 и останавливается на проверке `0 > 0`. `range(10, 0, -2)` идёт вниз с шагом 2 и не включает конец 0 — те же числа. С шагом `2` при начале больше конца диапазон пуст, `range(0, 10, 2)` идёт вверх и начинает с 0, а `range(10, -1, -2)` захватит лишний 0.'
-- id: empty-list-loop-var
-  type: single
+- id: range-step
+  type: code
   q: |
-    Что произойдёт?
-    ```python
-    for t in []:
-        print(t)
-    print(t)
-    ```
-  options:
-  - Пустая строка вывода
-  - Выведется `None`
-  - Ошибка `NameError`
-  - Выведется `[]`
-  answer: 2
-  explain: 'Список пуст, тело не выполнилось ни разу, и имя `t` так и не было привязано. Обращение к нему после цикла — `NameError`.'
-- id: open-range-off-by-one
-  type: open
+    Программа читает целое число `n` — оно не меньше 0 и делится на 10 — и выводит обратный отсчёт с шагом 10: `n`, `n - 10` и так далее до `0` включительно, в одну строку через пробел. Для `30` ответ `30 20 10 0`. Напишите её циклом `for` с `range`.
+  starter: |
+    n = int(input())
+  solution: |
+    n = int(input())
+    for i in range(n, -1, -10):
+        print(i, end=" ")
+  tests:
+    io:
+    - name: От 30
+      stdin: "30\n"
+      stdout: "30 20 10 0"
+    - name: От 0
+      stdin: "0\n"
+      stdout: "0"
+      hidden: true
+    - name: От 10
+      stdin: "10\n"
+      stdout: "10 0"
+      hidden: true
+    - name: От 100
+      stdin: "100\n"
+      stdout: "100 90 80 70 60 50 40 30 20 10 0"
+      hidden: true
+  explain: |
+    Числа идут вниз, поэтому шаг отрицательный: `-10`. Конец в `range` не входит, и `range(n, 0, -10)` потеряет ноль. Конец должен лежать за нулём: `range(n, -1, -10)` — подойдёт любое число от `-1` до `-10`.
+- id: f-fix-seats
+  type: code
   q: |
-    Ученик хочет вывести числа от 1 до n включительно:
-    ```python
+    Программа читает число мест в ряду `n` и выводит их номера от 1 до `n` в одну строку через пробел. Для `5` она выводит только четыре номера. Исправьте её.
+  starter: |
     n = int(input())
     for i in range(1, n):
-        print(i)
-    ```
-    Для `5` программа выводит только четыре числа. Объясните, почему, и исправьте программу.
-  rubric:
-  - конец range не включается — range(1, 5) даёт 1, 2, 3, 4
-  - исправление — range(1, n + 1)
-  wrong_answers:
-  - нужно написать range(0, n)
-  - range не умеет считать с единицы
-  followups:
-  - Что выведет исправленная программа для 0?
-  - Как вывести те же числа в обратном порядке, от n до 1?
+        print(i, end=" ")
+  solution: |
+    n = int(input())
+    for i in range(1, n + 1):
+        print(i, end=" ")
+  tests:
+    io:
+    - name: Пять мест
+      stdin: "5\n"
+      stdout: "1 2 3 4 5"
+    - name: Одно место
+      stdin: "1\n"
+      stdout: "1"
+      hidden: true
+    - name: Нет мест
+      stdin: "0\n"
+      stdout: ""
+      hidden: true
+    - name: Двенадцать мест
+      stdin: "12\n"
+      stdout: "1 2 3 4 5 6 7 8 9 10 11 12"
+      hidden: true
+  explain: |
+    Конец диапазона в `range` не входит: `range(1, 5)` — это 1, 2, 3, 4. Чтобы `n` попало в перебор, конец должен быть на единицу больше: `range(1, n + 1)`. При `n = 0` диапазон `range(1, 1)` пуст, и программа ничего не выводит.
+- id: f-complete-hot-days
+  type: code
+  q: |
+    В строке ввода — температуры по дням через пробел. Программа выводит номера дней (с 1), когда было теплее 20 градусов, каждый в своей строке. Замените `...` в заголовке цикла, чтобы программа заработала.
+  starter: |
+    temps = input().split()
+    for i in ...:
+        if int(temps[i]) > 20:
+            print(i + 1)
+  solution: |
+    temps = input().split()
+    for i in range(len(temps)):
+        if int(temps[i]) > 20:
+            print(i + 1)
+  tests:
+    io:
+    - name: Два тёплых дня
+      stdin: "18 22 25 19\n"
+      stdout: "2\n3"
+    - name: Один тёплый день
+      stdin: "21\n"
+      stdout: "1"
+      hidden: true
+    - name: Тёплых дней нет
+      stdin: "15 20\n"
+      stdout: ""
+      hidden: true
+    - name: Тёплый первый и последний
+      stdin: "25 10 30\n"
+      stdout: "1\n3"
+      hidden: true
+    - name: Нет данных
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+  explain: |
+    В теле `i` — индекс: по нему берут `temps[i]`, а номер дня — `i + 1`. Индексы списка перебирает `range(len(temps))`: от 0 до последнего. С `range(1, len(temps))` пропадёт первый день, с `range(1, len(temps) + 1)` — `IndexError` на последнем шаге.
+- id: empty-range
+  type: code
+  q: |
+    Программа читает два целых числа `a` и `b`, каждое в своей строке, и выводит все целые числа от `a` до `b` включительно в одну строку через пробел: по возрастанию, если `a` меньше `b`, и по убыванию, если больше. Если `a` равно `b`, выводится одно число. Для `3` и `6` ответ `3 4 5 6`, для `6` и `3` — `6 5 4 3`. Напишите её.
+  starter: |
+    a = int(input())
+    b = int(input())
+  solution: |
+    a = int(input())
+    b = int(input())
+    if a <= b:
+        for i in range(a, b + 1):
+            print(i, end=" ")
+    else:
+        for i in range(a, b - 1, -1):
+            print(i, end=" ")
+  tests:
+    io:
+    - name: По возрастанию
+      stdin: "3\n6\n"
+      stdout: "3 4 5 6"
+    - name: По убыванию
+      stdin: "6\n3\n"
+      stdout: "6 5 4 3"
+    - name: Одно число
+      stdin: "5\n5\n"
+      stdout: "5"
+      hidden: true
+    - name: Через ноль вверх
+      stdin: "-2\n1\n"
+      stdout: "-2 -1 0 1"
+      hidden: true
+    - name: Через ноль вниз
+      stdin: "1\n-2\n"
+      stdout: "1 0 -1 -2"
+      hidden: true
+  explain: |
+    С шагом по умолчанию `+1` диапазон пуст, если начало больше конца, — поэтому для убывания нужен отдельный `range` с шагом `-1`. Конец не входит в диапазон, значит, при движении вверх он `b + 1`, а при движении вниз — `b - 1`.
+- id: f-fix-price-raise
+  type: code
+  q: |
+    Все цены в магазине подняли на 10 рублей. Программа должна изменить каждый элемент списка `prices` и вывести список через пробел, но выводит старые цены. Исправьте второй цикл, чтобы менялся сам список.
+  starter: |
+    prices = input().split()
+    for i in range(len(prices)):
+        prices[i] = int(prices[i])
+    for p in prices:
+        p = p + 10
+    print(*prices)
+  solution: |
+    prices = input().split()
+    for i in range(len(prices)):
+        prices[i] = int(prices[i])
+    for i in range(len(prices)):
+        prices[i] = prices[i] + 10
+    print(*prices)
+  tests:
+    stdin: "100 250 80\n"
+    io:
+    - name: Три цены
+      stdin: "100 250 80\n"
+      stdout: "110 260 90"
+    - name: Одна цена
+      stdin: "5\n"
+      stdout: "15"
+      hidden: true
+    - name: Нет товаров
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+    asserts:
+    - name: Изменился сам список
+      code: 'assert prices == [110, 260, 90], "для ввода 100 250 80 список prices должен стать [110, 260, 90], а он " + str(prices)'
+  explain: |
+    `p = p + 10` привязывает к имени `p` новое число, а элемент списка остаётся прежним. Чтобы заменить элемент, нужно присвоить ему по индексу: перебирать `range(len(prices))` и писать `prices[i] = prices[i] + 10` — так же, как в первом цикле, который превращает строки в числа.
+- id: f-change-stairs
+  type: code
+  q: |
+    Программа читает число `n` и рисует из знаков `#` квадрат `n` на `n`. Измените её, чтобы получилась лесенка: в первой строке один `#`, во второй — два, в последней — `n`.
+  starter: |
+    n = int(input())
+    for i in range(n):
+        for j in range(n):
+            print("#", end="")
+        print()
+  solution: |
+    n = int(input())
+    for i in range(n):
+        for j in range(i + 1):
+            print("#", end="")
+        print()
+  tests:
+    io:
+    - name: Три ступеньки
+      stdin: "3\n"
+      stdout: "#\n##\n###"
+    - name: Одна ступенька
+      stdin: "1\n"
+      stdout: "#"
+      hidden: true
+    - name: Ноль ступенек
+      stdin: "0\n"
+      stdout: ""
+      hidden: true
+    - name: Пять ступенек
+      stdin: "5\n"
+      stdout: "#\n##\n###\n####\n#####"
+      hidden: true
+  explain: |
+    Сейчас внутренний цикл в каждой строке делает `n` итераций. Для лесенки число знаков зависит от номера строки: при `i = 0` нужен один, при `i = 1` — два. Значит, внутренний цикл — `range(i + 1)`. `print()` после внутреннего цикла переводит строку.
+- id: f-write-double-letters
+  type: code
+  q: |
+    Программа читает слово и выводит, сколько раз в нём одна и та же буква стоит дважды подряд — то есть сколько пар соседних букв совпадают. Для `аллея` ответ `1`, для `жжж` — `2`: совпадают первая со второй и вторая с третьей. Допишите её.
+  starter: |
+    word = input()
+  solution: |
+    word = input()
+    count = 0
+    for i in range(1, len(word)):
+        if word[i] == word[i - 1]:
+            count += 1
+    print(count)
+  tests:
+    io:
+    - name: Аллея
+      stdin: "аллея\n"
+      stdout: "1"
+    - name: Три одинаковые буквы
+      stdin: "жжж\n"
+      stdout: "2"
+      hidden: true
+    - name: Первая буква равна последней
+      stdin: "анна\n"
+      stdout: "1"
+      hidden: true
+    - name: Без повторов
+      stdin: "кот\n"
+      stdout: "0"
+      hidden: true
+    - name: Одна буква
+      stdin: "я\n"
+      stdout: "0"
+      hidden: true
+    - name: Пустая строка
+      stdin: "\n"
+      stdout: "0"
+      hidden: true
+  explain: |
+    Каждую букву, начиная со второй, сравниваем с предыдущей: `word[i] == word[i - 1]`, поэтому перебор — `range(1, len(word))`. Если начать с 0, при `i = 0` индекс `-1` укажет на последнюю букву: в слове «анна» первая и последняя `а` дадут лишнюю пару. В слове из одной буквы и в пустой строке пар нет — диапазон пуст, ответ 0.

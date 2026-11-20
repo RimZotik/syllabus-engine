@@ -1,6 +1,6 @@
 title: Проверка темы
 pass: 0.85
-minutes: 15
+minutes: 45
 questions:
 - id: counter-inside
   type: single
@@ -40,46 +40,6 @@ questions:
   - Только `9`
   answer: 0
   explain: '`print` стоит в теле цикла и срабатывает на каждой итерации. В каждый момент `best` — лучшее среди уже просмотренных: после 4 — это 4, после 9 — 9, а 2 его не меняет. Максимум всего списка — только в последней строке вывода.'
-- id: flag-reset
-  type: single
-  q: |
-    Программа проверяет, все ли дни дали больше 500 рублей. Что она выведет?
-    ```python
-    all_ok = True
-    for s in [700, 300, 900]:
-        if s <= 500:
-            all_ok = False
-        else:
-            all_ok = True
-    print(all_ok)
-    ```
-  options:
-  - '`True`'
-  - '`False`'
-  - '`300`'
-  - Ошибку `NameError`
-  answer: 0
-  explain: 'На 300 флаг упал в `False`, но на 900 ветвь `else` вернула `True`. Флаг говорит только о последнем дне. Его переключают в одну сторону — лучше сразу с `break` при первом нарушении.'
-- id: search-break
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    nums = [5, 8, 12, 3, 20]
-    first_big = -1
-    for n in nums:
-        if n > 10:
-            first_big = n
-            break
-    print(first_big)
-    ```
-  options:
-  - '`20`'
-  - '`12`'
-  - '`-1`'
-  - '`3`'
-  answer: 1
-  explain: Поиск останавливается на первой находке — `break` выходит из цикла на 12, и 20 уже не проверяется.
 - id: all-empty
   type: single
   q: |
@@ -129,56 +89,265 @@ questions:
   - Выведется `6`
   answer: 2
   explain: "Имя `sum` теперь указывает на число 6, а число нельзя вызвать: `TypeError: 'int' object is not callable`. Называйте накопитель `total`."
-- id: sum-to-counter
-  type: single
+- id: p-complete-count-fives
+  type: code
   q: |
-    Этот код считает сумму чисел списка. Как изменить его, чтобы он считал, **сколько** чисел больше 10?
-    ```python
-    total = 0
-    for x in nums:
-        total += x
-    print(total)
-    ```
-  options:
-  - '`total += x` заменить на `if x > 10:` и под ним `total += 1`'
-  - '`total = 0` заменить на `total = 10`'
-  - '`total += x` заменить на `if x > 10:` и под ним `total = x`'
-  - После `total += x` добавить `if x > 10:` и под ним `break`
-  answer: 0
-  explain: 'Счётчик — накопитель, к которому прибавляют единицу, когда выполнено условие. `total = x` просто запомнит последнее подходящее число, а `break` остановит подсчёт.'
+    В строке ввода — оценки за четверть через пробел. Программа должна вывести, сколько среди них пятёрок. Замените `...` строкой кода, чтобы она заработала.
+  starter: |
+    marks = input().split()
+    count = 0
+    for m in marks:
+        if m == "5":
+            ...
+    print(count)
+  solution: |
+    marks = input().split()
+    count = 0
+    for m in marks:
+        if m == "5":
+            count += 1
+    print(count)
+  tests:
+    io:
+    - name: Две пятёрки
+      stdin: "5 4 5 3\n"
+      stdout: "2"
+    - name: Нет оценок
+      stdin: "\n"
+      stdout: "0"
+      hidden: true
+    - name: Нет пятёрок
+      stdin: "4 4 3\n"
+      stdout: "0"
+      hidden: true
+    - name: Одни пятёрки
+      stdin: "5 5 5 5\n"
+      stdout: "4"
+      hidden: true
+  explain: |
+    Это счётчик: начальное значение 0 стоит до цикла, а в цикле при выполненном условии к нему прибавляется единица — `count += 1`. Если оценок нет, тело не выполнится ни разу и останется 0.
 - id: any-all
-  type: single
+  type: code
   q: |
-    Что выведет программа?
-    ```python
-    print(any([0, "", 5]), all([1, "a", 0]))
-    ```
-  options:
-  - '`True False`'
-  - '`False False`'
-  - '`True True`'
-  - '`False True`'
-  answer: 0
-  explain: '`any` ищет хоть одно истинное значение — `5` истинно. `all` ищет контрпример — `0` ложен.'
-- id: open-ai-max
-  type: open
+    В строке ввода — выручка магазина по дням, целые неотрицательные числа через пробел (хотя бы одно). Программа уже превратила их в числа. Допишите вывод трёх строк: `Всего: S` — сумма за все дни, `Лучший день: M` — самая большая выручка — и `Были дни без выручки: да`, если хотя бы в один день выручка равна 0, иначе `Были дни без выручки: нет`. Здесь встроенные функции разрешены.
+  starter: |
+    sales = input().split()
+    for i in range(len(sales)):
+        sales[i] = int(sales[i])
+  solution: |
+    sales = input().split()
+    for i in range(len(sales)):
+        sales[i] = int(sales[i])
+    print("Всего:", sum(sales))
+    print("Лучший день:", max(sales))
+    if all(sales):
+        print("Были дни без выручки: нет")
+    else:
+        print("Были дни без выручки: да")
+  tests:
+    io:
+    - name: Есть день без выручки
+      stdin: "1200 0 850\n"
+      stdout: "Всего: 2050\nЛучший день: 1200\nБыли дни без выручки: да"
+    - name: Все дни с выручкой
+      stdin: "500 700\n"
+      stdout: "Всего: 1200\nЛучший день: 700\nБыли дни без выручки: нет"
+      hidden: true
+    - name: Один пустой день
+      stdin: "0\n"
+      stdout: "Всего: 0\nЛучший день: 0\nБыли дни без выручки: да"
+      hidden: true
+    - name: Один день
+      stdin: "300\n"
+      stdout: "Всего: 300\nЛучший день: 300\nБыли дни без выручки: нет"
+      hidden: true
+  explain: |
+    `sum` — накопитель, `max` — «лучший из просмотренных». `all(sales)` отвечает, все ли значения истинны, а ноль ложен — значит, `all(sales)` ложно ровно тогда, когда был день без выручки. Подойдёт и `0 in sales`. А `any(sales)` — не то: оно отвечает, был ли хоть один день **с** выручкой.
+- id: p-fix-cheapest
+  type: code
   q: |
-    ИИ-ассистент написал поиск самой низкой цены:
-    ```python
+    ИИ-ассистент написал поиск самой низкой цены. В строке ввода — цены через пробел. На вводе `120 80 95` программа выводит `0`, а должна `80`. Исправьте ошибку. Кроме того, если строка пустая, программа должна вывести `нет цен`. Встроенные `min`, `sorted` и `sort` не используйте.
+  starter: |
     prices = input().split()
     best = 0
     for p in prices:
         if int(p) < best:
             best = int(p)
     print(best)
-    ```
-    На вводе `120 80 95` программа выводит `0`. Объясните, в чём ошибка, исправьте её и назовите крайний случай, который нужно проверить отдельно.
-  rubric:
-  - начальное значение 0 меньше всех цен, поэтому best ни разу не обновляется — ответ 0, хотя такой цены нет
-  - исправление — начинать с первого элемента, best = int(prices[0])
-  - крайний случай — пустой ввод — prices[0] даст IndexError, его проверяют до цикла
-  wrong_answers:
-  - нужно заменить < на >
-  - нужно использовать встроенную min — тогда ошибки не будет
-  followups:
-  - Как вывести не только цену, но и номер самого дешёвого товара?
+  solution: |
+    prices = input().split()
+    if prices:
+        best = int(prices[0])
+        for p in prices:
+            if int(p) < best:
+                best = int(p)
+        print(best)
+    else:
+        print("нет цен")
+  tests:
+    forbid: [min, sorted, sort]
+    io:
+    - name: Три цены
+      stdin: "120 80 95\n"
+      stdout: "80"
+    - name: Пустая строка
+      stdin: "\n"
+      stdout: "нет цен"
+      hidden: true
+    - name: Одна цена
+      stdin: "300\n"
+      stdout: "300"
+      hidden: true
+    - name: Самая низкая — первая
+      stdin: "90 100 120\n"
+      stdout: "90"
+      hidden: true
+    - name: Самая низкая повторяется
+      stdin: "50 70 50\n"
+      stdout: "50"
+      hidden: true
+  explain: |
+    Начальное значение 0 меньше любой цены, поэтому ни одна цена его не «побеждает», и выводится 0 — цена, которой нет в списке. «Лучший из просмотренных» начинают с первого элемента: `best = int(prices[0])`. Но у пустого списка первого элемента нет, `prices[0]` даст `IndexError`, поэтому пустой ввод проверяют до цикла: пустой список в условии ложен.
+- id: p-change-last-expensive
+  type: code
+  q: |
+    Программа ищет в строке цен первый товар дороже 1000 рублей и выводит его цену или `нет`. Измените её: пусть она выводит **номер** (с 1) **последнего** товара дороже 1000 рублей, а если таких нет — `0`.
+  starter: |
+    prices = input().split()
+    found = "нет"
+    for p in prices:
+        if int(p) > 1000:
+            found = p
+            break
+    print(found)
+  solution: |
+    prices = input().split()
+    last = 0
+    for i in range(len(prices)):
+        if int(prices[i]) > 1000:
+            last = i + 1
+    print(last)
+  tests:
+    io:
+    - name: Два дорогих товара
+      stdin: "500 1200 800 3000 900\n"
+      stdout: "4"
+    - name: Нет товаров
+      stdin: "\n"
+      stdout: "0"
+      hidden: true
+    - name: Один дорогой товар
+      stdin: "1500\n"
+      stdout: "1"
+      hidden: true
+    - name: Ровно 1000 — не дороже
+      stdin: "1001 1000\n"
+      stdout: "1"
+      hidden: true
+    - name: Дорогие в конце
+      stdin: "100 2000 2000\n"
+      stdout: "3"
+      hidden: true
+    - name: Дорогих нет
+      stdin: "100 200\n"
+      stdout: "0"
+      hidden: true
+  explain: |
+    Нужны два изменения. Номер товара знает только перебор индексов — `range(len(prices))`, номер равен `i + 1`. А `break` придётся убрать: он останавливает поиск на **первой** находке, а последнюю можно узнать, только просмотрев весь список и обновляя ответ при каждой находке. Начальное значение `0` остаётся, если находок не было.
+- id: p-write-prices-growing
+  type: code
+  q: |
+    В строке ввода — цены на хлеб по неделям, целые числа через пробел. Выведите `да`, если каждая следующая цена **больше** предыдущей, иначе `нет`. Если цен меньше двух, ответ `да`. Встроенные `all` и `sorted` не используйте.
+  starter: |
+    prices = input().split()
+  solution: |
+    prices = input().split()
+    growing = True
+    for i in range(1, len(prices)):
+        if int(prices[i]) <= int(prices[i - 1]):
+            growing = False
+            break
+    if growing:
+        print("да")
+    else:
+        print("нет")
+  tests:
+    forbid: [all, sorted, sort]
+    io:
+    - name: Цены растут
+      stdin: "40 42 45\n"
+      stdout: "да"
+    - name: В конце подешевел
+      stdin: "40 42 41\n"
+      stdout: "нет"
+    - name: Нет цен
+      stdin: "\n"
+      stdout: "да"
+      hidden: true
+    - name: Одна цена
+      stdin: "50\n"
+      stdout: "да"
+      hidden: true
+    - name: Цена не изменилась
+      stdin: "40 40 45\n"
+      stdout: "нет"
+      hidden: true
+    - name: Подешевел в начале
+      stdin: "50 45 60 70\n"
+      stdout: "нет"
+      hidden: true
+    - name: Из однозначной в двузначную
+      stdin: "9 10\n"
+      stdout: "да"
+      hidden: true
+  explain: |
+    Это проверка «все ли»: флаг `True` до цикла, и он падает в `False` при первом контрпримере — паре соседей, где цена не выросла. Обратно флаг не поднимают, иначе он расскажет только о последней паре. Сравнивать нужно числа: строки сравниваются по символам, и `"9" < "10"` ложно. Если цен меньше двух, пар нет, флаг остаётся `True`.
+- id: p-write-rain-streak
+  type: code
+  q: |
+    В строке ввода — осадки по дням в миллиметрах, целые числа через пробел. День дождливый, если осадков больше 0. Выведите, сколько дней длилась самая долгая серия дождливых дней подряд. Если дождливых дней не было, выведите `0`.
+  starter: |
+    rain = input().split()
+  solution: |
+    rain = input().split()
+    current = 0
+    best = 0
+    for r in rain:
+        if int(r) > 0:
+            current += 1
+            if current > best:
+                best = current
+        else:
+            current = 0
+    print(best)
+  tests:
+    io:
+    - name: Серии 2, 1 и 3 дня
+      stdin: "0 3 5 0 2 0 1 4 6\n"
+      stdout: "3"
+    - name: Нет данных
+      stdin: "\n"
+      stdout: "0"
+      hidden: true
+    - name: Без дождя
+      stdin: "0 0\n"
+      stdout: "0"
+      hidden: true
+    - name: Дождь каждый день
+      stdin: "2 2 2\n"
+      stdout: "3"
+      hidden: true
+    - name: Дождь только в первый день
+      stdin: "5 0 0\n"
+      stdout: "1"
+      hidden: true
+    - name: Длинная серия в начале
+      stdin: "1 1 1 0 1 1\n"
+      stdout: "3"
+      hidden: true
+    - name: Длинная серия в конце
+      stdin: "4 0 1 1 1\n"
+      stdout: "3"
+      hidden: true
+  explain: |
+    Здесь сходятся два шаблона. Счётчик `current` — длина текущей серии: растёт в дождливый день и обнуляется в сухой. «Лучший из просмотренных» `best` запоминает самую длинную серию. Обновлять `best` нужно сразу, когда серия растёт: если делать это только при обнулении, серия, которая тянется до последнего дня, не будет учтена.

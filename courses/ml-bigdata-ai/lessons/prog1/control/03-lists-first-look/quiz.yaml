@@ -1,53 +1,7 @@
 title: Проверка темы
 pass: 0.85
-minutes: 15
+minutes: 40
 questions:
-- id: index-ends
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    nums = [4, 8, 15, 16, 23]
-    print(nums[1], nums[-1])
-    ```
-  options:
-  - '`8 23`'
-  - '`4 23`'
-  - '`8 16`'
-  - '`4 16`'
-  answer: 0
-  explain: 'Индексы начинаются с нуля — `nums[1]` это второй элемент, 8. `nums[-1]` — последний, 23.'
-- id: index-error
-  type: single
-  q: |
-    Что произойдёт?
-    ```python
-    nums = [4, 8, 15, 16, 23]
-    print(nums[len(nums)])
-    ```
-  options:
-  - Выведется `23`
-  - Ошибка `IndexError`
-  - Выведется `5`
-  - Выведется `16`
-  answer: 1
-  explain: '`len(nums)` равно 5, а индексы списка из пяти элементов — от 0 до 4. Индекса 5 нет — `IndexError: list index out of range`. Последний элемент — `nums[len(nums) - 1]` или `nums[-1]`.'
-- id: append-none
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    names = ["Аня"]
-    names = names.append("Борис")
-    print(names)
-    ```
-  options:
-  - "`['Аня', 'Борис']`"
-  - "`['Борис']`"
-  - '`None`'
-  - "`['Аня']`"
-  answer: 2
-  explain: '`append` меняет сам список и возвращает `None`. Присваивание привязало имя `names` к этому `None`, и список потерян. Правильно — просто `names.append("Борис")`.'
 - id: in-list-vs-string
   type: single
   q: |
@@ -97,21 +51,6 @@ questions:
   - '`[5, 7, 9, 5]`'
   answer: 0
   explain: 'В отличие от строки, элемент списка можно заменить. Сначала вычисляется правая часть — `temps[0]`, это 5, — потом последний элемент начинает указывать на 5. Присваивание по индексу заменяет элемент, а не дописывает новый.'
-- id: split-strings
-  type: single
-  q: |
-    Что выведет программа?
-    ```python
-    parts = "10 20".split()
-    print(parts[0] + parts[1])
-    ```
-  options:
-  - '`30`'
-  - '`1020`'
-  - '`10 20`'
-  - Ошибку `TypeError`
-  answer: 1
-  explain: '`split()` возвращает список **строк** `["10", "20"]`. Строки склеиваются. Чтобы сложить числа, нужно `int(parts[0]) + int(parts[1])`.'
 - id: print-list-ways
   type: multi
   q: '`nums = [1, 2, 3]`. Какие строки кода выведут ровно `1 2 3`? Выберите все.'
@@ -139,24 +78,241 @@ questions:
   - '`False True`'
   answer: 1
   explain: '`x in [1, 2, 3]` ищет 5 среди элементов — его нет, `False`. А `x == 1 or 2` читается как `(x == 1) or 2`: левая часть ложна, и `or` возвращает значение справа — число `2`. Проверку «одно из нескольких значений» пишут через `in`.'
-- id: open-while-index
-  type: open
+- id: split-strings
+  type: code
   q: |
-    Программа должна вывести все элементы списка, но падает на последнем шаге:
-    ```python
-    temps = [12, 15, 9]
-    i = 0
+    В строке ввода — два целых числа через пробел: цена товара и стоимость доставки. Программа должна вывести `К оплате: S`, где S — их сумма. На вводе `10 20` она выводит `К оплате: 1020`. Исправьте её.
+  starter: |
+    parts = input().split()
+    print("К оплате:", parts[0] + parts[1])
+  solution: |
+    parts = input().split()
+    print("К оплате:", int(parts[0]) + int(parts[1]))
+  tests:
+    io:
+    - name: 10 и 20
+      stdin: "10 20\n"
+      stdout: "К оплате: 30"
+    - name: Бесплатная доставка
+      stdin: "500 0\n"
+      stdout: "К оплате: 500"
+      hidden: true
+    - name: 1 и 99
+      stdin: "1 99\n"
+      stdout: "К оплате: 100"
+      hidden: true
+    - name: 250 и 300
+      stdin: "250 300\n"
+      stdout: "К оплате: 550"
+      hidden: true
+  explain: |
+    `split()` возвращает список **строк**: `["10", "20"]`. Для строк `+` — склеивание, отсюда `1020`. Каждую часть нужно превратить в число: `int(parts[0]) + int(parts[1])`.
+- id: l-fix-last-item
+  type: code
+  q: |
+    В строке ввода — покупки через пробел, хотя бы одна. Программа должна вывести последнюю покупку, но падает с ошибкой. Исправьте её.
+  starter: |
+    items = input().split()
+    print(items[len(items)])
+  solution: |
+    items = input().split()
+    print(items[-1])
+  tests:
+    io:
+    - name: Три покупки
+      stdin: "хлеб молоко сыр\n"
+      stdout: "сыр"
+    - name: Одна покупка
+      stdin: "чай\n"
+      stdout: "чай"
+      hidden: true
+    - name: Две покупки
+      stdin: "соль сахар\n"
+      stdout: "сахар"
+      hidden: true
+  explain: |
+    В списке из `n` элементов индексы — от `0` до `n - 1`, поэтому `items[len(items)]` выходит за конец: `IndexError`. Последний элемент — `items[-1]` или `items[len(items) - 1]`.
+- id: l-complete-price
+  type: code
+  q: |
+    В первой строке ввода — цены товаров через пробел. Во второй — номер товара (с 1, как на ценнике) и его новая цена. Программа должна заменить цену этого товара и вывести все цены через пробел. Допишите одну строку кода в отмеченное место.
+  starter: |
+    prices = input().split()
+    change = input().split()
+    number = int(change[0])
+    new_price = change[1]
+    # замените цену товара с номером number
+    print(*prices)
+  solution: |
+    prices = input().split()
+    change = input().split()
+    number = int(change[0])
+    new_price = change[1]
+    prices[number - 1] = new_price
+    print(*prices)
+  tests:
+    io:
+    - name: Второй товар
+      stdin: "100 250 80\n2 300\n"
+      stdout: "100 300 80"
+    - name: Единственный товар
+      stdin: "50\n1 70\n"
+      stdout: "70"
+      hidden: true
+    - name: Последний товар
+      stdin: "10 20 30\n3 35\n"
+      stdout: "10 20 35"
+      hidden: true
+    - name: Первый товар
+      stdin: "10 20 30\n1 15\n"
+      stdout: "15 20 30"
+      hidden: true
+  explain: |
+    Элемент списка можно заменить присваиванием по индексу. Номер на ценнике начинается с 1, а индекс — с 0, поэтому `prices[number - 1] = new_price`. С `prices[number]` меняется соседний товар, а для последнего — `IndexError`. `append` не заменил бы цену, а дописал новую в конец.
+- id: append-none
+  type: code
+  q: |
+    Программа записывает гостей: читает имена, по одному в строке, до пустой строки, а затем выводит `Гостей: N` и следующей строкой — имена через запятую с пробелом в порядке ввода. Но уже на втором имени она падает с ошибкой. Исправьте её.
+  starter: |
+    names = []
+    name = input()
+    while name != "":
+        names = names.append(name)
+        name = input()
+    print("Гостей:", len(names))
+    print(", ".join(names))
+  solution: |
+    names = []
+    name = input()
+    while name != "":
+        names.append(name)
+        name = input()
+    print("Гостей:", len(names))
+    print(", ".join(names))
+  tests:
+    io:
+    - name: Два гостя
+      stdin: "Аня\nБорис\n\n"
+      stdout: "Гостей: 2\nАня, Борис"
+    - name: Один гость
+      stdin: "Вера\n\n"
+      stdout: "Гостей: 1\nВера"
+      hidden: true
+    - name: Три гостя
+      stdin: "Глеб\nДина\nЕгор\n\n"
+      stdout: "Гостей: 3\nГлеб, Дина, Егор"
+      hidden: true
+    - name: Никого
+      stdin: "\n"
+      stdout: "Гостей: 0"
+      hidden: true
+  explain: |
+    `append` меняет сам список и возвращает `None`. Строка кода `names = names.append(name)` добавляет имя, а затем привязывает `names` к этому `None` — список потерян, и следующий `append` вызывать уже не у чего. Достаточно `names.append(name)` без присваивания.
+- id: l-fix-day-numbers
+  type: code
+  q: |
+    В строке ввода — температуры по дням через пробел. Программа должна вывести их с номерами дней: `День 1: 12`, `День 2: 15` и так далее, каждую в своей строке. Но она берёт не ту температуру, а в конце падает. Исправьте её, не меняя формат вывода.
+  starter: |
+    temps = input().split()
+    i = 1
     while i <= len(temps):
-        print(temps[i])
+        print(f"День {i}: {temps[i]}")
         i += 1
-    ```
-    Какая будет ошибка и почему? Как исправить? Какие числа программа успеет вывести до ошибки?
-  rubric:
-  - 'программа выведет 12, 15, 9, а потом упадёт с IndexError'
-  - причина — условие i <= len(temps) пропускает i = 3, а последний индекс списка из трёх элементов — 2 (ошибка на единицу)
-  - исправление — условие i < len(temps) (или перебор циклом for)
-  wrong_answers:
-  - нужно начинать с i = 1
-  - ошибка в том, что список нельзя перебирать циклом while
-  followups:
-  - Что выведет программа, если список пуст, — в исходной версии и в исправленной?
+  solution: |
+    temps = input().split()
+    i = 1
+    while i <= len(temps):
+        print(f"День {i}: {temps[i - 1]}")
+        i += 1
+  tests:
+    io:
+    - name: Три дня
+      stdin: "12 15 9\n"
+      stdout: "День 1: 12\nДень 2: 15\nДень 3: 9"
+    - name: Один день
+      stdin: "5\n"
+      stdout: "День 1: 5"
+      hidden: true
+    - name: Нет данных
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+  explain: |
+    Номер дня начинается с 1, а индекс списка — с 0. Программа брала элемент с индексом, равным номеру дня, — на один дальше, — и на последнем дне уходила за конец списка. Индекс должен быть на единицу меньше номера: `temps[i - 1]`. Можно и наоборот: перебирать индексы с `i = 0` при `i < len(temps)` и печатать номер `i + 1`.
+- id: l-change-shopping
+  type: code
+  q: |
+    Программа читает список покупок, по одной в строке, до пустой строки и выводит его через запятую. Измените её: если такая покупка уже есть в списке, второй раз её не добавлять, а сразу вывести `уже есть: <покупка>`. Большие и маленькие буквы различаются.
+  starter: |
+    items = []
+    item = input()
+    while item != "":
+        items.append(item)
+        item = input()
+    print(", ".join(items))
+  solution: |
+    items = []
+    item = input()
+    while item != "":
+        if item in items:
+            print("уже есть:", item)
+        else:
+            items.append(item)
+        item = input()
+    print(", ".join(items))
+  tests:
+    io:
+    - name: Хлеб дважды
+      stdin: "хлеб\nмолоко\nхлеб\n\n"
+      stdout: "уже есть: хлеб\nхлеб, молоко"
+    - name: Пустой список
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+    - name: Разный регистр
+      stdin: "сыр\nСыр\n\n"
+      stdout: "сыр, Сыр"
+      hidden: true
+    - name: Три раза одно и то же
+      stdin: "чай\nчай\nчай\n\n"
+      stdout: "уже есть: чай\nуже есть: чай\nчай"
+      hidden: true
+  explain: |
+    Перед `append` проверяем `item in items`: для списка `in` ищет элемент, равный покупке целиком. Найден — печатаем сообщение и не добавляем, иначе дописываем в конец. Чтение следующей строки `item = input()` остаётся в конце тела для обеих ветвей — иначе цикл не закончится.
+- id: l-write-temp-diff
+  type: code
+  q: |
+    В строке ввода — температуры по дням, целые числа через пробел. Выведите через пробел, на сколько градусов менялась температура от каждого дня к следующему: для `5 7 4 4` ответ `2 -3 0`. Если дней меньше двух, выведите пустую строку. Перебирайте индексы циклом `while`.
+  starter: |
+    temps = input().split()
+  solution: |
+    temps = input().split()
+    changes = []
+    i = 1
+    while i < len(temps):
+        changes.append(int(temps[i]) - int(temps[i - 1]))
+        i += 1
+    print(*changes)
+  tests:
+    io:
+    - name: Четыре дня
+      stdin: "5 7 4 4\n"
+      stdout: "2 -3 0"
+    - name: Один день
+      stdin: "10\n"
+      stdout: ""
+      hidden: true
+    - name: Нет данных
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+    - name: Из мороза в оттепель
+      stdin: "-3 2\n"
+      stdout: "5"
+      hidden: true
+    - name: Похолодание и потепление
+      stdin: "20 18 18 25\n"
+      stdout: "-2 0 7"
+      hidden: true
+  explain: |
+    Изменение к дню `i` — это `temps[i] - temps[i - 1]`, поэтому перебор начинается с `i = 1`: у первого дня предыдущего нет. Изменений на одно меньше, чем дней. Элементы после `split()` — строки, их нужно превратить в числа: иначе вычитание даст `TypeError`. Новые значения собираются в список через `append`, а `print(*changes)` выводит их через пробел.
