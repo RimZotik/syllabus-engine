@@ -365,6 +365,10 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
         for n, line in enumerate(text.splitlines(), 1):
             if re.match(r'\s*[A-Za-z]+="[^"]*\\"', line):
                 errors.append(f'{rel(mdx)}:{n}: escaped quote inside attr="…" breaks MDX — use attr={{"…"}} or «»')
+            # attr={"… with the string not closed on the same line: a raw line break inside a JS string — the page fails to compile
+            m = re.match(r'\s*[A-Za-z]+=\{"((?:[^"\\]|\\.)*)$', line)
+            if m:
+                errors.append(f'{rel(mdx)}:{n}: line break inside attr={{"…"}} breaks MDX — write \\n inside the string')
         used = set(re.findall(r'<Term id="([^"]+)"', text))
         linked[tid] = set(used)
         texts[tid] = text.lower()
