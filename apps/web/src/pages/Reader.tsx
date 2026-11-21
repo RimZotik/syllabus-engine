@@ -194,7 +194,7 @@ function TocDrawer({ place: where, current, progress, onClose }: { place: TopicP
               const cls = t.id === current ? "on" : done ? "done" : !written ? "na" : "";
               const icon = done ? <Check size={15} /> : written ? <BookOpen size={15} /> : <CircleDashed size={15} />;
               const label = <><span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span>{t.title}</span></>;
-              return <li key={t.id}>{!written ? <span className={`toc-item ${cls}`} title="Тема ещё не написана">{label}</span>
+              return <li key={t.id}>{!written ? <span className={`toc-item ${cls}`} title="В плане курса, ещё не написана">{label}</span>
                 : canOpen("topic", t.id) ? <Link to={to(`/learn/${t.id}`)} className={cls} onClick={onClose}>{label}</Link>
                 : <span className="toc-item locked" title="Откроется, когда вы дойдёте до неё по программе">{label}</span>}</li>;
             })}

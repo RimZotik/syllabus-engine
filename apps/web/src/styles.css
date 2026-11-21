@@ -4,7 +4,7 @@
   --ink:#27231d; --ink-2:#5c564c; --ink-3:#686154;
   --o1:#2f7a57; --o2:#6a5a9e; --o3:#b0711f; --o4:#2f6e9e; --o5:#a8466b; --o6:#5f7a2a;   /* object colours of the trace visualiser */
   --green:#3d7c5e; --green-2:#4a8c6c; --green-soft:#e1ebdd; --green-ink:#2f6249;
-  --lav:#6a5a9e; --lav-soft:#ebe5f2; --mark:#f5e3a3;
+  --lav:#6a5a9e; --lav-soft:#ebe5f2; --mark:#f5e3a3; --planned:#9b93b0; /* in the plan, not written yet: grey with a violet tint */
   --warn:#7d4a0c; --amber:#b9821c; --fb-mark:rgba(214,92,74,.30); --warn-soft:#f6ead2; --bad:#b4483a; --bad-soft:#f6e1dc; --code:#f2ece1;
   --sh-soft:0 1px 2px rgba(39,35,29,.05),0 10px 26px -16px rgba(39,35,29,.25);
   --sh-pop:0 24px 48px -20px rgba(39,35,29,.35),0 2px 6px rgba(39,35,29,.06);
@@ -17,7 +17,7 @@
   --o1:#7fc4a0; --o2:#b3a6de; --o3:#e0b066; --o4:#86b8e0; --o5:#e08aa8; --o6:#a9c46e;
   --bg:#1d1b17; --paper:#22201b; --card:#28251f; --fill:#2e2b24; --line:#37332b; --line-2:#443f35;
   --ink:#ece6da; --ink-2:#bcb4a5; --ink-3:#a39b8c; --green:#7fbf9d; --green-2:#8fcaa9; --green-soft:#2b3a31; --green-ink:#9fd3b6;
-  --lav:#b3a6de; --lav-soft:#332f42; --mark:#5a4d22; --warn:#e0a85a; --amber:#d9b25e; --fb-mark:rgba(232,128,112,.38); --warn-soft:#3a2f1e; --bad:#e28a7c; --bad-soft:#3d2622; --code:#2a2721;
+  --lav:#b3a6de; --lav-soft:#332f42; --mark:#5a4d22; --planned:#6e6787; --warn:#e0a85a; --amber:#d9b25e; --fb-mark:rgba(232,128,112,.38); --warn-soft:#3a2f1e; --bad:#e28a7c; --bad-soft:#3d2622; --code:#2a2721;
   --sh-soft:0 10px 26px -16px rgba(0,0,0,.7); --sh-pop:0 24px 48px -20px rgba(0,0,0,.8); --sh-chip:0 1px 2px rgba(0,0,0,.35),0 2px 8px -2px rgba(0,0,0,.4); --sh-menu:0 0 0 1px rgba(255,255,255,.06),0 10px 30px -6px rgba(0,0,0,.6); color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -448,13 +448,23 @@ input[type=range]{accent-color:var(--green)}
 .rec-row.locked:hover{background:transparent}
 /* discipline panel: done — check, not yet — small empty circle; section test — green when passed, grey before */
 .topic-link .mark-todo{color:var(--ink-3);margin-inline:2px}
-.topic-link.test{color:var(--ink-3)}
+.topic-link.test{color:var(--ink)}
 .topic-link.test.passed{color:var(--green-ink)}
 .topic-link.test.passed svg{color:var(--green)}
 
 /* not reached yet: shown, but not a link (the course goes in order) */
 .topic-link.locked,.toc-topics .toc-item.locked{opacity:.5;cursor:default}
 .topic-link.locked:hover,.toc-topics .toc-item.locked:hover{background:transparent}
+
+/* Three looks everywhere (Learn, record book, contents):
+   passed / open — plain ink; written but not reached — dimmed grey (.locked);
+   in the plan but not written yet — muted grey-violet (.na), never a link, no green */
+.topic-link,.topic-link.done,.toc-topics a,.toc-topics a.done{color:var(--ink)}
+.topic-link.na,.toc-topics .na,.rec-row.na,.disc.na .name,.disc.na .name small,.disc.na .faint{color:var(--planned);opacity:1;cursor:default}
+.topic-link.na svg,.toc-topics .na svg,.rec-row.na svg{color:var(--planned)}
+.rec-row.na:hover,.topic-link.na:hover{background:transparent;color:var(--planned)}
+.st.na{box-shadow:inset 0 0 0 1.5px var(--planned);opacity:.7}
+.rec-sec.na .rec-sec-h b,.rec-disc.na h3{color:var(--planned)}
 
 /* clickable parts of diagrams (svg role=button): no browser focus box after a mouse click; a soft ring for keyboard users */
 svg [role=button]:focus{outline:none}
@@ -613,3 +623,6 @@ svg [role=button]:focus-visible{outline:2px solid var(--lav);outline-offset:3px;
 .rt-io{margin:8px 0}
 .rt-io>span{display:block;font:600 12px/1 var(--f-text);color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
 .rt-io .rt-pre{margin:0}
+.sections b.na-h,.toc-sec.na .toc-sec-h b{color:var(--planned)}
+.topic-link.locked svg,.toc-topics .toc-item.locked svg,.rec-row.locked svg{color:var(--ink-3)}
+.rec-row.na .toc-num{color:var(--planned)}

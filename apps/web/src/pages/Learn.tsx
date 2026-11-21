@@ -43,6 +43,7 @@ export function Learn() {
   const discState = (d: Discipline) => {
     const ids = d.sections.flatMap((s) => s.topics.map((t) => t.id));
     const done = ids.filter((id) => progress[id]?.status === "done").length;
+    if (!ids.some((id) => content.hasTopic(id))) return "na"; // in the plan, nothing written yet
     return done === ids.length ? "done" : done > 0 || ids.some((id) => progress[id]) ? "cur" : "todo";
   };
 
@@ -73,7 +74,7 @@ export function Learn() {
           {course.disciplines.map((d) => {
             const st = discState(d);
             return (
-              <button key={d.id} className={`disc${d.id === disc.id ? " sel" : ""}`} onClick={() => setDiscId(d.id)}>
+              <button key={d.id} className={`disc${d.id === disc.id ? " sel" : ""}${st === "na" ? " na" : ""}`} title={st === "na" ? "В плане курса, ещё не написана" : undefined} onClick={() => setDiscId(d.id)}>
                 <span className={`st ${st}`}>{st === "done" && <Check size={13} strokeWidth={3} />}</span>
                 <span className="name">{d.name}{d.name !== d.title && <small>{d.title}</small>}</span>
                 <span className="faint" style={{ fontSize: 13 }}>{d.hours} ч</span>
@@ -93,9 +94,9 @@ export function Learn() {
           <ul className="sections">
             <li><span className="topic-link na"><CircleDashed size={15} />0. Вводная лекция — появится вместе с темами дисциплины</span></li>
             {disc.sections.map((s, i) => (
-              <li key={s.id}><b>{i + 1}. {s.title}</b>
+              <li key={s.id}><b className={s.topics.some((t) => content.hasTopic(t.id)) ? undefined : "na-h"}>{i + 1}. {s.title}</b>
                 {s.topics.map((t) => !content.hasTopic(t.id)
-                  ? <span key={t.id} className="topic-link na"><CircleDashed size={15} />{t.title}</span>
+                  ? <span key={t.id} className="topic-link na" title="В плане курса, ещё не написана"><CircleDashed size={15} />{t.title}</span>
                   : canOpen("topic", t.id) ? (
                     <Link key={t.id} to={to(`/learn/${t.id}`)} className={`topic-link${progress[t.id]?.status === "done" ? " done" : ""}`}>
                       {progress[t.id]?.status === "done" ? <Check size={15} /> : <Circle size={11} className="mark-todo" />}{t.title}</Link>

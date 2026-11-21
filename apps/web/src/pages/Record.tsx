@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, Check, CircleDashed, Target } from "lucide-react";
+import { BookOpen, Check, Circle, CircleDashed, Target } from "lucide-react";
 import { api, type Results, type TimeStats } from "../api";
 import { to } from "../current";
 import { useApp } from "../state";
@@ -76,18 +76,20 @@ export function Record() {
                   {d.sections.map((s, si) => {
                     const test = content.sectionTest(s.id) ? results[s.id] : undefined;
                     return (
-                      <div key={s.id} className="rec-sec">
+                      <div key={s.id} className={`rec-sec${s.topics.some((x) => content.hasTopic(x.id)) ? "" : " na"}`}>
                         <div className="rec-sec-h"><span className="toc-n">Раздел {si + 1}</span><b>{s.title}</b></div>
                         {s.topics.map((x, ti) => {
                           const r = results[x.id];
                           const done = progress[x.id]?.status === "done";
-                          const icon = done ? <Check size={15} /> : progress[x.id] ? <BookOpen size={15} /> : <CircleDashed size={15} />;
+                          const icon = done ? <Check size={15} /> : progress[x.id] ? <BookOpen size={15} /> : content.hasTopic(x.id) ? <Circle size={11} style={{ marginInline: 2 }} /> : <CircleDashed size={15} />;
+                          const written = content.hasTopic(x.id);
                           const inner = <>
                             <span className="toc-num">{si + 1}.{ti + 1}</span>{icon}<span className="rec-title">{x.title}</span>
                             <span className="rec-score tnum">{r?.done ? pct(r.score) : ""}</span>
                             <span className="rec-time tnum">{t(x.id) ? fmtTime(t(x.id)) : ""}</span>
                           </>;
                           // the course goes in order: from the record book only what is passed, and the next step, opens
+                          if (!written) return <div key={x.id} className="rec-row na" title="В плане курса, ещё не написана">{inner}</div>;
                           return isOpen({ kind: "topic", id: x.id }, next, progress, results)
                             ? <Link key={x.id} to={to(`/learn/${x.id}`)} className={`rec-row${done ? " done" : ""}`}>{inner}</Link>
                             : <div key={x.id} className="rec-row locked" title="Откроется, когда вы дойдёте до неё по программе">{inner}</div>;
