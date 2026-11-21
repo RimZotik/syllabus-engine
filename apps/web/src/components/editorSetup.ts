@@ -8,7 +8,8 @@ import { EditorState, type Extension } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { bracketMatching, HighlightStyle, indentOnInput, syntaxHighlighting } from "@codemirror/language";
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
-import { python } from "@codemirror/lang-python";
+import { python, pythonLanguage } from "@codemirror/lang-python";
+import { dotCompletions } from "./pyComplete";
 import { tags as t } from "@lezer/highlight";
 
 const v = (name: string) => `var(--tok-${name})`;
@@ -45,7 +46,7 @@ const look = EditorView.theme({
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "var(--ed-popup-sel)", color: "var(--ink)" },
   ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "700", color: "var(--tok-keyword)" },
   ".cm-completionIcon": { opacity: ".7" },
-  ".cm-completionDetail": { color: "var(--ink-3)", fontStyle: "normal" },
+  ".cm-completionDetail": { color: "var(--ink-3)", fontStyle: "normal", marginLeft: "0" },
 });
 
 /** Everything the editor needs; `extra` goes first so its keys win (e.g. Ctrl+Enter). */
@@ -56,6 +57,6 @@ export function editorExtensions(extra: Extension[] = []): Extension[] {
     EditorState.allowMultipleSelections.of(true), indentOnInput(), bracketMatching(), closeBrackets(),
     autocompletion(), rectangularSelection(),
     keymap.of([indentWithTab, ...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...completionKeymap]),
-    python(), syntaxHighlighting(pythonColors), look,
+    python(), pythonLanguage.data.of({ autocomplete: dotCompletions }), syntaxHighlighting(pythonColors), look,
   ];
 }
