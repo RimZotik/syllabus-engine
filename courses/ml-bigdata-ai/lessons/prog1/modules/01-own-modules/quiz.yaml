@@ -1,0 +1,452 @@
+title: Проверка темы
+pass: 0.85
+minutes: 40
+questions:
+- id: from-import-counter
+  type: single
+  q: |
+    Файл `counter.py`:
+    ```python
+    print("загружаю counter")
+    CALLS = 0
+
+
+    def hit():
+        global CALLS
+        CALLS += 1
+        return CALLS
+    ```
+    Что выведет программа рядом с ним?
+    ```python
+    from counter import hit, CALLS
+    hit()
+    hit()
+    import counter
+    print(CALLS, counter.CALLS, hit())
+    ```
+  options:
+  - '`загружаю counter`, затем `0 2 3`'
+  - '`загружаю counter` дважды, затем `0 2 3`'
+  - '`загружаю counter`, затем `2 2 3`'
+  - '`загружаю counter`, затем `0 3 3`'
+  answer: 0
+  explain: '`from counter import CALLS` связал имя программы с числом 0, которое было в модуле в тот момент. `global CALLS` внутри `hit` — глобальное имя модуля `counter`, где функцию определили, поэтому `hit` перепривязывает `counter.CALLS`, а имя `CALLS` программы остаётся при нуле. Второй `import` файл не выполняет. Аргументы `print` вычисляются слева направо: `counter.CALLS` прочитан до третьего вызова `hit`, когда он ещё 2.'
+- id: two-files-name
+  type: single
+  q: |
+    Файл `temperature.py`:
+    ```python
+    def to_f(c):
+        return c * 9 / 5 + 32
+
+    if __name__ == "__main__":
+        print("проверка:", to_f(100))
+    print("temperature:", __name__)
+    ```
+    Файл `weather.py` рядом:
+    ```python
+    import temperature
+    print("weather:", __name__)
+    if __name__ == "__main__":
+        print(temperature.to_f(-40))
+    ```
+    Что выведет `python weather.py`?
+  options:
+  - "`temperature: temperature`, `weather: __main__`, `-40.0`"
+  - "`проверка: 212.0`, `temperature: temperature`, `weather: __main__`, `-40.0`"
+  - "`temperature: __main__`, `weather: __main__`, `-40.0`"
+  - "`weather: __main__`, `-40.0`"
+  answer: 0
+  explain: 'Запущен `weather.py`, поэтому `"__main__"` — только его `__name__`. Импорт выполняет `temperature.py` целиком, но там `__name__` равно `"temperature"`: условие ложно, «проверка» не печатается, а последняя строка файла стоит вне условия и выполняется. Затем выполняется сам `weather.py`, и его условие истинно.'
+- id: circular-trace
+  type: multi
+  q: |
+    `main.py` начинается с `import orders`. `orders.py` начинается с `from menu import MENU`, а ниже заводит `TAX = 0.2`. `menu.py` начинается с `from orders import TAX`, а ниже заводит `MENU`. Запуск `main.py`:
+    ```
+    Traceback (most recent call last):
+      File "C:\cafe\main.py", line 1, in <module>
+        import orders
+      File "C:\cafe\orders.py", line 1, in <module>
+        from menu import MENU
+      File "C:\cafe\menu.py", line 1, in <module>
+        from orders import TAX
+    ImportError: cannot import name 'TAX' from partially initialized module 'orders' (most likely due to a circular import) (C:\cafe\orders.py)
+    ```
+    Что верно?
+  options:
+  - 'К моменту ошибки модуль `orders` уже заведён и запомнен'
+  - 'Строка `TAX = 0.2` в `orders.py` к моменту ошибки ещё не выполнялась'
+  - 'Ошибки не будет, если в `main.py` перед `import orders` поставить `import menu`'
+  - 'Ошибки не будет, если запускать не `main.py`, а `orders.py`'
+  - 'Python выполняет `orders.py` второй раз, и на этом повторном выполнении всё ломается'
+  answer:
+  - 0
+  - 1
+  explain: 'Python завёл и запомнил `orders`, на первой его строке ушёл выполнять `menu.py`, а тот попросил `TAX` у недовыполненного `orders`. `import menu` первым только развернёт круг: `menu` начнёт, `orders` попросит `MENU` раньше, чем `menu` его заведёт. Запуск `orders.py` тоже не спасёт: он выполнится как `__main__`, а `menu` импортирует его ещё раз уже под именем `orders` — и споткнётся на `MENU`. Повторного выполнения запомненного `orders` в трассировке нет: `from orders import TAX` взял уже запомненный модуль.'
+- id: shadow-csv
+  type: single
+  q: |
+    В папке `C:\work` лежат `report.py` и `csv.py` — в последнем вы пробовали разбирать строки через `split`. `report.py`:
+    ```python
+    import csv
+
+    with open("sales.csv", encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    ```
+    Запуск падает: `AttributeError: module 'csv' has no attribute 'DictReader'`. Что исправит ошибку?
+  options:
+  - 'Переименовать `csv.py`, например в `csv_tries.py`'
+  - 'Написать `import csv as c` и вызывать `c.DictReader`'
+  - 'Написать `from csv import DictReader`'
+  - 'Перенести `import csv` ниже, сразу перед `with`'
+  answer: 0
+  explain: 'Python ищет модуль сначала в папке запущенного файла и находит там ваш `csv.py`, где `DictReader` нет. Другое имя в программе (`as c`) или другая запись импорта ищут тот же файл и найдут тот же модуль; `from csv import DictReader` упадёт с `ImportError`. Место строки `import` на поиск не влияет. Помогает только убрать совпадение имени файла со стандартным модулем.'
+- id: code-fix-qualified
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести сумму чека через функцию `total` из модуля `shop`.**
+
+    На входе — названия товаров через пробел. Модуль `shop.py` — на вкладке, менять его нельзя.
+
+    Пример 1
+    ```input
+    хлеб сыр
+    ```
+    ```output
+    Итого: 365
+    ```
+  starter: |
+    import shop
+
+    items = input().split()
+    print("Итого:", total(items))
+  solution: |
+    import shop
+
+    items = input().split()
+    print("Итого:", shop.total(items))
+  tests:
+    files:
+      shop.py: |
+        PRICES = {"молоко": 89, "хлеб": 45, "сыр": 320}
+
+
+        def total(items):
+            return sum(PRICES[name] for name in items)
+    io:
+    - name: Пример из условия
+      stdin: "хлеб сыр\n"
+      stdout: "Итого: 365"
+    - name: Один товар дважды
+      stdin: "молоко молоко\n"
+      stdout: "Итого: 178"
+      hidden: true
+    - name: Другие цены в модуле
+      stdin: "хлеб сыр\n"
+      files:
+        shop.py: |
+          PRICES = {"молоко": 95, "хлеб": 52, "сыр": 349}
+
+
+          def total(items):
+              return sum(PRICES[name] for name in items)
+      stdout: "Итого: 401"
+      hidden: true
+  explain: '`import shop` заводит в программе одно имя — `shop`. Имени `total` в программе нет, отсюда `NameError`. Функцию берут из модуля через точку: `shop.total`. Другой путь — `from shop import total`, тогда имя `total` появится в программе.'
+- id: code-fix-star-shadow
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести сумму чисел и сумму со скидкой 10 %, а падает с `KeyError`.**
+
+    На входе — цены через пробел. Модуль `shop.py` — на вкладке, менять его нельзя. Свою функцию `total` оставьте: она считает сумму списка цен.
+
+    Пример 1
+    ```input
+    100 250
+    ```
+    ```output
+    Итого: 350
+    Со скидкой: 315.0
+    ```
+  starter: |
+    def total(prices):
+        return sum(prices)
+
+
+    from shop import *
+
+    prices = [int(x) for x in input().split()]
+    print("Итого:", total(prices))
+    print("Со скидкой:", discount(total(prices), 10))
+  solution: |
+    def total(prices):
+        return sum(prices)
+
+
+    from shop import discount
+
+    prices = [int(x) for x in input().split()]
+    print("Итого:", total(prices))
+    print("Со скидкой:", discount(total(prices), 10))
+  tests:
+    stdin: "100\n"
+    files:
+      shop.py: |
+        PRICES = {"молоко": 89, "хлеб": 45, "сыр": 320}
+
+
+        def total(items):
+            """Сумма чека по названиям товаров."""
+            return sum(PRICES[name] for name in items)
+
+
+        def discount(amount, percent):
+            """Сумма после скидки percent процентов."""
+            return amount * (100 - percent) / 100
+    io:
+    - name: Пример из условия
+      stdin: "100 250\n"
+      stdout: "Итого: 350\nСо скидкой: 315.0"
+    - name: Одна цена
+      stdin: "45\n"
+      stdout: "Итого: 45\nСо скидкой: 40.5"
+      hidden: true
+    asserts:
+    - name: Своя total — та, что считает список цен
+      code: |
+        r = total([10, 20])
+        assert r == 30, f"total([10, 20]) должна вернуть 30, а вернула {r!r}: имя total перепривязано"
+  explain: '`from shop import *` привёл все имена модуля, и `total` из `shop` молча заменила вашу — она ищет цены по названиям, и `PRICES[100]` даёт `KeyError`. Из модуля нужна одна `discount` — её и импортируют явно. Перенести звёздочку выше `def total` тоже «сработает», но любое новое имя в `shop` снова сможет что-то перекрыть.'
+- id: code-fix-module-limit
+  type: code
+  q: |
+    **Исправьте программу: она должна проверять суммы по лимиту 500 через функцию `over_limit` модуля `settings`, а помечает уже 200.**
+
+    На входе — суммы через пробел; для каждой — строка `сумма — проверить` или `сумма — ок`. `settings.py` — на вкладке, менять его нельзя; свою проверку суммы не пишите — решает `over_limit`.
+
+    Пример 1
+    ```input
+    200 500 501
+    ```
+    ```output
+    200 — ок
+    500 — ок
+    501 — проверить
+    ```
+  starter: |
+    from settings import LIMIT, over_limit
+
+    LIMIT = 500
+    for amount in [int(x) for x in input().split()]:
+        if over_limit(amount):
+            print(amount, "— проверить")
+        else:
+            print(amount, "— ок")
+  solution: |
+    import settings
+
+    settings.LIMIT = 500
+    for amount in [int(x) for x in input().split()]:
+        if settings.over_limit(amount):
+            print(amount, "— проверить")
+        else:
+            print(amount, "— ок")
+  tests:
+    files:
+      settings.py: |
+        LIMIT = 100
+
+
+        def over_limit(amount):
+            return amount > LIMIT
+    io:
+    - name: Пример из условия
+      stdin: "200 500 501\n"
+      stdout: "200 — ок\n500 — ок\n501 — проверить"
+    - name: Мелкие суммы
+      stdin: "50 100 101\n"
+      stdout: "50 — ок\n100 — ок\n101 — ок"
+      hidden: true
+    - name: В модуле другое правило
+      stdin: "499 500 501\n"
+      files:
+        settings.py: |
+          LIMIT = 100
+
+
+          def over_limit(amount):
+              return amount >= LIMIT
+      stdout: "499 — ок\n500 — проверить\n501 — проверить"
+      hidden: true
+  explain: '`over_limit` ищет `LIMIT` среди глобальных имён модуля `settings`, где её определили. `LIMIT = 500` в программе перепривязывает имя программы, а `settings.LIMIT` остаётся 100. Менять нужно имя в пространстве имён модуля: `settings.LIMIT = 500`. Для этого нужен сам модуль — `import settings`.'
+- id: code-fix-module-rebind
+  type: code
+  q: |
+    **Исправьте программу: для каждого магазина она должна вывести сумму чека, а падает на втором магазине.**
+
+    Первая строка — товары через пробел, вторая — магазины через пробел. Для каждого магазина — строка `магазин: сумма`. Модуль `shop.py` — на вкладке, менять его нельзя.
+
+    Пример 1
+    ```input
+    хлеб сыр
+    Ромашка Лента
+    ```
+    ```output
+    Ромашка: 365
+    Лента: 365
+    ```
+  starter: |
+    import shop
+
+    items = input().split()
+    for shop in input().split():
+        print(f"{shop}: {shop.total(items)}")
+  solution: |
+    import shop
+
+    items = input().split()
+    for name in input().split():
+        print(f"{name}: {shop.total(items)}")
+  tests:
+    files:
+      shop.py: |
+        PRICES = {"молоко": 89, "хлеб": 45, "сыр": 320}
+
+
+        def total(items):
+            return sum(PRICES[name] for name in items)
+    io:
+    - name: Пример из условия
+      stdin: "хлеб сыр\nРомашка Лента\n"
+      stdout: "Ромашка: 365\nЛента: 365"
+    - name: Один магазин
+      stdin: "молоко\nПятёрочка\n"
+      stdout: "Пятёрочка: 89"
+      hidden: true
+    - name: Другие цены в модуле
+      stdin: "сыр\nА Б В\n"
+      files:
+        shop.py: |
+          PRICES = {"сыр": 410}
+
+
+          def total(items):
+              return sum(PRICES[name] for name in items)
+      stdout: "А: 410\nБ: 410\nВ: 410"
+      hidden: true
+  explain: 'Цикл `for shop in ...` перепривязывает имя `shop` к строке «Ромашка»: модуль больше не достать по этому имени, и `shop.total` — это поиск атрибута `total` у строки, `AttributeError`. Имя модуля — обычное имя в пространстве имён программы, и `for` его не щадит, как `sum = 0` — встроенную `sum`. Переменной цикла дают другое имя.'
+- id: code-guard-silent
+  type: code
+  q: |
+    **Измените программу так, чтобы её можно было импортировать: при `import main` она ничего не печатает и не ждёт ввода, а при запуске работает как сейчас.**
+
+    Функцию `fare` не меняйте; при импорте она должна быть доступна как `main.fare`.
+
+    Пример 1
+    ```input
+    12
+    ```
+    ```output
+    проверка прошла
+    К оплате: 399
+    ```
+  starter: |
+    def fare(km):
+        """Стоимость поездки: посадка 99 ₽ и 25 ₽ за километр."""
+        return 99 + 25 * km
+
+
+    assert fare(0) == 99
+    print("проверка прошла")
+    km = int(input())
+    print("К оплате:", fare(km))
+  solution: |
+    def fare(km):
+        """Стоимость поездки: посадка 99 ₽ и 25 ₽ за километр."""
+        return 99 + 25 * km
+
+
+    if __name__ == "__main__":
+        assert fare(0) == 99
+        print("проверка прошла")
+        km = int(input())
+        print("К оплате:", fare(km))
+  tests:
+    stdin: "12\n"
+    io:
+    - name: Пример из условия
+      stdin: "12\n"
+      stdout: "проверка прошла\nК оплате: 399"
+    - name: Ноль километров
+      stdin: "0\n"
+      stdout: "проверка прошла\nК оплате: 99"
+      hidden: true
+    asserts:
+    - name: import main молчит и не ждёт ввода
+      code: |
+        import io as _io, contextlib as _cl
+        _buf = _io.StringIO()
+        try:
+            with _cl.redirect_stdout(_buf):
+                import main
+        except EOFError:
+            assert False, "При import main программа ждёт ввод: input стоит вне if __name__ == \"__main__\""
+        assert _buf.getvalue() == "", f"При import main напечаталось {_buf.getvalue()!r}, а не должно ничего"
+        assert main.fare(10) == 349, f"main.fare(10) должна вернуть 349, а вернула {main.fare(10)!r}"
+  explain: 'Импорт выполняет файл сверху вниз, поэтому всё, что нужно только при запуске, — проверку, печать и чтение ввода — ставят под `if __name__ == "__main__":`. Определение `fare` остаётся без условия: функция нужна в обеих ролях.'
+- id: code-fix-alias-sale
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести сумму чека по обычным ценам и по акционным — всё на 10 % дешевле, а выводит акционную сумму дважды.**
+
+    На входе — названия товаров через пробел. Акционная цена товара — `round(цена * 0.9)`. Модуль `shop.py` — на вкладке, менять его нельзя; функция `shop.total` должна и дальше считать по обычным ценам.
+
+    Пример 1
+    ```input
+    хлеб сыр
+    ```
+    ```output
+    Акция: 328
+    Обычно: 365
+    ```
+  starter: |
+    import shop
+
+    items = input().split()
+    sale = shop.PRICES
+    for name in sale:
+        sale[name] = round(sale[name] * 0.9)
+    print("Акция:", sum(sale[name] for name in items))
+    print("Обычно:", shop.total(items))
+  solution: |
+    import shop
+
+    items = input().split()
+    sale = dict(shop.PRICES)
+    for name in sale:
+        sale[name] = round(sale[name] * 0.9)
+    print("Акция:", sum(sale[name] for name in items))
+    print("Обычно:", shop.total(items))
+  tests:
+    stdin: "хлеб\n"
+    files:
+      shop.py: |
+        PRICES = {"молоко": 89, "хлеб": 45, "сыр": 320}
+
+
+        def total(items):
+            return sum(PRICES[name] for name in items)
+    io:
+    - name: Пример из условия
+      stdin: "хлеб сыр\n"
+      stdout: "Акция: 328\nОбычно: 365"
+    - name: Все товары
+      stdin: "молоко хлеб сыр\n"
+      stdout: "Акция: 408\nОбычно: 454"
+      hidden: true
+    asserts:
+    - name: Цены в модуле не изменились
+      code: |
+        import shop
+        assert shop.PRICES == {"молоко": 89, "хлеб": 45, "сыр": 320}, f"После программы shop.PRICES = {shop.PRICES}: программа изменила цены в модуле"
+  explain: '`sale = shop.PRICES` не копирует словарь: оба имени указывают на один словарь, и цены меняются в самом модуле. `shop.total` ищет `PRICES` в своём модуле и видит уже акционные цены. Нужна своя копия — `dict(shop.PRICES)` — или подсчёт без изменения словаря: `sum(round(shop.PRICES[n] * 0.9) for n in items)`.'

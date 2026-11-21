@@ -1,0 +1,124 @@
+id: p1m-proj-summary
+title: 'Шаг 2. Модуль сводок summary'
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите модуль сводок: функции `by_category(records)`, `by_month(records)` и `top_category(records)`.**
+
+  Запись — словарь `{"date": date, "category": str, "amount": float}`, такие возвращает `parse_row`.
+
+  - `by_category` — словарь «категория → сумма расходов», категории в порядке первого появления.
+  - `by_month` — словарь «`ГГГГ-ММ` → сумма», месяцы в порядке первого появления; одинаковые месяцы разных лет — разные ключи.
+  - `top_category` — категория с наибольшей суммой; при равенстве — встреченная раньше; для пустого списка — `None`.
+
+  Возвращаются обычные словари, не `defaultdict`; суммы не округляются. В модуле нет `print` и работы с файлами.
+
+  Пример 1
+  ```input
+  records = [{"date": date(2023, 12, 30), "category": "подарки", "amount": 2000.0},
+             {"date": date(2024, 12, 5), "category": "кафе", "amount": 450.0},
+             {"date": date(2024, 12, 9), "category": "подарки", "amount": 500.0}]
+  by_category(records), by_month(records), top_category(records)
+  ```
+  ```output
+  ({'подарки': 2500.0, 'кафе': 450.0}, {'2023-12': 2000.0, '2024-12': 950.0}, 'подарки')
+  ```
+starter: |
+  """Сводки по готовым записям расходов."""
+  from collections import defaultdict
+
+
+  def by_category(records):
+      """Сумма расходов по каждой категории."""
+      pass
+
+
+  def by_month(records):
+      """Сумма расходов по месяцам: ключ — 'ГГГГ-ММ'."""
+      pass
+
+
+  def top_category(records):
+      """Категория с наибольшей суммой; при равенстве — встреченная раньше; пусто — None."""
+      pass
+solution: |
+  """Сводки по готовым записям расходов."""
+  from collections import defaultdict
+
+
+  def by_category(records):
+      """Сумма расходов по каждой категории."""
+      totals = defaultdict(float)
+      for r in records:
+          totals[r["category"]] += r["amount"]
+      return dict(totals)
+
+
+  def by_month(records):
+      """Сумма расходов по месяцам: ключ — 'ГГГГ-ММ'."""
+      totals = defaultdict(float)
+      for r in records:
+          totals[r["date"].strftime("%Y-%m")] += r["amount"]
+      return dict(totals)
+
+
+  def top_category(records):
+      """Категория с наибольшей суммой; при равенстве — встреченная раньше; пусто — None."""
+      best = None
+      totals = by_category(records)
+      for category in totals:
+          if best is None or totals[category] > totals[best]:
+              best = category
+      return best
+tests:
+  asserts:
+    - name: При импорте модуль молчит
+      code: |
+        import io as _io, contextlib as _cl
+        _buf = _io.StringIO()
+        with _cl.redirect_stdout(_buf):
+            import main
+        assert _buf.getvalue() == "", f"При import main напечаталось {_buf.getvalue()!r}: в модуле сводок не должно быть print"
+    - name: by_category
+      code: |
+        from datetime import date as _d
+        recs = [{"date": _d(2024, 5, 3), "category": "продукты", "amount": 1250.5},
+                {"date": _d(2024, 5, 3), "category": "транспорт", "amount": 60.0},
+                {"date": _d(2024, 5, 17), "category": "продукты", "amount": 890.0}]
+        r = by_category(recs)
+        assert r == {"продукты": 2140.5, "транспорт": 60.0}, f"by_category вернула {r!r}"
+        assert list(r) == ["продукты", "транспорт"], f"Категории должны идти в порядке первого появления, а идут {list(r)}"
+        assert type(r) is dict, f"Нужен обычный словарь, а вернулся {type(r).__name__}"
+        assert by_category([]) == {}, "by_category([]) должна вернуть {}"
+    - name: by_month — годы не сливаются
+      code: |
+        from datetime import date as _d
+        recs = [{"date": _d(2023, 12, 30), "category": "подарки", "amount": 2000.0},
+                {"date": _d(2024, 12, 5), "category": "кафе", "amount": 450.0},
+                {"date": _d(2024, 1, 9), "category": "кафе", "amount": 100.0},
+                {"date": _d(2024, 12, 31), "category": "подарки", "amount": 500.0}]
+        r = by_month(recs)
+        want = {"2023-12": 2000.0, "2024-12": 950.0, "2024-01": 100.0}
+        assert r == want, f"by_month должна вернуть {want}, а вернула {r!r}"
+        assert list(r) == ["2023-12", "2024-12", "2024-01"], f"Месяцы должны идти в порядке первого появления, а идут {list(r)}"
+        assert type(r) is dict, f"Нужен обычный словарь, а вернулся {type(r).__name__}"
+        assert by_month([]) == {}, "by_month([]) должна вернуть {}"
+    - name: top_category
+      code: |
+        from datetime import date as _d
+        def rec(cat, amount):
+            return {"date": _d(2024, 6, 1), "category": cat, "amount": amount}
+        cases = [([rec("кафе", 100.0), rec("такси", 300.0), rec("кафе", 250.0)], "кафе"),
+                 ([rec("книги", 200.0), rec("кино", 200.0)], "книги"),
+                 ([rec("кино", 50.0)], "кино"),
+                 ([], None)]
+        for recs, want in cases:
+            r = top_category(recs)
+            assert r == want, f"top_category для {[(x['category'], x['amount']) for x in recs]} должна вернуть {want!r}, а вернула {r!r}"
+hints:
+  - level: 1
+    text: 'Все три функции — накопители по ключу. Что служит ключом в каждой и где его взять в записи?'
+  - level: 2
+    text: '`defaultdict(float)` избавит от проверки нового ключа, а `dict(...)` в конце превратит его в обычный словарь. Ключ месяца из даты даёт `strftime` с годом и месяцем.'
+  - level: 3
+    text: 'Для `top_category` используйте готовую `by_category` и пройдите по её ключам, запоминая лучший: меняйте его только при строго большей сумме — тогда при равенстве останется встреченный раньше.'

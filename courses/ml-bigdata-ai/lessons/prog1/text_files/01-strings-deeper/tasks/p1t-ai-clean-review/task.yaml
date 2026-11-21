@@ -1,0 +1,93 @@
+id: p1t-ai-clean-review
+title: ИИ-ассистент чистит отзывы
+sandbox: python-browser
+difficulty: 1
+statement: |
+  **Исправьте две функции: `clean_review(text)` возвращает текст, где между словами ровно один пробел, а по краям пробелов нет; `word_count(text)` возвращает число слов.**
+
+  Слова разделены любыми пробельными символами: пробел, табуляция, перевод строки, неразрывный пробел. Код в редакторе написал ИИ-ассистент: на примере 1 он отвечает верно, на примере 2 — нет. Найдите, каких случаев он не учёл.
+
+  Пример 1
+  ```input
+  clean_review("  Отличный   товар,  спасибо ")
+  word_count("  Отличный   товар,  спасибо ")
+  ```
+  ```output
+  Отличный товар, спасибо
+  3
+  ```
+
+  Пример 2
+  ```input
+  clean_review("Пришёл\tбыстро\n\nрекомендую")
+  word_count("Пришёл\tбыстро\n\nрекомендую")
+  ```
+  ```output
+  Пришёл быстро рекомендую
+  3
+  ```
+starter: |
+  # Решение от ИИ-ассистента
+  def clean_review(text):
+      while "  " in text:
+          text = text.replace("  ", " ")
+      return text.strip(" ")
+
+
+  def word_count(text):
+      return len(clean_review(text).split(" "))
+
+
+  print(clean_review("  Отличный   товар,  спасибо "))
+  print(word_count("  Отличный   товар,  спасибо "))
+solution: |
+  def clean_review(text):
+      return " ".join(text.split())
+
+
+  def word_count(text):
+      return len(text.split())
+
+
+  print(clean_review("  Отличный   товар,  спасибо "))
+  print(word_count("  Отличный   товар,  спасибо "))
+tests:
+  asserts:
+    - name: Пример 1
+      code: |
+        t = "  Отличный   товар,  спасибо "
+        got = clean_review(t)
+        assert got == "Отличный товар, спасибо", f"clean_review({t!r}) вернула {got!r}"
+        assert word_count(t) == 3, f"word_count({t!r}) должна вернуть 3, а вернула {word_count(t)}"
+    - name: Табуляция и переводы строк
+      code: |
+        t = "Пришёл\tбыстро\n\nрекомендую"
+        got = clean_review(t)
+        assert got == "Пришёл быстро рекомендую", f"clean_review({t!r}) должна вернуть 'Пришёл быстро рекомендую', а вернула {got!r}"
+        assert word_count(t) == 3, f"word_count({t!r}) должна вернуть 3, а вернула {word_count(t)}"
+    - name: Неразрывный пробел
+      code: |
+        t = "Цена\u00a0отличная \u00a0"
+        got = clean_review(t)
+        assert got == "Цена отличная", f"clean_review({t!r}) должна вернуть 'Цена отличная', а вернула {got!r}"
+        assert word_count(t) == 2, f"word_count({t!r}) должна вернуть 2, а вернула {word_count(t)}"
+    - name: Пустой отзыв
+      code: |
+        for t in ["", "   ", "\n\t"]:
+            got = clean_review(t)
+            assert got == "", f"clean_review({t!r}) должна вернуть пустую строку, а вернула {got!r}"
+            n = word_count(t)
+            assert n == 0, f"В {t!r} нет слов: word_count должна вернуть 0, а вернула {n}"
+    - name: Перевод строки по краям
+      code: |
+        t = "\nСупер\n"
+        got = clean_review(t)
+        assert got == "Супер", f"clean_review({t!r}) должна вернуть 'Супер', а вернула {got!r}"
+        assert word_count(t) == 1, f"word_count({t!r}) должна вернуть 1, а вернула {word_count(t)}"
+hints:
+  - level: 1
+    text: 'Возьмите самый короткий вход, на котором ответ неверен: например, `"а\tб"`. Что с ним делает каждая строка `clean_review`?'
+  - level: 2
+    text: 'Ассистент считает разделителем только обычный пробел. Какой вызов `split` сам режет по любой цепочке пробельных символов и не оставляет пустых кусков?'
+  - level: 3
+    text: 'Отдельно проверьте пустой отзыв: сколько элементов в `"".split(" ")` и сколько в `"".split()`?'

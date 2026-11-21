@@ -1,0 +1,331 @@
+title: Проверка темы
+pass: 0.85
+minutes: 45
+questions:
+- id: counter-update-string
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    from collections import Counter
+
+    drinks = Counter(["чай", "сок", "чай"])
+    drinks.update("сок")
+    print(drinks["сок"], drinks["чай"], len(drinks))
+    ```
+  options:
+  - '`1 2 5`'
+  - '`2 2 2`'
+  - '`2 2 5`'
+  - '`1 2 2`'
+  answer: 0
+  traps:
+  - 1
+  explain: '`update` перебирает то, что ему дали, и прибавляет по единице каждому элементу. Перебор строки даёт буквы, поэтому прибавились «с», «о», «к», а не «сок»: у «сока» по-прежнему 1, а ключей стало пять — «чай», «сок» и три буквы. Чтобы добавить слово, его передают списком: `update(["сок"])`.'
+- id: seed-inside-function
+  type: single
+  q: |
+    Что выведет программа, если запустить её несколько раз?
+    ```python
+    import random
+
+
+    def roll():
+        random.seed(7)
+        return random.randint(1, 6)
+
+
+    rolls = [roll() for _ in range(3)]
+    print(len(set(rolls)))
+    ```
+  options:
+  - '`1` при каждом запуске'
+  - '`3` при каждом запуске'
+  - 'От `1` до `3`, при каждом запуске по-разному'
+  - 'Одно и то же число при каждом запуске, но какое — зависит от первых трёх чисел после `seed(7)`'
+  answer: 0
+  explain: 'Каждый вызов `roll` заново задаёт начало последовательности и берёт из неё первое число — три раза одно и то же, в множестве один элемент. Последовательность после `seed(7)` дальше первого числа не продвигается. Поэтому seed задают один раз, в начале программы или опыта, а не перед каждым числом.'
+- id: environ-is-strings
+  type: multi
+  q: |
+    Переменная окружения `MAX_ITEMS` не задана, в начале программы — `import os`. Какие из этих строк, каждая сама по себе, упадут с исключением?
+  options:
+  - '`a = os.environ.get("MAX_ITEMS", 5) + 1`'
+  - '`b = int(os.environ.get("MAX_ITEMS", "5")) + 1`'
+  - '`os.environ["MAX_ITEMS"] = 12`'
+  - '`c = os.environ["MAX_ITEMS"]`'
+  - '`d = "MAX_ITEMS" in os.environ`'
+  answer:
+  - 2
+  - 3
+  explain: 'Переменной нет, поэтому `get` возвращает значение по умолчанию: в строке `a` это число 5, и `5 + 1` работает — ошибка притаится до того дня, когда переменную зададут и придёт строка. Строка `b` верна в любом случае. Значения окружения — только строки, и присвоить число нельзя: `TypeError: str expected, not int`. Чтение через `[]` отсутствующей переменной даёт `KeyError`, а проверка `in`, как у словаря, просто даёт `False`.'
+- id: code-fix-counter-words
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести самое частое слово строки и сколько раз оно встретилось.**
+
+    На входе — слова через пробел. Вывод — `слово: число`; при равенстве — слово, встреченное раньше.
+
+    Пример 1
+    ```input
+    мама мыла раму мама
+    ```
+    ```output
+    мама: 2
+    ```
+  starter: |
+    from collections import Counter
+
+    counts = Counter(input())
+    word, n = counts.most_common(1)[0]
+    print(f"{word}: {n}")
+  solution: |
+    from collections import Counter
+
+    counts = Counter(input().split())
+    word, n = counts.most_common(1)[0]
+    print(f"{word}: {n}")
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "мама мыла раму мама\n"
+      stdout: "мама: 2"
+    - name: Равные частоты
+      stdin: "чай кофе кофе чай сок\n"
+      stdout: "чай: 2"
+      hidden: true
+    - name: Одно слово
+      stdin: "привет\n"
+      stdout: "привет: 1"
+      hidden: true
+  explain: '`Counter` считает элементы того, что перебирает, а перебор строки даёт символы: самым частым выходит буква «а» или пробел. Словами строка становится после `split()`.'
+- id: code-fix-environ-int
+  type: code
+  q: |
+    **Исправьте `max_items()`: она должна вернуть число из переменной окружения `MAX_ITEMS`, а если переменной нет — 5.**
+
+    Значение возвращайте целым числом.
+
+    Пример 1
+    ```input
+    os.environ["MAX_ITEMS"] = "12"
+    max_items()
+    ```
+    ```output
+    12
+    ```
+  starter: |
+    import os
+
+
+    def max_items():
+        """Сколько товаров можно положить в заказ; по умолчанию 5."""
+        return os.environ.get("MAX_ITEMS", 5)
+  solution: |
+    import os
+
+
+    def max_items():
+        """Сколько товаров можно положить в заказ; по умолчанию 5."""
+        return int(os.environ.get("MAX_ITEMS", "5"))
+  tests:
+    asserts:
+    - name: Переменной нет — 5
+      code: |
+        import os as _os
+        _os.environ.pop("MAX_ITEMS", None)
+        r = max_items()
+        assert r == 5 and type(r) is int, f"Без MAX_ITEMS должно вернуться число 5, а вернулось {r!r}"
+    - name: Переменная задана — её число
+      code: |
+        import os as _os
+        try:
+            for text, want in [("12", 12), ("1", 1)]:
+                _os.environ["MAX_ITEMS"] = text
+                r = max_items()
+                assert r == want and type(r) is int, f"При MAX_ITEMS=\"{text}\" должно вернуться число {want}, а вернулось {r!r}"
+        finally:
+            _os.environ.pop("MAX_ITEMS", None)
+  explain: 'Пока переменной нет, `get` возвращает число 5, и ошибка не видна. Но заданная переменная — всегда строка: вернётся `"12"`, и сравнение `count > max_items()` упадёт. Значение переводят через `int`, а значение по умолчанию тоже пишут строкой, чтобы `int` получал строку в обоих случаях.'
+- id: code-fix-defaultdict-read
+  type: code
+  q: |
+    **Исправьте программу: для каждого города из списка проверки она должна сказать, были ли продажи, а потом — в скольких городах они были.**
+
+    Строки ввода — `город сумма`, до пустой строки. Для каждого города из `CHECK` по порядку — `город: сумма` или `город: продаж нет`; последняя строка — `Городов с продажами: число`.
+
+    Пример 1
+    ```input
+    Казань 300
+    Омск 120
+    Казань 50
+
+    ```
+    ```output
+    Казань: 350
+    Тула: продаж нет
+    Городов с продажами: 2
+    ```
+  starter: |
+    from collections import defaultdict
+
+    CHECK = ["Казань", "Тула"]
+
+    sales = defaultdict(int)
+    line = input()
+    while line != "":
+        city, amount = line.split()
+        sales[city] += int(amount)
+        line = input()
+
+    for city in CHECK:
+        if sales[city] == 0:
+            print(f"{city}: продаж нет")
+        else:
+            print(f"{city}: {sales[city]}")
+    print("Городов с продажами:", len(sales))
+  solution: |
+    from collections import defaultdict
+
+    CHECK = ["Казань", "Тула"]
+
+    sales = defaultdict(int)
+    line = input()
+    while line != "":
+        city, amount = line.split()
+        sales[city] += int(amount)
+        line = input()
+
+    for city in CHECK:
+        if city not in sales:
+            print(f"{city}: продаж нет")
+        else:
+            print(f"{city}: {sales[city]}")
+    print("Городов с продажами:", len(sales))
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "Казань 300\nОмск 120\nКазань 50\n\n"
+      stdout: "Казань: 350\nТула: продаж нет\nГородов с продажами: 2"
+    - name: Нигде не продали
+      stdin: "\n"
+      stdout: "Казань: продаж нет\nТула: продаж нет\nГородов с продажами: 0"
+      hidden: true
+    - name: Оба города
+      stdin: "Тула 10\nКазань 20\n\n"
+      stdout: "Казань: 20\nТула: 10\nГородов с продажами: 2"
+      hidden: true
+  explain: 'Чтение `sales["Тула"]` в `defaultdict(int)` не падает, а заводит пару `"Тула": 0`, и `len(sales)` считает её как город с продажами. Проверка `city not in sales` пары не создаёт. Сравнение с нулём неверно и по смыслу: сумма могла сложиться в ноль из настоящих продаж.'
+- id: code-fix-seed-dice
+  type: code
+  q: |
+    **Исправьте `roll_dice(n, seed)`: она должна вернуть список из `n` бросков кубика — одинаковый при одинаковом `seed`, но не из одного повторённого числа.**
+
+    Броски — `random.randint(1, 6)`, `seed` задаётся через `random.seed(seed)` один раз, перед первым броском.
+
+    Пример 1
+    ```input
+    roll_dice(5, 42) == roll_dice(5, 42)
+    ```
+    ```output
+    True
+    ```
+  starter: |
+    import random
+
+
+    def roll_dice(n, seed):
+        """n бросков кубика; одинаковый seed — одинаковые броски."""
+        rolls = []
+        for _ in range(n):
+            random.seed(seed)
+            rolls.append(random.randint(1, 6))
+        return rolls
+  solution: |
+    import random
+
+
+    def roll_dice(n, seed):
+        """n бросков кубика; одинаковый seed — одинаковые броски."""
+        random.seed(seed)
+        rolls = []
+        for _ in range(n):
+            rolls.append(random.randint(1, 6))
+        return rolls
+  tests:
+    asserts:
+    - name: Те же броски, что у эталона
+      code: |
+        import random as _r
+        for n, s in [(5, 42), (10, 7), (1, 3)]:
+            _r.seed(s)
+            want = [_r.randint(1, 6) for _ in range(n)]
+            got = roll_dice(n, s)
+            assert got == want, f"roll_dice({n}, {s}) должна вернуть {want}, а вернула {got}"
+    - name: Одинаковый seed — одинаковый список
+      code: |
+        a = roll_dice(8, 2024)
+        b = roll_dice(8, 2024)
+        assert a == b, f"Два вызова с seed 2024 дали разное: {a} и {b}"
+    - name: Ноль бросков
+      code: |
+        r = roll_dice(0, 1)
+        assert r == [], f"roll_dice(0, 1) должна вернуть [], а вернула {r}"
+  explain: '`random.seed(seed)` внутри цикла каждый раз начинает последовательность заново, и каждый бросок — её первое число. Seed задают один раз перед бросками: тогда вызов с тем же seed повторит весь список, а внутри списка числа идут дальше по последовательности.'
+- id: code-write-median-courier
+  type: code
+  q: |
+    **Напишите программу: для каждого курьера выведите медиану времени его доставок.**
+
+    Строки ввода — `курьер минуты`, до пустой строки. Вывод — по строке `курьер: медиана` для каждого курьера, курьеры по алфавиту, медиана с одним знаком после точки. Медиана — средний элемент упорядоченного списка, а при чётном количестве — среднее двух средних; готовая функция есть в модуле `statistics` — найдите её в документации.
+
+    Пример 1
+    ```input
+    Олег 30
+    Ира 25
+    Олег 20
+    Олег 90
+    Ира 31
+
+    ```
+    ```output
+    Ира: 28.0
+    Олег: 30.0
+    ```
+  starter: |
+    from collections import defaultdict
+
+    times = defaultdict(list)
+    # Читайте строки до пустой и собирайте минуты каждого курьера.
+    # Затем курьеры по алфавиту и медиана их минут.
+  solution: |
+    import statistics
+    from collections import defaultdict
+
+    times = defaultdict(list)
+    line = input()
+    while line != "":
+        name, minutes = line.split()
+        times[name].append(int(minutes))
+        line = input()
+
+    for name in sorted(times):
+        print(f"{name}: {statistics.median(times[name]):.1f}")
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "Олег 30\nИра 25\nОлег 20\nОлег 90\nИра 31\n\n"
+      stdout: "Ира: 28.0\nОлег: 30.0"
+    - name: Чётное число доставок и выброс
+      stdin: "Аня 40\nАня 10\nАня 15\nАня 200\n\n"
+      stdout: "Аня: 27.5"
+      hidden: true
+    - name: Одна доставка у каждого
+      stdin: "Вова 33\nБорис 12\n\n"
+      stdout: "Борис: 12.0\nВова: 33.0"
+      hidden: true
+    - name: Нет доставок
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+  explain: 'Медиану даёт `statistics.median(список)` — запись о ней в документации стоит рядом с `mean`. Сортировать минуты самому не нужно: функция делает это сама. Среднее тут обмануло бы: одна доставка за 90 минут подняла бы среднее Олега до 46,7, а медиана остаётся 30. Минуты собирает `defaultdict(list)`.'

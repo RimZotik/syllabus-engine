@@ -1,0 +1,101 @@
+id: p1t-json-path
+title: Значение по пути в JSON
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите `get_path(data, path, default=None)`: вернуть значение во вложенных словарях и списках по пути вида `customer.address.city` или `items.0.name`, а если пути нет — `default`.**
+
+  Части пути разделены точкой. Если текущее значение — словарь, часть пути — ключ; если список — часть из цифр означает индекс с 0. Пути нет, если ключа нет, индекс за пределами списка, часть для списка не из цифр или текущее значение — не словарь и не список.
+
+  Пример 1
+  ```input
+  (shop.json)
+  {"id": 17,
+   "customer": {"name": "Аня", "address": {"city": "Казань"}},
+   "items": [{"name": "чай", "tags": ["зелёный", "листовой"]}, {"name": "сыр"}]}
+
+  get_path(data, "customer.address.city")
+  get_path(data, "items.0.tags.1")
+  get_path(data, "items.5.name", "нет")
+  ```
+  ```output
+  Казань
+  листовой
+  нет
+  ```
+starter: |
+  import json
+
+
+  def get_path(data, path, default=None):
+      pass
+
+
+  with open("shop.json", encoding="utf-8") as f:
+      data = json.load(f)
+  print(get_path(data, "customer.address.city"))
+solution: |
+  import json
+
+
+  def get_path(data, path, default=None):
+      current = data
+      for part in path.split("."):
+          if type(current) is dict:
+              if part not in current:
+                  return default
+              current = current[part]
+          elif type(current) is list:
+              if not part.isdigit() or int(part) >= len(current):
+                  return default
+              current = current[int(part)]
+          else:
+              return default
+      return current
+
+
+  with open("shop.json", encoding="utf-8") as f:
+      data = json.load(f)
+  print(get_path(data, "customer.address.city"))
+tests:
+  files:
+    shop.json: "{\"id\": 17,\n \"customer\": {\"name\": \"Аня\", \"address\": {\"city\": \"Казань\"}},\n \"items\": [{\"name\": \"чай\", \"tags\": [\"зелёный\", \"листовой\"]}, {\"name\": \"сыр\"}]}\n"
+  asserts:
+    - name: Примеры из условия
+      code: |
+        import json
+        with open("shop.json", encoding="utf-8") as f:
+            d = json.load(f)
+        for path, want in [("customer.address.city", "Казань"), ("items.0.tags.1", "листовой"), ("id", 17), ("items.1.name", "сыр")]:
+            got = get_path(d, path)
+            assert got == want, f"get_path(data, {path!r}) должна вернуть {want!r}, а вернула {got!r}"
+        got = get_path(d, "items.5.name", "нет")
+        assert got == "нет", f"get_path(data, 'items.5.name', 'нет') должна вернуть 'нет', а вернула {got!r}"
+    - name: Путь ведёт к словарю или списку
+      code: |
+        d = {"a": {"b": [1, 2]}}
+        got = get_path(d, "a.b")
+        assert got == [1, 2], f"get_path({d}, 'a.b') должна вернуть [1, 2], а вернула {got!r}"
+        got = get_path(d, "a")
+        assert got == {"b": [1, 2]}, f"get_path({d}, 'a') должна вернуть {{'b': [1, 2]}}, а вернула {got!r}"
+    - name: Пути нет
+      code: |
+        d = {"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}
+        for path in ["customer.phone", "items.name", "items.-1.name", "items.1", "id.x", "customer.name.0", "nothing"]:
+            got = get_path(d, path, "—")
+            assert got == "—", f"Пути {path!r} в {d} нет — нужно значение по умолчанию '—', а вернулось {got!r}"
+        got = get_path(d, "customer.phone")
+        assert got is None, f"Без default для отсутствующего пути нужен None, а вернулось {got!r}"
+    - name: Значения null и false — найдены
+      code: |
+        d = {"coupon": None, "paid": False, "n": [0]}
+        assert get_path(d, "coupon", "нет") is None, "Ключ coupon есть, его значение None — нужно вернуть None, а не default"
+        assert get_path(d, "paid", "нет") is False, "Ключ paid есть со значением False — нужно вернуть False"
+        assert get_path(d, "n.0", "нет") == 0, "По пути n.0 лежит 0 — нужно вернуть 0"
+hints:
+  - level: 1
+    text: 'Идите по пути шаг за шагом: держите «текущее значение» и на каждой части пути спускайтесь на уровень глубже — как `order["customer"]["name"]`, только скобок столько, сколько частей.'
+  - level: 2
+    text: 'На каждом шаге сначала узнайте, что перед вами: словарь, список или что-то другое. От этого зависит, как понимать часть пути и как проверить, что путь есть.'
+  - level: 3
+    text: 'Не путайте «пути нет» и «по пути лежит `None` или `False`»: проверяйте наличие ключа через `in`, а не истинность значения. Для списка — `isdigit()` и сравнение индекса с длиной.'

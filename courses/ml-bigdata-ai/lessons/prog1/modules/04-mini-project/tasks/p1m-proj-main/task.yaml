@@ -1,0 +1,267 @@
+id: p1m-proj-main
+title: 'Шаг 3. Основная программа: от CSV к отчёту'
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Напишите основную программу проекта: `load(path)` читает таблицу расходов, `main()` пишет `report.json` и печатает итог.**
+
+  - `load(path)` открывает CSV с `encoding="utf-8-sig"` (файл может начинаться с невидимой метки Excel) и `newline=""`, читает строки через `csv.DictReader` и каждую разбирает `clean.parse_row`. Строку, на которой та выбросила `ValueError`, пропускает и запоминает `{"строка": номер, "причина": текст исключения}`; номер — как в редакторе, заголовок — строка 1. Возвращает кортеж `(записи, пропущенные)`.
+  - `main()` читает `expenses.csv` и пишет в `report.json` словарь с ключами `всего`, `по категориям` (`summary.by_category`), `по месяцам` (`summary.by_month`), `пропущено` — в этом порядке; все суммы округлены через `round(…, 2)`. Запись — `json.dump(отчёт, f, ensure_ascii=False, indent=2)`, файл открыт с `encoding="utf-8"`. Печатает `записей: N пропущено: M`.
+  - `main()` вызывается под `if __name__ == "__main__":`: при `import main` программа ничего не печатает и не пишет.
+
+  Модули `clean.py`, `summary.py` и таблица `expenses.csv` — на вкладках.
+
+  Пример 1
+  ```input
+  (входа нет; expenses.csv — на вкладке)
+  ```
+  ```output
+  записей: 5 пропущено: 2
+  ```
+  `report.json` после запуска:
+  ```
+  {
+    "всего": 2700.5,
+    "по категориям": {
+      "продукты": 2140.5,
+      "транспорт": 180.0,
+      "кафе": 380.0
+    },
+    "по месяцам": {
+      "2024-05": 2200.5,
+      "2024-06": 500.0
+    },
+    "пропущено": [
+      {
+        "строка": 5,
+        "причина": "пустая сумма"
+      },
+      {
+        "строка": 7,
+        "причина": "Invalid isoformat string: '06.06.2024'"
+      }
+    ]
+  }
+  ```
+starter: |
+  import csv
+  import json
+
+  import clean
+  import summary
+
+
+  def load(path):
+      """Путь к CSV → (записи, пропущенные строки с номером и причиной)."""
+      pass
+
+
+  def main():
+      """Читает expenses.csv, пишет report.json, печатает итог."""
+      pass
+solution: |
+  import csv
+  import json
+
+  import clean
+  import summary
+
+
+  def load(path):
+      """Путь к CSV → (записи, пропущенные строки с номером и причиной)."""
+      records, skipped = [], []
+      with open(path, encoding="utf-8-sig", newline="") as f:
+          for line_no, row in enumerate(csv.DictReader(f), start=2):
+              try:
+                  records.append(clean.parse_row(row))
+              except ValueError as e:
+                  skipped.append({"строка": line_no, "причина": str(e)})
+      return records, skipped
+
+
+  def rounded(totals):
+      """Те же суммы, округлённые до копеек."""
+      return {key: round(value, 2) for key, value in totals.items()}
+
+
+  def main():
+      """Читает expenses.csv, пишет report.json, печатает итог."""
+      records, skipped = load("expenses.csv")
+      report = {
+          "всего": round(sum(r["amount"] for r in records), 2),
+          "по категориям": rounded(summary.by_category(records)),
+          "по месяцам": rounded(summary.by_month(records)),
+          "пропущено": skipped,
+      }
+      with open("report.json", "w", encoding="utf-8") as f:
+          json.dump(report, f, ensure_ascii=False, indent=2)
+      print("записей:", len(records), "пропущено:", len(skipped))
+
+
+  if __name__ == "__main__":
+      main()
+tests:
+  files:
+    clean.py: |
+      """Разбор и очистка строк таблицы расходов."""
+      import math
+      from datetime import date
+
+
+      def parse_amount(text):
+          """'1 250,50' → 1250.5; пустой текст, не число или nan — ValueError."""
+          cleaned = text.replace(" ", "").replace("\xa0", "").replace(",", ".")
+          if not cleaned:
+              raise ValueError("пустая сумма")
+          amount = float(cleaned)
+          if math.isnan(amount):
+              raise ValueError(f"не число: {text}")
+          return amount
+
+
+      def clean_category(text):
+          """' Продукты ' → 'продукты'; пустая категория — ValueError."""
+          category = text.strip().lower()
+          if not category:
+              raise ValueError("пустая категория")
+          return category
+
+
+      def parse_row(row):
+          """Словарь из csv.DictReader → запись {'date', 'category', 'amount'}; плохая строка — ValueError."""
+          if row.get("дата") is None or row.get("категория") is None or row.get("сумма") is None:
+              raise ValueError("не хватает полей")
+          return {
+              "date": date.fromisoformat(row["дата"].strip()),
+              "category": clean_category(row["категория"]),
+              "amount": parse_amount(row["сумма"]),
+          }
+    summary.py: |
+      """Сводки по готовым записям расходов."""
+      from collections import defaultdict
+
+
+      def by_category(records):
+          """Сумма расходов по каждой категории, в порядке первого появления."""
+          totals = defaultdict(float)
+          for r in records:
+              totals[r["category"]] += r["amount"]
+          return dict(totals)
+
+
+      def by_month(records):
+          """Сумма расходов по месяцам: ключ — 'ГГГГ-ММ'."""
+          totals = defaultdict(float)
+          for r in records:
+              totals[r["date"].strftime("%Y-%m")] += r["amount"]
+          return dict(totals)
+    expenses.csv: |
+      дата,категория,сумма
+      2024-05-03, Продукты ,"1 250,50"
+      2024-05-03,Транспорт,60
+      2024-05-17,продукты,890
+      2024-06-01,Кафе,
+      2024-06-02,транспорт,120
+      06.06.2024,Кафе,450
+      2024-06-09,кафе,380
+  io:
+    - name: Таблица из условия
+      stdout: "записей: 5 пропущено: 2"
+      files_out:
+        report.json: |
+          {
+            "всего": 2700.5,
+            "по категориям": {
+              "продукты": 2140.5,
+              "транспорт": 180.0,
+              "кафе": 380.0
+            },
+            "по месяцам": {
+              "2024-05": 2200.5,
+              "2024-06": 500.0
+            },
+            "пропущено": [
+              {
+                "строка": 5,
+                "причина": "пустая сумма"
+              },
+              {
+                "строка": 7,
+                "причина": "Invalid isoformat string: '06.06.2024'"
+              }
+            ]
+          }
+    - name: Таблица из Excel — с меткой и короткой строкой
+      files:
+        expenses.csv: "﻿дата,категория,сумма\n2023-12-30,Подарки,\"2 000\"\n2024-12-01,подарки,1500\n2024-12-05,Кафе,nan\n2024-12-06,кафе\n2024-12-07, ,100\n2024-12-31,Кафе,\"99,99\"\n"
+      stdout: "записей: 3 пропущено: 3"
+      files_out:
+        report.json: |
+          {
+            "всего": 3599.99,
+            "по категориям": {
+              "подарки": 3500.0,
+              "кафе": 99.99
+            },
+            "по месяцам": {
+              "2023-12": 2000.0,
+              "2024-12": 1599.99
+            },
+            "пропущено": [
+              {
+                "строка": 4,
+                "причина": "не число: nan"
+              },
+              {
+                "строка": 5,
+                "причина": "не хватает полей"
+              },
+              {
+                "строка": 6,
+                "причина": "пустая категория"
+              }
+            ]
+          }
+      hidden: true
+    - name: Копейки накапливаются
+      files:
+        expenses.csv: "дата,категория,сумма\n2024-03-01,кафе,\"0,1\"\n2024-03-02,кафе,\"0,2\"\n2024-03-03,такси,\"10,15\"\n"
+      stdout: "записей: 3 пропущено: 0"
+      files_out:
+        report.json: |
+          {
+            "всего": 10.45,
+            "по категориям": {
+              "кафе": 0.3,
+              "такси": 10.15
+            },
+            "по месяцам": {
+              "2024-03": 10.45
+            },
+            "пропущено": []
+          }
+      hidden: true
+  asserts:
+    - name: import main молчит и не пишет отчёт
+      code: |
+        import io as _io, contextlib as _cl, os as _os
+        if _os.path.exists("report.json"):
+            _os.remove("report.json")
+        _buf = _io.StringIO()
+        with _cl.redirect_stdout(_buf):
+            import main
+        assert _buf.getvalue() == "", f"При import main напечаталось {_buf.getvalue()!r}: вызов main() должен стоять под if __name__ == \"__main__\""
+        assert not _os.path.exists("report.json"), "При import main появился report.json: при импорте программа не должна ничего записывать"
+    - name: load возвращает записи и пропуски
+      code: |
+        recs, skipped = load("expenses.csv")
+        assert len(recs) == 5, f"load(\"expenses.csv\") должна вернуть 5 записей, а вернула {len(recs)}"
+        assert skipped == [{"строка": 5, "причина": "пустая сумма"}, {"строка": 7, "причина": "Invalid isoformat string: '06.06.2024'"}], f"Пропущенные строки: {skipped}"
+        assert recs[0]["category"] == "продукты" and recs[0]["amount"] == 1250.5, f"Первая запись: {recs[0]}"
+hints:
+  - level: 1
+    text: '`load` — цикл по строкам таблицы, где каждую строку разбирают отдельно и по-отдельности же решают, что с ней: в записи или в пропущенные. Где здесь должен стоять `try` и что он должен охватывать?'
+  - level: 2
+    text: 'Номер строки даёт `enumerate(csv.DictReader(f), start=2)` — заголовок занимает строку 1. Текст причины — `str(e)` из `except ValueError as e`. Суммы округляйте при сборке отчёта: словарь из словаря — включение `{k: round(v, 2) for k, v in ...items()}`.'
+  - level: 3
+    text: 'В `main`: `records, skipped = load("expenses.csv")`, затем словарь отчёта с четырьмя ключами в нужном порядке, `with open("report.json", "w", encoding="utf-8") as f:` и `json.dump(...)` с `ensure_ascii=False, indent=2`. Печать итога — после записи.'

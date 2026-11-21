@@ -1,0 +1,91 @@
+id: p1t-ai-birthday
+title: ИИ-ассистент считает дни до дня рождения
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Исправьте `days_to_birthday(birth, today)`: вернуть, сколько дней от `today` до ближайшего дня рождения; если он сегодня — 0.**
+
+  `birth` и `today` — значения `date`. У родившихся 29 февраля в невисокосный год день рождения — 1 марта. Код в редакторе написал ИИ-ассистент: на примере 1 он отвечает верно, на примере 2 — 355 вместо 356, а для родившихся 29 февраля иногда падает.
+
+  Пример 1
+  ```input
+  days_to_birthday(date(2006, 5, 18), date(2024, 5, 17))
+  ```
+  ```output
+  1
+  ```
+
+  Пример 2
+  ```input
+  days_to_birthday(date(2000, 3, 10), date(2023, 3, 20))
+  ```
+  ```output
+  356
+  ```
+starter: |
+  # Решение от ИИ-ассистента
+  from datetime import date
+
+
+  def days_to_birthday(birth, today):
+      next_birthday = date(today.year, birth.month, birth.day)
+      days = (next_birthday - today).days
+      if days < 0:
+          days += 365
+      return days
+
+
+  print(days_to_birthday(date(2006, 5, 18), date(2024, 5, 17)))
+  print(days_to_birthday(date(2000, 3, 10), date(2023, 3, 20)))
+solution: |
+  from datetime import date
+
+
+  def birthday_in(year, birth):
+      try:
+          return date(year, birth.month, birth.day)
+      except ValueError:
+          return date(year, 3, 1)
+
+
+  def days_to_birthday(birth, today):
+      next_birthday = birthday_in(today.year, birth)
+      if next_birthday < today:
+          next_birthday = birthday_in(today.year + 1, birth)
+      return (next_birthday - today).days
+
+
+  print(days_to_birthday(date(2006, 5, 18), date(2024, 5, 17)))
+  print(days_to_birthday(date(2000, 3, 10), date(2023, 3, 20)))
+tests:
+  asserts:
+    - name: Пример 1
+      code: |
+        from datetime import date
+        got = days_to_birthday(date(2006, 5, 18), date(2024, 5, 17))
+        assert got == 1, f"Для примера 1 нужно 1, а вернулось {got!r}"
+    - name: Пример 2
+      code: |
+        from datetime import date
+        got = days_to_birthday(date(2000, 3, 10), date(2023, 3, 20))
+        assert got == 356, f"Для примера 2 нужно 356, а вернулось {got!r}"
+    - name: День рождения сегодня и завтра в новом году
+      code: |
+        from datetime import date
+        for b, t, want in [(date(2000, 1, 1), date(2024, 1, 1), 0), (date(1990, 1, 1), date(2024, 12, 31), 1), (date(1990, 12, 31), date(2024, 1, 1), 365)]:
+            got = days_to_birthday(b, t)
+            assert got == want, f"days_to_birthday({b}, {t}) должна вернуть {want}, а вернула {got!r}"
+    - name: Родился 29 февраля
+      code: |
+        from datetime import date
+        b = date(2004, 2, 29)
+        for t, want in [(date(2025, 2, 28), 1), (date(2023, 3, 2), 364), (date(2024, 2, 28), 1), (date(2025, 3, 1), 0)]:
+            got = days_to_birthday(b, t)
+            assert got == want, f"days_to_birthday({b}, {t}) должна вернуть {want}, а вернула {got!r}"
+hints:
+  - level: 1
+    text: 'Самый короткий вход, на котором ассистент ошибается, — пример 2. Сколько дней в году между 20 марта 2023 и 10 марта 2024? Что особенного в этом промежутке?'
+  - level: 2
+    text: '«Прибавить 365» — то же заблуждение, что «месяц — это 30 дней». Вместо прибавления дней найдите саму дату следующего дня рождения и вычтите из неё `today`.'
+  - level: 3
+    text: 'Дату дня рождения в заданном году удобно вынести в функцию. `date(2025, 2, 29)` выбрасывает `ValueError` — его можно поймать и вернуть 1 марта.'

@@ -1,0 +1,95 @@
+id: p1t-contacts-roundtrip
+title: Контакты туда и обратно
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите две функции: `save_contacts(contacts, path)` записывает список контактов в CSV, `load_contacts(path)` читает его обратно — и после записи и чтения список должен совпасть с исходным.**
+
+  Контакт — словарь с ключами `имя` (строка), `телефон` (строка) и `возраст` (целое число или `None`, если неизвестен). Файл — CSV в кодировке UTF-8 без метки BOM, разделитель — запятая; столбцы `имя,телефон,возраст`, первая строка — заголовок. Неизвестный возраст записывается пустым полем.
+
+  Пример 1
+  ```input
+  contacts = [{"имя": "Петрова, Анна", "телефон": "+79123456789", "возраст": 34},
+              {"имя": "Борис", "телефон": "007", "возраст": None}]
+  save_contacts(contacts, "contacts.csv")
+  load_contacts("contacts.csv") == contacts
+  ```
+  ```output
+  True
+  (contacts.csv)
+  имя,телефон,возраст
+  "Петрова, Анна",+79123456789,34
+  Борис,007,
+  ```
+starter: |
+  import csv
+
+
+  def save_contacts(contacts, path):
+      pass
+
+
+  def load_contacts(path):
+      pass
+solution: |
+  import csv
+
+  FIELDS = ["имя", "телефон", "возраст"]
+
+
+  def save_contacts(contacts, path):
+      with open(path, "w", encoding="utf-8", newline="") as f:
+          writer = csv.DictWriter(f, fieldnames=FIELDS)
+          writer.writeheader()
+          for c in contacts:
+              age = "" if c["возраст"] is None else c["возраст"]
+              writer.writerow({"имя": c["имя"], "телефон": c["телефон"], "возраст": age})
+
+
+  def load_contacts(path):
+      contacts = []
+      with open(path, encoding="utf-8", newline="") as f:
+          for row in csv.DictReader(f):
+              age = int(row["возраст"]) if row["возраст"] else None
+              contacts.append({"имя": row["имя"], "телефон": row["телефон"], "возраст": age})
+      return contacts
+tests:
+  asserts:
+    - name: Пример 1
+      code: |
+        contacts = [{"имя": "Петрова, Анна", "телефон": "+79123456789", "возраст": 34}, {"имя": "Борис", "телефон": "007", "возраст": None}]
+        save_contacts(contacts, "contacts.csv")
+        got = load_contacts("contacts.csv")
+        assert got == contacts, f"После записи и чтения ожидалось {contacts}, а прочитано {got}"
+    - name: Файл читается модулем csv
+      code: |
+        import csv
+        save_contacts([{"имя": "Петрова, Анна", "телефон": "+79123456789", "возраст": 34}], "c2.csv")
+        with open("c2.csv", encoding="utf-8", newline="") as f:
+            rows = list(csv.reader(f))
+        want = [["имя", "телефон", "возраст"], ["Петрова, Анна", "+79123456789", "34"]]
+        assert rows == want, f"csv.reader прочитал из файла {rows}, а нужно {want}"
+    - name: Возраст — число, ноль — не пропуск
+      code: |
+        contacts = [{"имя": "Малыш", "телефон": "", "возраст": 0}, {"имя": "Вера", "телефон": "8 (912) 000-00-00", "возраст": 101}]
+        save_contacts(contacts, "c3.csv")
+        got = load_contacts("c3.csv")
+        assert got == contacts, f"Ожидалось {contacts}, а прочитано {got}: возраст 0 должен вернуться числом 0, а не None"
+    - name: Кавычки и перевод строки в имени
+      code: |
+        contacts = [{"имя": "ООО \"Ромашка\"", "телефон": "1", "возраст": None}, {"имя": "Иван\nГрозный", "телефон": "2", "возраст": 54}]
+        save_contacts(contacts, "c4.csv")
+        got = load_contacts("c4.csv")
+        assert got == contacts, f"Ожидалось {contacts}, а прочитано {got}"
+    - name: Пустой список
+      code: |
+        save_contacts([], "c5.csv")
+        got = load_contacts("c5.csv")
+        assert got == [], f"Для пустого списка после записи и чтения нужен [], а прочитано {got}"
+hints:
+  - level: 1
+    text: 'Запись и чтение — зеркальные: `DictWriter` с `writeheader`, `DictReader`. Помните о `newline=""` в обоих `open`.'
+  - level: 2
+    text: 'Из CSV всё возвращается строками. Что станет с возрастом 34? Что модуль запишет вместо `None` и что прочитает обратно?'
+  - level: 3
+    text: 'Пустое поле возраста превращайте в `None`, остальное — в `int`. Проверяйте именно пустую строку: возраст 0 после записи — строка «0», и она не пустая.'

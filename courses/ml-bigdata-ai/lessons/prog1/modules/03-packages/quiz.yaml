@@ -1,0 +1,269 @@
+title: Проверка темы
+pass: 0.85
+minutes: 40
+questions:
+- id: constraint-new-major
+  type: single
+  q: 'Вчера вышла `charset-normalizer` 4.0.0, а последняя третья — 3.5.2. Пакету `requests` 2.32.3 нужна `charset-normalizer<4,>=2`. Какую версию поставит `python -m pip install requests==2.32.3` в чистое окружение?'
+  options:
+  - '3.5.2 — самую новую из подходящих'
+  - '4.0.0 — pip всегда берёт самую новую'
+  - '2.0.0 — нижнюю границу ограничения'
+  - 'Никакую: pip остановится с ошибкой, потому что новейшая версия не подходит'
+  answer: 0
+  explain: 'pip выбирает версию, которая подходит под все ограничения, и среди них — самую новую. 4.0.0 исключена условием `<4`: авторы `requests` не обещают работу с несовместимой версией. Нижняя граница лишь отсекает старые версии, а то, что новейшая не подходит, — не ошибка.'
+- id: venv-wrong-window
+  type: multi
+  q: 'У проектов «Отчёты» и «Бот» — по своему окружению `.venv`, в окружении «Бота» `pandas` нет. В окне терминала включено окружение «Отчётов», и вы, собираясь работать над «Ботом», вводите `python -m pip install pandas==2.2.3`. Что верно?'
+  options:
+  - '`pandas` 2.2.3 установится в окружение «Отчётов»'
+  - 'Если в «Отчётах» стоял `pandas` 1.5.3, теперь там 2.2.3, и код «Отчётов» может сломаться'
+  - '`import pandas` в «Боте», запущенном в его окружении, по-прежнему упадёт с `ModuleNotFoundError`'
+  - '`pandas` попадёт в оба окружения: оба опираются на один и тот же установленный Python'
+  - '`requirements.txt` «Бота» сам пополнится строкой `pandas==2.2.3`'
+  answer:
+  - 0
+  - 1
+  - 2
+  explain: 'Включённое окружение решает, куда ставит pip: пакет ушёл в «Отчёты» и заменил там прежнюю версию — смена MAJOR может сломать их код. В окружении «Бота» пакета так и нет. Окружения ссылаются на один Python, но пакеты у каждого свои. Файл зависимостей pip сам не пишет: его создают командой `pip freeze` или вручную.'
+- id: pin-or-range
+  type: single
+  q: |
+    Год назад в `requirements.txt` проекта записали строку `requests>=2.0`. Сегодня коллега ставит проект по этому файлу, и программа падает на коде, который год назад работал. Что вероятнее всего произошло?
+  options:
+  - 'Поставилась более новая версия, чем была у автора, и в ней что-то изменилось'
+  - 'Поставилась версия 2.0 — самая старая из подходящих'
+  - 'pip не понял запись `>=` и пропустил строку'
+  - '`requests` убрали из PyPI, и pip поставил пакет с похожим именем'
+  answer: 0
+  explain: '`>=2.0` разрешает любую версию от 2.0, и pip берёт самую новую — у коллеги она другая, чем год назад у автора. Без верхней границы годится и будущая несовместимая версия. Поэтому в файл зависимостей пишут точные версии: `pip freeze` записывает их через `==`.'
+- id: code-fix-version-compare
+  type: code
+  q: |
+    **Исправьте `newer(a, b)`: она должна вернуть `True`, если версия `a` новее версии `b`.**
+
+    Версии — строки из чисел через точку, части сравниваются как числа, слева направо.
+
+    Пример 1
+    ```input
+    newer("2.10.0", "2.9.4")
+    ```
+    ```output
+    True
+    ```
+  starter: |
+    def newer(a, b):
+        """True, если версия a новее версии b."""
+        return a > b
+  solution: |
+    def newer(a, b):
+        """True, если версия a новее версии b."""
+        return tuple(int(x) for x in a.split(".")) > tuple(int(x) for x in b.split("."))
+  tests:
+    asserts:
+    - name: Число в части больше девяти
+      code: |
+        for a, b, want in [("2.10.0", "2.9.4", True), ("2.9.4", "2.10.0", False), ("10.0.0", "9.9.9", True)]:
+            r = newer(a, b)
+            assert r == want, f"newer(\"{a}\", \"{b}\") должна вернуть {want}, а вернула {r!r}"
+    - name: Обычные и равные версии
+      code: |
+        for a, b, want in [("2.32.4", "2.32.3", True), ("1.26.18", "2.8.0", False), ("3.5.2", "3.5.2", False)]:
+            r = newer(a, b)
+            assert r == want, f"newer(\"{a}\", \"{b}\") должна вернуть {want}, а вернула {r!r}"
+  explain: 'Строки сравниваются посимвольно: в `"2.10.0"` и `"2.9.4"` третий символ `"1"` меньше `"9"`, и строка 2.10 выходит «старше». Версию делят на части по точке, каждую переводят в `int` и сравнивают кортежи: кортежи сравниваются по порядку элементов, как раз как части версии.'
+- id: code-parse-pin
+  type: code
+  q: |
+    **Напишите `parse_pin(line)`: из строки файла зависимостей вида `имя==версия` вернуть кортеж `(имя, версия)`.**
+
+    Пробелы по краям строки и вокруг `==` убираются. Если в строке нет `==` — `ValueError` с текстом `версия не зафиксирована: строка` (строка — без пробелов по краям).
+
+    Пример 1
+    ```input
+    parse_pin("  requests == 2.32.3\n")
+    ```
+    ```output
+    ('requests', '2.32.3')
+    ```
+
+    Пример 2
+    ```input
+    parse_pin("certifi>=2017.4.17")
+    ```
+    ```output
+    ValueError: версия не зафиксирована: certifi>=2017.4.17
+    ```
+  starter: |
+    def parse_pin(line):
+        """'requests==2.32.3' → ('requests', '2.32.3'); без == — ValueError."""
+        pass
+  solution: |
+    def parse_pin(line):
+        """'requests==2.32.3' → ('requests', '2.32.3'); без == — ValueError."""
+        line = line.strip()
+        if "==" not in line:
+            raise ValueError(f"версия не зафиксирована: {line}")
+        name, version = line.split("==")
+        return name.strip(), version.strip()
+  tests:
+    asserts:
+    - name: Закреплённые версии
+      code: |
+        for line, want in [("requests==2.32.3", ("requests", "2.32.3")), ("  urllib3 == 2.8.0\n", ("urllib3", "2.8.0")), ("charset-normalizer==3.5.2", ("charset-normalizer", "3.5.2"))]:
+            r = parse_pin(line)
+            assert r == want, f"parse_pin({line!r}) должна вернуть {want}, а вернула {r!r}"
+    - name: Без == — ValueError с текстом
+      code: |
+        for line, shown in [("certifi>=2017.4.17", "certifi>=2017.4.17"), ("  pandas\n", "pandas"), ("idna<4,>=2.5", "idna<4,>=2.5")]:
+            msg = None
+            try:
+                parse_pin(line)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"parse_pin({line!r}) должна выбросить ValueError"
+            assert msg == f"версия не зафиксирована: {shown}", f"Текст исключения: «{msg}». Нужен: версия не зафиксирована: {shown}"
+  explain: 'Сначала строку чистят от пробелов по краям — и для разбора, и для текста ошибки. Наличие `==` проверяют до `split`: иначе строка без него даст список из одного элемента, и распаковка в два имени упадёт со своим, непонятным для человека `ValueError`.'
+- id: code-readme-call
+  type: code
+  q: |
+    **Выведите самую высокую дневную температуру в городе на ближайшие три дня, пользуясь учебным пакетом `tinyweather`.**
+
+    На входе — город. Вывод — `город: максимум число`. Модуль `tinyweather.py` — на вкладке; вот фрагмент его README:
+
+    ```
+    >>> import tinyweather as tw
+    >>> tw.forecast("Омск", days=2)
+    [{'date': '2026-11-22', 'day': -3, 'night': -9}, {'date': '2026-11-23', 'day': -1, 'night': -6}]
+    ```
+
+    Пример 1
+    ```input
+    Казань
+    ```
+    ```output
+    Казань: максимум 2
+    ```
+  starter: |
+    import tinyweather as tw
+
+    city = input()
+  solution: |
+    import tinyweather as tw
+
+    city = input()
+    days = tw.forecast(city, days=3)
+    print(f"{city}: максимум {max(d['day'] for d in days)}")
+  tests:
+    files:
+      tinyweather.py: |
+        """Учебный «пакет» погоды: прогноз без интернета."""
+        _DATA = {
+            "Казань": [(0, -5), (2, -3), (-1, -6), (4, 0)],
+            "Омск": [(-3, -9), (-1, -6), (-4, -12), (-2, -8)],
+            "Сочи": [(12, 7), (14, 9), (11, 6), (16, 10)],
+        }
+
+
+        def forecast(city, days=1):
+            """Прогноз на days дней: список словарей с ключами date, day, night."""
+            if days < 1 or days > 4:
+                raise ValueError("days — от 1 до 4")
+            result = []
+            for i, (day, night) in enumerate(_DATA[city][:days]):
+                result.append({"date": f"2026-11-{22 + i}", "day": day, "night": night})
+            return result
+    io:
+    - name: Пример из условия
+      stdin: "Казань\n"
+      stdout: "Казань: максимум 2"
+    - name: Холодный город
+      stdin: "Омск\n"
+      stdout: "Омск: максимум -1"
+      hidden: true
+    - name: Четвёртый день не в счёт
+      stdin: "Сочи\n"
+      stdout: "Сочи: максимум 14"
+      hidden: true
+  explain: 'README показывает три вещи: как подключить (`import tinyweather as tw`), что вызвать (`tw.forecast(город, days=...)`) и что вернётся — список словарей, где дневная температура лежит под ключом `day`. По умолчанию `days=1`, поэтому три дня нужно попросить явно; четвёртый брать нельзя — в Сочи он теплее.'
+- id: code-fits-spec
+  type: code
+  q: |
+    **Напишите `fits(version, spec)`: вернуть `True`, если версия подходит под ограничение из файла зависимостей.**
+
+    `spec` — одно или несколько условий через запятую, все должны выполняться; условие — оператор `==`, `>=` или `<` и версия, вокруг условия могут стоять пробелы. Версии сравниваются по частям как числа; у версий в одном сравнении одинаковое число частей не гарантировано: `4` равно `4.0.0`.
+
+    Пример 1
+    ```input
+    fits("2.8.0", "<3,>=1.21.1")
+    ```
+    ```output
+    True
+    ```
+
+    Пример 2
+    ```input
+    fits("1.21.0", "<3,>=1.21.1")
+    ```
+    ```output
+    False
+    ```
+  starter: |
+    def as_tuple(version):
+        """'2.10' → (2, 10, 0): части числами, дополнено нулями до трёх."""
+        parts = [int(x) for x in version.split(".")]
+        while len(parts) < 3:
+            parts.append(0)
+        return tuple(parts)
+
+
+    def fits(version, spec):
+        """True, если version подходит под все условия spec через запятую."""
+        pass
+  solution: |
+    def as_tuple(version):
+        """'2.10' → (2, 10, 0): части числами, дополнено нулями до трёх."""
+        parts = [int(x) for x in version.split(".")]
+        while len(parts) < 3:
+            parts.append(0)
+        return tuple(parts)
+
+
+    def fits(version, spec):
+        """True, если version подходит под все условия spec через запятую."""
+        v = as_tuple(version)
+        for cond in spec.split(","):
+            cond = cond.strip()
+            if cond.startswith("=="):
+                ok = v == as_tuple(cond[2:])
+            elif cond.startswith(">="):
+                ok = v >= as_tuple(cond[2:])
+            elif cond.startswith("<"):
+                ok = v < as_tuple(cond[1:])
+            else:
+                raise ValueError(f"непонятное условие: {cond}")
+            if not ok:
+                return False
+        return True
+  tests:
+    asserts:
+    - name: Ограничения из дерева requests
+      code: |
+        cases = [("2.8.0", "<3,>=1.21.1", True), ("1.21.0", "<3,>=1.21.1", False), ("1.26.18", "<3,>=1.21.1", True),
+                 ("3.0.0", "<3,>=1.21.1", False), ("3.5.2", "<4,>=2", True), ("4.0.0", "<4,>=2", False),
+                 ("2", "<4,>=2", True), ("2026.11.20", ">=2017.4.17", True)]
+        for version, spec, want in cases:
+            r = fits(version, spec)
+            assert r == want, f"fits(\"{version}\", \"{spec}\") должна вернуть {want}, а вернула {r!r}"
+    - name: Точная версия и числа больше девяти
+      code: |
+        cases = [("2.32.3", "==2.32.3", True), ("2.32.4", "==2.32.3", False), ("4", "==4.0.0", True),
+                 ("2.10.0", ">=2.9", True), ("2.9.0", ">=2.10", False), ("2.10", "<2.9", False)]
+        for version, spec, want in cases:
+            r = fits(version, spec)
+            assert r == want, f"fits(\"{version}\", \"{spec}\") должна вернуть {want}, а вернула {r!r}"
+    - name: Пробелы вокруг условий
+      code: |
+        r = fits("2.5", " >=2.0 , <3 ")
+        assert r is True, f"fits(\"2.5\", \" >=2.0 , <3 \") должна вернуть True, а вернула {r!r}"
+  explain: 'Запятая значит «и», поэтому условия проверяют по очереди и при первом невыполненном возвращают `False`. Оператор узнают по началу условия (`startswith`), а версия — всё, что после него. Версии сравнивают кортежами чисел — `as_tuple` дополняет их нулями, чтобы `4` и `4.0.0` совпали.'

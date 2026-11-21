@@ -1,0 +1,180 @@
+id: p1m-proj-checks
+title: 'Шаг 4. Проверки, которые ловят сломанное'
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Напишите наборы проверок `check_parse_amount(f)` и `check_by_month(f)`: каждый молчит на верной функции и падает на неверной.**
+
+  Проверки пишите по условию, без подсмотра в чужой код:
+  - `parse_amount(text)`: убирает пробелы и неразрывные пробелы `"\xa0"`, запятую заменяет точкой и возвращает `float`; пусто после очистки — `ValueError("пустая сумма")`; не число и `"nan"` — `ValueError`.
+  - `by_month(records)`: записи `{"date": date, "category": str, "amount": float}` → словарь «`ГГГГ-ММ` → сумма»; пустой список — `{}`.
+
+  Наборы будут запущены на верных функциях и на нескольких сломанных — какие поломки, заранее не сказано. Упасть набор может с `AssertionError` или с исключением самой проверяемой функции. Проверьте обычные, граничные и «плохие» случаи; «плохой» вход, на котором верная функция выбрасывает `ValueError`, — проверка флагом.
+
+  Пример 1
+  ```input
+  check_parse_amount(верная parse_amount)
+  check_parse_amount(parse_amount, которая пропускает "nan")
+  ```
+  ```output
+  (ничего)
+  AssertionError: f('nan') должна выбросить ValueError
+  ```
+starter: |
+  from datetime import date
+
+
+  def check_parse_amount(f):
+      assert f("60") == 60, f"f(\"60\") должна вернуть 60, а вернула {f('60')}"
+      # граничные: пробел и неразрывный пробел внутри, запятая
+      # «плохие»: пустая строка, не число, "nan"
+
+
+  def check_by_month(f):
+      records = [
+          {"date": date(2024, 5, 3), "category": "кафе", "amount": 100.0},
+          {"date": date(2024, 6, 1), "category": "кафе", "amount": 50.0},
+      ]
+      assert f(records) == {"2024-05": 100.0, "2024-06": 50.0}, f"Вернулось {f(records)}"
+      # граничные: пустой список, несколько записей в одном месяце,
+      # один месяц в разные годы
+solution: |
+  from datetime import date
+
+
+  def raises_value_error(f, arg):
+      """True, если f(arg) выбрасывает ValueError."""
+      try:
+          f(arg)
+      except ValueError:
+          return True
+      return False
+
+
+  def check_parse_amount(f):
+      assert f("60") == 60, f"f(\"60\") должна вернуть 60, а вернула {f('60')}"
+      assert f("1 250,50") == 1250.5, "f(\"1 250,50\") должна вернуть 1250.5"
+      assert f("1\xa0250,50") == 1250.5, "f с неразрывным пробелом должна вернуть 1250.5"
+      assert f("0,5") == 0.5, "f(\"0,5\") должна вернуть 0.5"
+      for bad in ["", "  ", "сто", "nan"]:
+          assert raises_value_error(f, bad), f"f({bad!r}) должна выбросить ValueError"
+
+
+  def check_by_month(f):
+      records = [
+          {"date": date(2024, 5, 3), "category": "кафе", "amount": 100.0},
+          {"date": date(2024, 6, 1), "category": "кафе", "amount": 50.0},
+      ]
+      assert f(records) == {"2024-05": 100.0, "2024-06": 50.0}, f"Вернулось {f(records)}"
+      assert f([]) == {}, f"f([]) должна вернуть {{}}, а вернула {f([])}"
+      same_month = [
+          {"date": date(2024, 5, 3), "category": "кафе", "amount": 100.0},
+          {"date": date(2024, 5, 20), "category": "такси", "amount": 30.0},
+      ]
+      assert f(same_month) == {"2024-05": 130.0}, f"Две записи мая: вернулось {f(same_month)}"
+      two_years = [
+          {"date": date(2023, 12, 30), "category": "подарки", "amount": 2000.0},
+          {"date": date(2024, 12, 31), "category": "подарки", "amount": 500.0},
+      ]
+      assert f(two_years) == {"2023-12": 2000.0, "2024-12": 500.0}, f"Декабри разных лет: вернулось {f(two_years)}"
+tests:
+  asserts:
+    - name: Верную parse_amount проверки пропускают
+      code: |
+        import math as _m
+        def _ok(text):
+            cleaned = text.replace(" ", "").replace("\xa0", "").replace(",", ".")
+            if not cleaned:
+                raise ValueError("пустая сумма")
+            x = float(cleaned)
+            if _m.isnan(x):
+                raise ValueError(f"не число: {text}")
+            return x
+        try:
+            check_parse_amount(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную parse_amount: {e}"
+    - name: Сломанные parse_amount проверки ловят
+      code: |
+        import math as _m
+        def _make(spaces=True, nbsp=True, comma=True, empty_error=True, nan_error=True):
+            def f(text):
+                cleaned = text
+                if spaces:
+                    cleaned = cleaned.replace(" ", "")
+                if nbsp:
+                    cleaned = cleaned.replace("\xa0", "")
+                if comma:
+                    cleaned = cleaned.replace(",", ".")
+                if not cleaned.strip():
+                    if empty_error:
+                        raise ValueError("пустая сумма")
+                    return 0.0
+                x = float(cleaned)
+                if nan_error and _m.isnan(x):
+                    raise ValueError(f"не число: {text}")
+                return x
+            return f
+        def _comma_drop(text):           # запятую убирает, а не заменяет точкой
+            cleaned = text.replace(" ", "").replace("\xa0", "").replace(",", "")
+            if not cleaned:
+                raise ValueError("пустая сумма")
+            x = float(cleaned)
+            if _m.isnan(x):
+                raise ValueError("не число")
+            return x
+        broken = [("пробелы не убираются", _make(spaces=False)), ("неразрывный пробел не убирается", _make(nbsp=False)),
+                  ("запятая не заменяется", _make(comma=False)), ("пустая сумма — 0", _make(empty_error=False)),
+                  ("nan пропускается", _make(nan_error=False)), ("запятая просто удаляется", _comma_drop)]
+        missed = []
+        for name, f in broken:
+            try:
+                check_parse_amount(f)
+                missed.append(name)
+            except Exception:            # AssertionError или исключение самой функции
+                pass
+        assert not missed, "Проверки не поймали сломанные parse_amount: " + "; ".join(missed)
+    - name: Верную by_month проверки пропускают
+      code: |
+        def _ok(records):
+            totals = {}
+            for r in records:
+                k = r["date"].strftime("%Y-%m")
+                totals[k] = totals.get(k, 0) + r["amount"]
+            return totals
+        try:
+            check_by_month(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную by_month: {e}"
+    - name: Сломанные by_month проверки ловят
+      code: |
+        def _make(fmt="%Y-%m", replace=False):
+            def f(records):
+                totals = {}
+                for r in records:
+                    k = r["date"].strftime(fmt)
+                    totals[k] = r["amount"] if replace else totals.get(k, 0) + r["amount"]
+                return totals
+            return f
+        def _none_on_empty(records):
+            if not records:
+                return None
+            return _make()(records)
+        broken = [("ключ без года", _make("%m")), ("ключ без месяца", _make("%Y")),
+                  ("сумма месяца заменяется последней записью", _make(replace=True)), ("пустой список — None", _none_on_empty),
+                  ("ключ с днём", _make("%Y-%m-%d"))]
+        missed = []
+        for name, f in broken:
+            try:
+                check_by_month(f)
+                missed.append(name)
+            except Exception:            # AssertionError или исключение на неверном ответе
+                pass
+        assert not missed, "Проверки не поймали сломанные by_month: " + "; ".join(missed)
+hints:
+  - level: 1
+    text: 'Пройдите по условию каждой функции фразу за фразой: каждая фраза — то, что может сломаться. На какой вход сломанная функция ответит иначе, чем верная?'
+  - level: 2
+    text: 'Для `parse_amount`: отдельная проверка на каждое правило очистки (пробел, `"\xa0"`, запятая) и флаг `ValueError` для каждого «плохого» входа. Для `by_month`: две записи в одном месяце (сумма, а не последняя), декабри двух лет, пустой список.'
+  - level: 3
+    text: 'Флаг удобно вынести в функцию: `raised = False`, `try: f(arg)`, `except ValueError: raised = True`, `return raised` — и звать её в цикле по `["", "сто", "nan"]` с `assert`.'

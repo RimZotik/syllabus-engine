@@ -1,0 +1,396 @@
+title: Проверка темы
+pass: 0.85
+minutes: 30
+questions:
+- id: split-empty-fields
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    line = "Иванов;;5;"
+    print(len(line.split(";")), len(line.split()))
+    ```
+  options:
+  - '`4 1`'
+  - '`2 1`'
+  - '`4 4`'
+  - '`3 1`'
+  answer: 0
+  explain: 'С разделителем `split(";")` режет по каждой `;`: две подряд дают пустую строку между ними, последняя — пустую строку после себя, получается `[''Иванов'', '''', ''5'', '''']`. Без аргумента `split()` режет только по пробельным символам, а их в строке нет — целая строка остаётся одним куском.'
+- id: strip-set-vs-prefix
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    print("молоко".strip("мо"), "молоко".removeprefix("мо"))
+    ```
+  options:
+  - '`лок локо`'
+  - '`локо локо`'
+  - '`лок лок`'
+  - '`локо молоко`'
+  answer: 0
+  explain: '`strip("мо")` убирает с обоих краёв любые буквы «м» и «о», пока они идут подряд: слева уходят «мо», справа — последняя «о». `removeprefix` убирает кусок «мо» ровно один раз и только в начале, конец строки не трогает.'
+- id: find-minus-one-slice
+  type: single
+  q: |
+    Адрес почты разбирают на имя и домен. Что выведет программа?
+    ```python
+    email = "anna.petrova"
+    at = email.find("@")
+    print(email[:at], email[at + 1:])
+    ```
+  options:
+  - '`anna.petrov anna.petrova`'
+  - 'Ошибку `ValueError`: в строке нет «@»'
+  - 'Пустую строку и `anna.petrova`'
+  - '`anna.petrova` и пустую строку'
+  answer: 0
+  explain: '«@» нет, и `find` возвращает −1 — без ошибки. Срез `[:-1]` отрезает последний символ, а `[0:]` даёт всю строку. Программа молча печатает чепуху, поэтому результат `find` сравнивают с −1 до того, как брать по нему срез. `ValueError` выбросил бы `index`.'
+- id: format-spec-three
+  type: single
+  q: |
+    Что выведет программа? Пробелы показаны как есть.
+    ```python
+    print(f"[{7.5:06.2f}] [{'ок':>4}] [{1500000:,}]")
+    ```
+  options:
+  - '`[007.50] [  ок] [1,500,000]`'
+  - '`[  7.50] [  ок] [1,500,000]`'
+  - '`[007.50] [ок  ] [1,500,000]`'
+  - '`[007.50] [  ок] [1 500 000]`'
+  answer: 0
+  explain: '`06.2f` — ширина 6 и два знака после точки, а `0` перед шириной дополняет нулями, а не пробелами: `7.50` — 4 символа, слева два нуля. `>4` прижимает строку вправо, хотя строки без знака выравниваются влево. Запятая в формате ставит запятую между тысячами; пробел вместо неё формат сам не ставит.'
+- id: log-maxsplit-double-space
+  type: single
+  q: |
+    В журнале строка `10:02  ERROR оплата не прошла` — после времени два пробела. Какая строка кода даст `level == "ERROR"` и `msg == "оплата не прошла"`?
+  options:
+  - '`time, level, msg = line.split(maxsplit=2)`'
+  - '`time, level, msg = line.split(" ", maxsplit=2)`'
+  - '`time, level, msg = line.split()`'
+  - '`time, level, msg = line.split(maxsplit=3)`'
+  answer: 0
+  explain: 'С разделителем `" "` двойной пробел даёт пустой кусок: `[''10:02'', '''', ''ERROR оплата не прошла'']` — ошибки нет, но `level` пуст, а уровень уехал в сообщение. Без `maxsplit` получится шесть частей, с `maxsplit=3` — четыре, и распаковка в три имени выбросит `ValueError`. `split(maxsplit=2)` склеивает пробелы и делает ровно два разреза — остаток строки идёт в `msg` целиком.'
+- id: code-fix-receipt-line
+  type: code
+  q: |
+    **Исправьте программу: она получает строку чека `товар;цена;количество` и печатает `товар: стоимость`.** Сейчас она падает на названиях из нескольких слов.
+    ```input
+    белый хлеб;45;2
+    ```
+    ```output
+    белый хлеб: 90
+    ```
+    - Цена и количество — целые числа. Вокруг `;` могут стоять пробелы: ` сыр ; 320 ; 1 ` → `сыр: 320`.
+  starter: |
+    line = input()
+    name, price, qty = line.split()
+    print(f"{name}: {int(price) * int(qty)}")
+  solution: |
+    line = input()
+    name, price, qty = line.split(";")
+    print(f"{name.strip()}: {int(price) * int(qty)}")
+  tests:
+    io:
+    - name: Название из двух слов
+      stdin: "белый хлеб;45;2\n"
+      stdout: "белый хлеб: 90"
+    - name: Пробелы вокруг «;»
+      stdin: " сыр ; 320 ; 1 \n"
+      stdout: "сыр: 320"
+    - name: Название из трёх слов
+      stdin: "молоко 3,2 %;89;3\n"
+      stdout: "молоко 3,2 %: 267"
+      hidden: true
+    - name: Ноль штук
+      stdin: "чай;150;0\n"
+      stdout: "чай: 0"
+      hidden: true
+  explain: '`split()` без аргумента режет по пробелам, а не по `;`: «белый хлеб;45;2» превращается в два куска, и распаковка в три имени падает. Поля разделены `;` — значит, `split(";")`. Пробелы вокруг цены и количества `int` пропускает сам, а у названия их нужно убрать `strip()`.'
+- id: code-fix-table-name
+  type: code
+  q: |
+    **Исправьте `table_name(filename)`: она убирает из имени файла окончание `.csv`, а другие имена возвращает без изменений.** Сейчас `table_name("sales.csv")` даёт `sale`.
+    ```input
+    table_name("sales.csv")
+    table_name("csv_notes.txt")
+    ```
+    ```output
+    sales
+    csv_notes.txt
+    ```
+    - Окончание убирается один раз и только в самом конце имени: `data.csv.bak` не меняется.
+  starter: |
+    def table_name(filename):
+        return filename.strip(".csv")
+
+
+    print(table_name("sales.csv"))
+    print(table_name("csv_notes.txt"))
+  solution: |
+    def table_name(filename):
+        return filename.removesuffix(".csv")
+
+
+    print(table_name("sales.csv"))
+    print(table_name("csv_notes.txt"))
+  tests:
+    asserts:
+    - name: Окончание .csv убирается
+      code: |
+        for name, want in [("sales.csv", "sales"), ("отчёт.csv", "отчёт"), ("vacancies.csv", "vacancies"), ("csv.csv", "csv")]:
+            got = table_name(name)
+            assert got == want, f"table_name({name!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Другие имена не меняются
+      code: |
+        for name in ["csv_notes.txt", "data.csv.bak", "vcs", "csv"]:
+            got = table_name(name)
+            assert got == name, f"table_name({name!r}) должна вернуть имя без изменений, а вернула {got!r}"
+  explain: 'Аргумент `strip` — набор символов «.», «c», «s», «v», а не кусок текста: у «sales.csv» справа ушли «.csv» и ещё буква «s» самого имени, а у «csv_notes.txt» слева съелось «csv». Кусок с конца убирает `removesuffix`: ровно один раз и только если имя им оканчивается. `replace(".csv", "")` тоже не годится — он вырежет «.csv» и из середины «data.csv.bak».'
+- id: code-fix-rub-format
+  type: code
+  q: |
+    **Исправьте `rub(x)`: она должна возвращать сумму по-русски — тысячи через пробел, два знака после запятой и знак рубля.** Сейчас вместо запятой перед копейками тоже стоит пробел.
+    ```input
+    rub(1234567.5)
+    rub(45)
+    ```
+    ```output
+    1 234 567,50 ₽
+    45,00 ₽
+    ```
+  starter: |
+    def rub(x):
+        text = f"{x:,.2f}".replace(".", ",").replace(",", " ")
+        return text + " ₽"
+
+
+    print(rub(1234567.5))
+    print(rub(45))
+  solution: |
+    def rub(x):
+        text = f"{x:,.2f}".replace(",", " ").replace(".", ",")
+        return text + " ₽"
+
+
+    print(rub(1234567.5))
+    print(rub(45))
+  tests:
+    asserts:
+    - name: Суммы из условия
+      code: |
+        for x, want in [(1234567.5, "1 234 567,50 ₽"), (45, "45,00 ₽")]:
+            got = rub(x)
+            assert got == want, f"rub({x}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Округление, ноль и минус
+      code: |
+        for x, want in [(999.999, "1 000,00 ₽"), (0, "0,00 ₽"), (-1500, "-1 500,00 ₽"), (1000000, "1 000 000,00 ₽")]:
+            got = rub(x)
+            assert got == want, f"rub({x}) должна вернуть {want!r}, а вернула {got!r}"
+  explain: 'Замены выполняются по очереди, каждая — над результатом предыдущей. После `replace(".", ",")` в строке уже не отличить запятую-разделитель тысяч от новой запятой перед копейками, и вторая замена превращает в пробел обе. Сначала запятые меняют на пробелы, потом точку — на запятую.'
+- id: code-complete-sales-row
+  type: code
+  q: |
+    **Допишите строку вывода: для каждой записи `город;сумма;доля` программа печатает ровную строку отчёта.**
+    Город — влево, ширина 10; сумма — вправо, ширина 14, запятая между тысячами, два знака после точки; доля — вправо, ширина 7, в процентах с одним знаком. Ввод заканчивается пустой строкой.
+    ```input
+    Казань;1234567.5;0.4567
+    Тула;5;0.0001
+
+    ```
+    ```output
+    Казань      1,234,567.50  45.7%
+    Тула                5.00   0.0%
+    ```
+  starter: |
+    line = input()
+    while line != "":
+        city, amount, share = line.split(";")
+        amount = float(amount)
+        share = float(share)
+        print(city, amount, share)
+        line = input()
+  solution: |
+    line = input()
+    while line != "":
+        city, amount, share = line.split(";")
+        amount = float(amount)
+        share = float(share)
+        print(f"{city:<10}{amount:>14,.2f}{share:>7.1%}")
+        line = input()
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "Казань;1234567.5;0.4567\nТула;5;0.0001\n\n"
+      stdout: "Казань      1,234,567.50  45.7%\nТула                5.00   0.0%"
+    - name: Целая доля и длинное название
+      stdin: "Омск;98000;1\nСанкт-Петербург;12000000;0.5\n\n"
+      stdout: "Омск           98,000.00 100.0%\nСанкт-Петербург 12,000,000.00  50.0%"
+      hidden: true
+    - name: Пустой ввод
+      stdin: "\n"
+      stdout: ""
+      hidden: true
+  explain: 'Каждое поле — своя спецификация после двоеточия: `<10` для города, `>14,.2f` для суммы (выравнивание, ширина, запятая, точность, тип — строго в таком порядке), `>7.1%` для доли: тип `%` сам умножает на 100 и добавляет знак процента. Ширина — минимум: «Санкт-Петербург» длиннее 10 символов и не обрезается, строка просто сдвигается.'
+- id: code-change-shopping-line
+  type: code
+  q: |
+    **Измените `shopping_line(items)`: вернуть названия через запятую с пробелом — без пробелов по краям названий и без пустых названий.** Сейчас в конце строки остаётся лишняя `, `.
+    ```input
+    shopping_line(["хлеб", " молоко ", "", "сыр"])
+    shopping_line([])
+    ```
+    ```output
+    хлеб, молоко, сыр
+
+    ```
+    - Название из одних пробелов — тоже пустое.
+  starter: |
+    def shopping_line(items):
+        line = ""
+        for item in items:
+            line += item + ", "
+        return line
+
+
+    print(shopping_line(["хлеб", " молоко ", "", "сыр"]))
+  solution: |
+    def shopping_line(items):
+        names = [item.strip() for item in items if item.strip()]
+        return ", ".join(names)
+
+
+    print(shopping_line(["хлеб", " молоко ", "", "сыр"]))
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        got = shopping_line(["хлеб", " молоко ", "", "сыр"])
+        assert got == "хлеб, молоко, сыр", f"Нужно 'хлеб, молоко, сыр', а вернулось {got!r}"
+    - name: Пустой список и одни пробелы
+      code: |
+        for items in [[], ["", "   "]]:
+            got = shopping_line(items)
+            assert got == "", f"shopping_line({items}) должна вернуть пустую строку, а вернула {got!r}"
+    - name: Одно название
+      code: |
+        got = shopping_line(["  чай\t"])
+        assert got == "чай", f"shopping_line(['  чай\\t']) должна вернуть 'чай', а вернула {got!r}"
+    - name: Название из двух слов
+      code: |
+        got = shopping_line(["белый хлеб", " ", "мёд "])
+        assert got == "белый хлеб, мёд", f"Нужно 'белый хлеб, мёд', а вернулось {got!r}"
+  explain: 'Разделитель нужен только *между* названиями, и `join` ставит его именно так — ни в начале, ни в конце. Сначала включение собирает очищенные названия и отбрасывает пустые: `item.strip()` от строки из пробелов — пустая строка, а она ложна. Склеивание через `+=` в цикле к тому же копирует всю накопленную строку на каждом шаге.'
+- id: code-change-level-counts
+  type: code
+  q: |
+    **Измените `level_counts(lines)`: строки журнала теперь `дата время уровень сообщение`, и сообщение — сколько угодно слов, а может и не быть.** Функция возвращает словарь «уровень → число строк». Пустые строки и строки из одних пробелов пропускаются.
+    ```input
+    level_counts(["2024-05-17 10:02 INFO вход anna",
+                  "2024-05-17 10:05 ERROR оплата не прошла: нет денег",
+                  "",
+                  "2024-05-17 10:07 INFO"])
+    ```
+    ```output
+    {'INFO': 2, 'ERROR': 1}
+    ```
+  starter: |
+    def level_counts(lines):
+        counts = {}
+        for line in lines:
+            date, time, level, action, user = line.split()
+            counts[level] = counts.get(level, 0) + 1
+        return counts
+
+
+    print(level_counts(["2024-05-17 10:02 INFO вход anna"]))
+  solution: |
+    def level_counts(lines):
+        counts = {}
+        for line in lines:
+            if not line.strip():
+                continue
+            level = line.split(maxsplit=3)[2]
+            counts[level] = counts.get(level, 0) + 1
+        return counts
+
+
+    print(level_counts(["2024-05-17 10:02 INFO вход anna"]))
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        lines = ["2024-05-17 10:02 INFO вход anna", "2024-05-17 10:05 ERROR оплата не прошла: нет денег", "", "2024-05-17 10:07 INFO"]
+        got = level_counts(lines)
+        assert got == {"INFO": 2, "ERROR": 1}, f"Нужно {{'INFO': 2, 'ERROR': 1}}, а вернулось {got!r}"
+    - name: Сообщение из одного слова и из многих
+      code: |
+        lines = ["2024-05-18 09:00 WARNING диск", "2024-05-18 09:01 WARNING диск почти заполнен, осталось 2 %", "2024-05-18 09:02 ERROR склад"]
+        got = level_counts(lines)
+        assert got == {"WARNING": 2, "ERROR": 1}, f"Нужно {{'WARNING': 2, 'ERROR': 1}}, а вернулось {got!r}"
+    - name: Строки без сообщения
+      code: |
+        got = level_counts(["2024-05-18 10:00 INFO", "2024-05-18 10:01 INFO   "])
+        assert got == {"INFO": 2}, f"Для двух строк без сообщения нужно {{'INFO': 2}}, а вернулось {got!r}"
+    - name: Пустые строки и пустой журнал
+      code: |
+        got = level_counts(["   ", "\t", "2024-05-18 10:00 ERROR сбой", ""])
+        assert got == {"ERROR": 1}, f"Пустые строки и строки из пробелов пропускаются: нужно {{'ERROR': 1}}, а вернулось {got!r}"
+        got = level_counts([])
+        assert got == {}, f"Для пустого журнала нужен пустой словарь, а вернулось {got!r}"
+  explain: 'Распаковка ждёт ровно столько частей, сколько имён, а в сообщении может быть любое число слов — или ни одного. Нужен только третий кусок, и `split(maxsplit=3)` отрежет его, не разбирая сообщение: оно останется четвёртым куском или его не будет вовсе. Распаковка `date, time, level, msg = …` упала бы на строке без сообщения. Пустую строку пропускают до разбора: `split()` от неё — пустой список.'
+- id: code-write-short-name
+  type: code
+  q: |
+    **Напишите `short_name(full)`: из `фамилия имя [отчество]` вернуть `Фамилия И. О.`.**
+    Слова разделены любыми пробельными символами, регистр букв любой. В фамилии первая буква заглавная, остальные строчные; от имени и отчества — первая буква, заглавная, с точкой. Не два и не три слова — `ValueError` с текстом `нужно 2 или 3 слова, а пришло N`.
+    ```input
+    short_name("  иванова   анна  сергеевна ")
+    short_name("ПЕТРОВ пётр")
+    ```
+    ```output
+    Иванова А. С.
+    Петров П.
+    ```
+  starter: |
+    def short_name(full):
+        pass
+
+
+    print(short_name("  иванова   анна  сергеевна "))
+  solution: |
+    def short_name(full):
+        words = full.split()
+        if len(words) not in (2, 3):
+            raise ValueError(f"нужно 2 или 3 слова, а пришло {len(words)}")
+        surname = words[0][0].upper() + words[0][1:].lower()
+        initials = [w[0].upper() + "." for w in words[1:]]
+        return surname + " " + " ".join(initials)
+
+
+    print(short_name("  иванова   анна  сергеевна "))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for full, want in [("  иванова   анна  сергеевна ", "Иванова А. С."), ("ПЕТРОВ пётр", "Петров П.")]:
+            got = short_name(full)
+            assert got == want, f"short_name({full!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Табуляция, перевод строки и буква ё
+      code: |
+        for full, want in [("ёлкин\tолег\nиванович", "Ёлкин О. И."), ("Ли Ян", "Ли Я."), ("сИДОРОВА ЕЛЕНА", "Сидорова Е.")]:
+            got = short_name(full)
+            assert got == want, f"short_name({full!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Неверное число слов — ValueError
+      code: |
+        for full, n in [("Иванова", 1), ("иванова анна сергеевна мария", 4), ("   ", 0)]:
+            msg = None
+            try:
+                got = short_name(full)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"short_name({full!r}) должна выбросить ValueError, а вернула {got!r}"
+            want = f"нужно 2 или 3 слова, а пришло {n}"
+            assert msg == want, f"Текст исключения для {full!r}: «{msg}». Нужен: {want}"
+  explain: '`split()` без аргумента режет по любой цепочке пробельных символов и не оставляет пустых кусков — лишние пробелы, табуляция и перевод строки исчезают сами. Число слов проверяют до разбора: иначе на одном слове инициалов не будет, а на четырёх лишнее слово тихо попадёт в результат. Инициалы склеивают через `join` — так между ними ровно один пробел, а в конце его нет.'

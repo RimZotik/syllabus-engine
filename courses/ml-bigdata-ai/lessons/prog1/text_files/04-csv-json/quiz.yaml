@@ -1,0 +1,463 @@
+title: Проверка темы
+pass: 0.85
+minutes: 30
+questions:
+- id: newline-inside-field
+  type: single
+  q: |
+    Файл `reviews.csv`:
+    ```
+    товар,отзыв
+    чай,"Вкусно.
+    Куплю ещё"
+    сыр,Нормально
+    ```
+    Что выведет программа?
+    ```python
+    import csv
+    with open("reviews.csv", encoding="utf-8", newline="") as f:
+        rows = list(csv.reader(f))
+    print(len(rows), rows[1][1].count("\n"))
+    ```
+  options:
+  - '`3 1`'
+  - '`4 0`'
+  - '`4 1`'
+  - '`3 0`'
+  answer: 0
+  explain: 'Строк в файле четыре, а записей три: перевод строки внутри кавычек — часть значения, и `csv` склеивает «Вкусно.» и «Куплю ещё» в одно поле, сохраняя `\n` внутри. `csv.reader` выдаёт и заголовок — это первая из трёх записей. Разбор по строкам файла дал бы четыре записи и разорванный отзыв.'
+- id: sort-string-amounts
+  type: single
+  q: |
+    В `sales.csv` три записи: Казань — 1200, Омск — 850, Тула — 90. Что выведет программа?
+    ```python
+    import csv
+    with open("sales.csv", encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    top = sorted(rows, key=lambda r: r["сумма"], reverse=True)
+    print(top[0]["город"], top[-1]["город"])
+    ```
+  options:
+  - '`Тула Казань`'
+  - '`Казань Тула`'
+  - '`Казань Омск`'
+  - 'Ошибку `TypeError`: строки нельзя сортировать'
+  answer: 0
+  explain: 'В CSV все поля — строки, и ключ сортировки возвращает строки «1200», «850», «90». Строки сравниваются посимвольно: «9» больше «8», а «8» больше «1», поэтому по убыванию первой идёт Тула, последней — Казань. Чтобы сравнивать суммы, ключ должен вернуть число: `int(r["сумма"])`.'
+- id: json-keys-and-tuples
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    import json
+    stock = {1: ("чай", 150), 2: ("сыр", 320)}
+    back = json.loads(json.dumps(stock, ensure_ascii=False))
+    print(back.get(1), back["2"])
+    ```
+  options:
+  - "`None ['сыр', 320]`"
+  - "`('чай', 150) ('сыр', 320)`"
+  - "`None ('сыр', 320)`"
+  - "Ошибку `KeyError: 1`"
+  answer: 0
+  explain: 'Ключи объекта JSON — только строки: число 1 записалось как "1", и после чтения ключа 1 в словаре нет. `get` при отсутствии ключа возвращает `None`, а не выбрасывает `KeyError`. Кортежа в JSON нет — он записался массивом и вернулся списком.'
+- id: valid-json
+  type: multi
+  q: 'Какие строки `json.loads` разберёт без ошибки?'
+  options:
+  - '`{"a": 1, "b": null}`'
+  - "`{'a': 1}`"
+  - '`{"a": True}`'
+  - '`[1, 2, 3,]`'
+  - '`[{"a": [1, {"b": false}]}]`'
+  answer:
+  - 0
+  - 4
+  explain: 'В JSON строки и ключи — только в двойных кавычках, логические значения — `true` и `false` со строчной буквы, запятая после последнего элемента запрещена. Вложенность любой глубины — обычное дело: массив объектов, в объекте массив. На трёх неверных строках `json.loads` выбросит `JSONDecodeError`.'
+- id: missing-field-typeerror
+  type: single
+  q: |
+    Файл `marks.csv`:
+    ```
+    имя,класс,оценка
+    Аня,9А,5
+    Борис,9А,
+    Вера,9Б
+    ```
+    Что произойдёт при запуске?
+    ```python
+    import csv
+    marks = []
+    with open("marks.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            try:
+                marks.append(int(row["оценка"]))
+            except ValueError:
+                print("пропуск", row["имя"])
+    print(marks)
+    ```
+  options:
+  - 'Напечатает `пропуск Борис` и остановится с `TypeError`'
+  - 'Напечатает `пропуск Борис`, `пропуск Вера` и `[5]`'
+  - 'Напечатает `пропуск Борис` и `[5]`: у Веры строка короче, `DictReader` её не выдаст'
+  - 'Остановится с `KeyError: ''оценка''` на строке Веры'
+  answer: 0
+  explain: 'У Бориса поле есть, но пустое: `int("")` — `ValueError`, его ловят. У Веры поля нет вовсе: `DictReader` подставляет `None`, а `int(None)` — уже `TypeError`, значение не того типа. `except ValueError` его не ловит, и программа останавливается. Короткие строки проверяют до перевода в число.'
+- id: code-fix-avg-price
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести среднюю цену по файлу `prices.csv` в виде `Средняя цена: X` с двумя знаками после точки.** Сейчас она падает с `TypeError`.
+    ```input
+    (prices.csv)
+    товар,цена
+    хлеб,45
+    "Чай ""Липа"", 100 г",150.5
+    сыр,320
+    ```
+    ```output
+    Средняя цена: 171.83
+    ```
+  starter: |
+    import csv
+
+    total = 0
+    count = 0
+    with open("prices.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            total += row["цена"]
+            count += 1
+    print(f"Средняя цена: {total / count:.2f}")
+  solution: |
+    import csv
+
+    total = 0
+    count = 0
+    with open("prices.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            total += float(row["цена"])
+            count += 1
+    print(f"Средняя цена: {total / count:.2f}")
+  tests:
+    files:
+      prices.csv: "товар,цена\nхлеб,45\n\"Чай \"\"Липа\"\", 100 г\",150.5\nсыр,320\n"
+    io:
+    - name: Файл из условия
+      stdout: "Средняя цена: 171.83"
+    - name: Одна запись
+      files:
+        prices.csv: "товар,цена\nмолоко,89.9\n"
+      stdout: "Средняя цена: 89.90"
+      hidden: true
+    - name: Столбцы в другом порядке
+      files:
+        prices.csv: "цена,товар\n10,\"вода, 0,5 л\"\n20,квас\n"
+      stdout: "Средняя цена: 15.00"
+      hidden: true
+  explain: 'В CSV все поля — строки: `0 + "45"` — `TypeError`. Число из строки делает `float` — цены бывают дробными. Название с запятой и кавычками модуль `csv` разбирает сам, поэтому `split(",")` здесь и не годится.'
+- id: code-fix-excel-csv
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести сумму продаж из выгрузки Excel `excel.csv` в виде `Итого: N`.** Сейчас она падает с `KeyError`.
+    ```input
+    (excel.csv — UTF-8 с меткой BOM в начале)
+    дата;сумма
+    2024-05-17;1200
+    2024-05-18;850
+    ```
+    ```output
+    Итого: 2050
+    ```
+    - Суммы — целые числа.
+  starter: |
+    import csv
+
+    total = 0
+    with open("excel.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            total += int(row["сумма"])
+    print(f"Итого: {total}")
+  solution: |
+    import csv
+
+    total = 0
+    with open("excel.csv", encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f, delimiter=";"):
+            total += int(row["сумма"])
+    print(f"Итого: {total}")
+  tests:
+    files:
+      excel.csv: "﻿дата;сумма\n2024-05-17;1200\n2024-05-18;850\n"
+    io:
+    - name: Файл из условия
+      stdout: "Итого: 2050"
+    - name: Сумма в первом столбце
+      files:
+        excel.csv: "﻿сумма;город\n100;Казань\n250;Омск, центр\n"
+      stdout: "Итого: 350"
+      hidden: true
+  explain: 'Ошибок две. Разделитель — `;`, а `DictReader` по умолчанию режет по запятой: вся строка заголовка стала одним ключом. И метка BOM в начале файла с `encoding="utf-8"` прилипает к первому заголовку — `''\ufeffсумма''` не равно `''сумма''`. Метку убирает `encoding="utf-8-sig"`, разделитель задаёт `delimiter=";"`.'
+- id: code-fix-json-cyrillic
+  type: code
+  q: |
+    **Исправьте программу: она считает сумму продаж по городам из `sales.csv` и записывает `report.json`, который должен читаться глазами — кириллица как есть.** Сейчас вместо названий городов в файле `\u041a\u0430\u0437...`.
+    ```input
+    (sales.csv)
+    город,сумма
+    Казань,1200
+    Омск,850
+    Казань,300
+    ```
+    ```output
+    (report.json)
+    {
+      "Казань": 1500,
+      "Омск": 850
+    }
+    ```
+  starter: |
+    import csv
+    import json
+
+    totals = {}
+    with open("sales.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            city = row["город"]
+            totals[city] = totals.get(city, 0) + int(row["сумма"])
+
+    with open("report.json", "w", encoding="utf-8") as f:
+        json.dump(totals, f, indent=2)
+  solution: |
+    import csv
+    import json
+
+    totals = {}
+    with open("sales.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            city = row["город"]
+            totals[city] = totals.get(city, 0) + int(row["сумма"])
+
+    with open("report.json", "w", encoding="utf-8") as f:
+        json.dump(totals, f, ensure_ascii=False, indent=2)
+  tests:
+    files:
+      sales.csv: "город,сумма\nКазань,1200\nОмск,850\nКазань,300\n"
+    io:
+    - name: Файл из условия
+      stdout: ""
+      files_out:
+        report.json: "{\n  \"Казань\": 1500,\n  \"Омск\": 850\n}"
+    - name: Один город
+      files:
+        sales.csv: "город,сумма\nЁлки-Палки,5\n"
+      stdout: ""
+      files_out:
+        report.json: "{\n  \"Ёлки-Палки\": 5\n}"
+      hidden: true
+  explain: 'По умолчанию `json.dump` записывает каждый не-ASCII символ номером вида `\u041a`. Это верный JSON — после `json.load` названия вернутся, — но человеку его не прочитать. `ensure_ascii=False` оставляет буквы как есть; `encoding="utf-8"` в `open` при этом обязателен.'
+- id: code-write-paid-total
+  type: code
+  q: |
+    **Напишите `paid_total(path)`: прочитать список заказов из JSON-файла и вернуть сумму оплаченных заказов.**
+    Сумма заказа — сумма `price * qty` по его товарам `items`. Заказ оплачен, если `paid` равно `true` или поля `paid` нет; `"paid": false` — не оплачен. Поля `items` может не быть — тогда заказ стоит 0.
+    ```input
+    (orders.json)
+    [
+      {"id": 1, "items": [{"price": 150, "qty": 2}, {"price": 320, "qty": 1}]},
+      {"id": 2, "items": [{"price": 45, "qty": 3}], "paid": false},
+      {"id": 3, "paid": true}
+    ]
+    ```
+    ```output
+    paid_total("orders.json") → 620
+    ```
+  starter: |
+    import json
+
+
+    def paid_total(path):
+        pass
+
+
+    print(paid_total("orders.json"))
+  solution: |
+    import json
+
+
+    def paid_total(path):
+        with open(path, encoding="utf-8") as f:
+            orders = json.load(f)
+        total = 0
+        for order in orders:
+            if order.get("paid", True):
+                total += sum(item["price"] * item["qty"] for item in order.get("items", []))
+        return total
+
+
+    print(paid_total("orders.json"))
+  tests:
+    files:
+      orders.json: "[\n  {\"id\": 1, \"items\": [{\"price\": 150, \"qty\": 2}, {\"price\": 320, \"qty\": 1}]},\n  {\"id\": 2, \"items\": [{\"price\": 45, \"qty\": 3}], \"paid\": false},\n  {\"id\": 3, \"paid\": true}\n]\n"
+    asserts:
+    - name: Файл из условия
+      code: |
+        got = paid_total("orders.json")
+        assert got == 620, f"paid_total('orders.json') должна вернуть 620, а вернула {got!r}"
+    - name: Явное paid true и пустой список товаров
+      code: |
+        import json
+        orders = [{"id": 5, "paid": True, "items": [{"price": 10, "qty": 5}]}, {"id": 6, "items": []}, {"id": 7, "paid": False, "items": [{"price": 1000, "qty": 1}]}]
+        with open("o2.json", "w", encoding="utf-8") as f:
+            json.dump(orders, f)
+        got = paid_total("o2.json")
+        assert got == 50, f"Для {orders} нужно 50, а вернулось {got!r}"
+    - name: Пустой список заказов
+      code: |
+        with open("o3.json", "w", encoding="utf-8") as f:
+            f.write("[]")
+        got = paid_total("o3.json")
+        assert got == 0, f"Для пустого списка заказов нужен 0, а вернулось {got!r}"
+  explain: 'Обязательные поля (`price`, `qty`) берут квадратными скобками, необязательные — через `get` со значением по умолчанию: `True` для `paid` и пустой список для `items`. `false` из JSON становится `False`, и условие его отсекает. Сумма по пустому списку — честный 0.'
+- id: code-write-save-report
+  type: code
+  q: |
+    **Напишите `save_report(rows, path)`: записать список словарей в CSV-файл с заголовком `город,сумма,чеков` — столбцы в этом порядке.**
+    Значения с запятой или кавычками должны пережить запись: файл потом читают модулем `csv`.
+    ```input
+    save_report([{"город": "Казань", "сумма": 2180.5, "чеков": 3},
+                 {"город": "Ростов-на-Дону, центр", "сумма": 640, "чеков": 1}], "report.csv")
+    ```
+    ```output
+    (report.csv)
+    город,сумма,чеков
+    Казань,2180.5,3
+    "Ростов-на-Дону, центр",640,1
+    ```
+  starter: |
+    import csv
+
+
+    def save_report(rows, path):
+        pass
+  solution: |
+    import csv
+
+
+    def save_report(rows, path):
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["город", "сумма", "чеков"])
+            writer.writeheader()
+            writer.writerows(rows)
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        import csv
+        rows = [{"город": "Казань", "сумма": 2180.5, "чеков": 3}, {"город": "Ростов-на-Дону, центр", "сумма": 640, "чеков": 1}]
+        save_report(rows, "report.csv")
+        with open("report.csv", encoding="utf-8", newline="") as f:
+            got = list(csv.reader(f))
+        want = [["город", "сумма", "чеков"], ["Казань", "2180.5", "3"], ["Ростов-на-Дону, центр", "640", "1"]]
+        assert got == want, f"csv.reader прочитал из файла {got}, а нужно {want}"
+    - name: Порядок столбцов не зависит от порядка ключей
+      code: |
+        import csv
+        save_report([{"чеков": 2, "город": "Тула", "сумма": 90}], "r2.csv")
+        with open("r2.csv", encoding="utf-8", newline="") as f:
+            got = list(csv.reader(f))
+        want = [["город", "сумма", "чеков"], ["Тула", "90", "2"]]
+        assert got == want, f"csv.reader прочитал {got}, а нужно {want}"
+    - name: Кавычки в названии
+      code: |
+        import csv
+        save_report([{"город": "Магазин \"Ромашка\"", "сумма": 1, "чеков": 1}], "r3.csv")
+        with open("r3.csv", encoding="utf-8", newline="") as f:
+            got = list(csv.DictReader(f))
+        assert got[0]["город"] == "Магазин \"Ромашка\"", f"Название с кавычками прочиталось как {got[0]['город']!r}"
+    - name: Пустой отчёт — только заголовок
+      code: |
+        save_report([], "r4.csv")
+        with open("r4.csv", encoding="utf-8") as f:
+            got = f.read().strip()
+        assert got == "город,сумма,чеков", f"Для пустого списка в файле должен быть только заголовок, а в нём {got!r}"
+  explain: '`DictWriter` берёт порядок столбцов из `fieldnames`, а не из словарей, сам превращает числа в строки и сам берёт в кавычки поле с запятой или кавычкой. Заголовок пишет `writeheader()`. Склеивание строк через `",".join(...)` сломалось бы на «Ростов-на-Дону, центр».'
+- id: code-write-journal-average
+  type: code
+  q: |
+    **Напишите `journal_average(path)`: прочитать журнал CSV с разделителем `;` и столбцами `ученик;оценка` и вернуть кортеж `(средний балл, номера пропущенных строк файла)`.**
+    Оценка — целое от 1 до 5, пробелы по краям допустимы. Строка с другой оценкой, с пустой или без поля оценки пропускается; номер строки файла считается с 1, заголовок — строка 1. Средний балл округлён до двух знаков; если верных оценок нет — `None`.
+    ```input
+    (journal.csv)
+    ученик;оценка
+    Аня; 5
+    Борис;н
+    Вера;4
+    Глеб;6
+    Дина
+    ```
+    ```output
+    journal_average("journal.csv") → (4.5, [3, 5, 6])
+    ```
+  starter: |
+    import csv
+
+
+    def journal_average(path):
+        pass
+
+
+    print(journal_average("journal.csv"))
+  solution: |
+    import csv
+
+
+    def journal_average(path):
+        marks = []
+        skipped = []
+        with open(path, encoding="utf-8", newline="") as f:
+            for n, row in enumerate(csv.DictReader(f, delimiter=";"), start=2):
+                text = row["оценка"]
+                if text is None:
+                    skipped.append(n)
+                    continue
+                try:
+                    mark = int(text)
+                except ValueError:
+                    skipped.append(n)
+                    continue
+                if 1 <= mark <= 5:
+                    marks.append(mark)
+                else:
+                    skipped.append(n)
+        if not marks:
+            return None, skipped
+        return round(sum(marks) / len(marks), 2), skipped
+
+
+    print(journal_average("journal.csv"))
+  tests:
+    files:
+      journal.csv: "ученик;оценка\nАня; 5\nБорис;н\nВера;4\nГлеб;6\nДина\n"
+    asserts:
+    - name: Файл из условия
+      code: |
+        got = journal_average("journal.csv")
+        assert got == (4.5, [3, 5, 6]), f"journal_average('journal.csv') должна вернуть (4.5, [3, 5, 6]), а вернула {got!r}"
+    - name: Пустая оценка, ноль и дробь
+      code: |
+        with open("j2.csv", "w", encoding="utf-8") as f:
+            f.write("ученик;оценка\nА;3\nБ;\nВ;0\nГ;4.5\nД; 3 \nЕ;5\n")
+        got = journal_average("j2.csv")
+        assert got == (3.67, [3, 4, 5]), f"Для второго журнала нужно (3.67, [3, 4, 5]), а вернулось {got!r}"
+    - name: Верных оценок нет
+      code: |
+        with open("j3.csv", "w", encoding="utf-8") as f:
+            f.write("ученик;оценка\nА;н\nБ\n")
+        got = journal_average("j3.csv")
+        assert got == (None, [2, 3]), f"Если верных оценок нет, нужно (None, [2, 3]), а вернулось {got!r}"
+    - name: Только заголовок
+      code: |
+        with open("j4.csv", "w", encoding="utf-8") as f:
+            f.write("ученик;оценка\n")
+        got = journal_average("j4.csv")
+        assert got == (None, []), f"Для журнала без записей нужно (None, []), а вернулось {got!r}"
+  explain: 'Каждая плохая строка ломается по-своему: «н» и пустое поле — `ValueError` от `int`, «6» — число вне диапазона, а у строки без `;` поля нет вовсе, и `DictReader` подставляет `None` — `int(None)` дал бы `TypeError`. Поэтому `None` проверяют до перевода. `enumerate(..., start=2)` даёт номер строки файла. Нет верных оценок — среднего нет: 0 был бы неправдой.'

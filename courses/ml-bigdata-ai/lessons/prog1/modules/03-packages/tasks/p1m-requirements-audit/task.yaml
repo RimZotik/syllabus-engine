@@ -1,0 +1,69 @@
+id: p1m-requirements-audit
+title: Проверка файла зависимостей
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Проверьте `requirements.txt`: выведите строки, где версия не закреплена через `==`, и сколько пакетов закреплено.**
+
+  Всё после `#` — комментарий; строки, где после удаления комментария и пробелов ничего не осталось, пропускайте. Для каждой незакреплённой строки — `не закреплено: строка` (без комментария и пробелов по краям), в порядке файла. Последняя строка — `закреплено: N из M`, где M — число пакетов в файле. Входа нет.
+
+  Пример 1
+  ```input
+  (входа нет; requirements.txt — на вкладке)
+  ```
+  ```output
+  не закреплено: pandas>=2.0
+  не закреплено: matplotlib
+  закреплено: 3 из 5
+  ```
+starter: |
+  # Прочитайте requirements.txt построчно.
+solution: |
+  pinned = 0
+  total = 0
+  with open("requirements.txt", encoding="utf-8") as f:
+      for line in f:
+          line = line.split("#")[0].strip()
+          if line == "":
+              continue
+          total += 1
+          if "==" in line:
+              pinned += 1
+          else:
+              print(f"не закреплено: {line}")
+  print(f"закреплено: {pinned} из {total}")
+tests:
+  files:
+    requirements.txt: |
+      # зависимости проекта «Отчёты»
+      requests==2.32.3
+      pandas>=2.0          # нужна новая группировка
+
+      matplotlib
+      numpy==2.1.3
+      openpyxl==3.1.5  # чтение Excel
+  io:
+    - name: Пример из условия
+      stdout: "не закреплено: pandas>=2.0\nне закреплено: matplotlib\nзакреплено: 3 из 5"
+    - name: Всё закреплено
+      files:
+        requirements.txt: "certifi==2026.11.20\ncharset-normalizer==3.5.2\nidna==3.20\nrequests==2.32.3\nurllib3==2.8.0\n"
+      stdout: "закреплено: 5 из 5"
+      hidden: true
+    - name: Только комментарии и диапазоны
+      files:
+        requirements.txt: "#\n   # пусто\n\nurllib3<3,>=1.21.1\n  scikit-learn ~= 1.5  # почти точно\n"
+      stdout: "не закреплено: urllib3<3,>=1.21.1\nне закреплено: scikit-learn ~= 1.5\nзакреплено: 0 из 2"
+      hidden: true
+    - name: Пустой файл
+      files:
+        requirements.txt: ""
+      stdout: "закреплено: 0 из 0"
+      hidden: true
+hints:
+  - level: 1
+    text: 'Каждую строку сначала приведите к виду «только пакет и версия», а уже потом решайте, что с ней делать: пропустить, засчитать или вывести.'
+  - level: 2
+    text: 'Комментарий отрезает `split("#")[0]` — всё до первой решётки; пробелы по краям убирает `strip()`. Пустой после этого строке в подсчёте не место.'
+  - level: 3
+    text: 'Два счётчика до цикла: сколько пакетов и сколько закреплено. Закреплено — если в очищенной строке есть `"=="`, проверка `in`.'

@@ -1,0 +1,689 @@
+title: Контрольная раздела «Модули и мини-проект»
+pass: 0.85
+minutes: 50
+questions:
+- id: s-module-counter
+  type: single
+  q: |
+    Файл `stats.py`:
+    ```python
+    from collections import Counter
+
+    counts = Counter()
+
+
+    def add(words):
+        counts.update(words)
+    ```
+    Что выведет программа рядом с ним?
+    ```python
+    from collections import Counter
+    from stats import counts, add
+
+    add(["чай", "сок"])
+    counts = Counter(["чай"])
+    add(["чай"])
+    import stats
+    print(stats.counts["чай"], counts["чай"], counts["сок"])
+    ```
+  options:
+  - '`2 1 0`'
+  - '`1 2 0`'
+  - '`2 1 1`'
+  - '`2 2 1`'
+  answer: 0
+  explain: 'Сначала `counts` программы и `stats.counts` — один и тот же счётчик, и `add` пополняет его. Присваивание `counts = Counter(["чай"])` перепривязывает только имя программы к новому счётчику; `add` по-прежнему пополняет счётчик модуля — там «чай» встретился дважды. В новом счётчике программы один «чай», а «сока» нет: отсутствующий ключ `Counter` даёт 0.'
+- id: s-seed-in-module
+  type: single
+  q: |
+    Файл `dice.py` — две строки: `import random` и `random.seed(1)`. Программу рядом с ним запустили три раза. Что она выведет?
+    ```python
+    import random
+    import dice
+
+    a = random.randint(1, 100)
+    import dice
+    b = random.randint(1, 100)
+    random.seed(1)
+    c = random.randint(1, 100)
+    print(a == c, a == b)
+    ```
+    После `random.seed(1)` первые два вызова `randint(1, 100)` дают 18 и 73.
+  options:
+  - '`True False` при каждом запуске'
+  - '`True True` при каждом запуске'
+  - '`False False` при каждом запуске'
+  - 'При каждом запуске по-разному: `seed` в чужом модуле на программу не действует'
+  answer: 0
+  explain: 'Модуль `random` в программе один на всех: `seed` в `dice.py` задаёт состояние того же генератора, которым пользуется программа, поэтому `a` — 18 при каждом запуске. Второй `import dice` файл не выполняет, seed не повторяется, и `b` — следующее число, 73. `random.seed(1)` в программе начинает последовательность заново, и `c` снова 18.'
+- id: s-own-requests
+  type: single
+  q: 'Пакет `requests` установлен в окружение проекта. Вы положили рядом с программой файл `requests.py` с опытами, где нет функции `get`. Что сделает строка `r = requests.get(url)` после `import requests`?'
+  options:
+  - 'Упадёт с `AttributeError`: импортирован ваш файл'
+  - 'Сработает: установленный пакет важнее файла рядом'
+  - 'Упадёт с `ModuleNotFoundError`: два модуля с одним именем'
+  - 'Упадёт с `ImportError` ещё на строке `import requests`'
+  answer: 0
+  explain: 'Модуль ищется сначала рядом с запущенным файлом, потом в стандартной библиотеке и только потом среди установленных пакетов. Ваш `requests.py` найден первым, импорт проходит без ошибки, а `get` в нём нет. Установленный пакет никуда не делся, но до него поиск не доходит.'
+- id: s-checks-without-guard
+  type: single
+  q: |
+    В проекте учёта расходов забыли `if __name__ == "__main__":` — `main.py` заканчивается строкой `main()`. Файл `checks.py`:
+    ```python
+    import clean
+    import summary
+    import main
+
+    assert clean.parse_amount("1 250,50") == 1250.5
+    assert main.load("expenses.csv")[1] != []
+    print("все проверки прошли")
+    ```
+    Что выведет `python checks.py` на таблице проекта, если все функции верны?
+  options:
+  - '`записей: 5 пропущено: 2`, затем `все проверки прошли`, и рядом появится `report.json`'
+  - 'Только `все проверки прошли`: `main()` вызывается только при запуске `main.py`'
+  - '`все проверки прошли`, затем `записей: 5 пропущено: 2`'
+  - 'Программа упадёт с `ImportError`: `checks.py` и `main.py` импортируют одни и те же модули'
+  answer: 0
+  explain: '`import main` выполняет `main.py` сверху вниз, а без условия последняя строка вызывает `main()`: отчёт пишется, итог печатается — ещё до первой проверки. Потом выполняются проверки и печать. Общие импорты `clean` и `summary` — не круг: эти модули никого из проекта не импортируют, а второй импорт просто берёт запомненный модуль.'
+- id: s-code-fix-imports
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести медиану оценок и самую частую оценку.**
+
+    На входе — оценки через пробел. При равной частоте — оценка, встреченная раньше.
+
+    Пример 1
+    ```input
+    5 4 5 3 4 5
+    ```
+    ```output
+    Медиана: 4.5
+    Чаще всего: 5 (встречается: 3)
+    ```
+  starter: |
+    import statistics as st
+
+    marks = [int(x) for x in input().split()]
+    counts = Counter(marks)
+    mark, n = counts.most_common(1)[0]
+    print("Медиана:", statistics.median(marks))
+    print(f"Чаще всего: {mark} (встречается: {n})")
+  solution: |
+    import statistics as st
+    from collections import Counter
+
+    marks = [int(x) for x in input().split()]
+    counts = Counter(marks)
+    mark, n = counts.most_common(1)[0]
+    print("Медиана:", st.median(marks))
+    print(f"Чаще всего: {mark} (встречается: {n})")
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "5 4 5 3 4 5\n"
+      stdout: "Медиана: 4.5\nЧаще всего: 5 (встречается: 3)"
+    - name: Нечётное число оценок, равные частоты
+      stdin: "4 3 3 4 5\n"
+      stdout: "Медиана: 4\nЧаще всего: 4 (встречается: 2)"
+      hidden: true
+  explain: '`import statistics as st` заводит в программе только имя `st` — имени `statistics` нет. А `Counter` живёт в модуле `collections`, и его нужно импортировать: встроенных имён с таким названием нет.'
+- id: s-code-read-module
+  type: code
+  q: |
+    **Прочитайте модуль `marks.py` и напишите программу: для каждого ученика — средний балл и медиана, в конце — самая частая оценка класса.**
+
+    Строки ввода — `имя: оценки через пробел`, до пустой строки. Оценки разбирает `marks.parse_marks`, средний балл — `marks.average`; если разбор выбросил `ValueError`, выведите `имя: ошибка — текст исключения`. Иначе — `имя: средний X, медиана Y`, медиана с одним знаком после точки. Последняя строка — `Частая оценка класса: N` по всем разобранным оценкам (при равенстве — встреченная раньше) или `Частая оценка класса: нет`.
+
+    Пример 1
+    ```input
+    Аня: 5 4 5
+    Борис: 3 7
+    Вера: 4 4 5 3
+
+    ```
+    ```output
+    Аня: средний 4.67, медиана 5.0
+    Борис: ошибка — оценка 7 вне 1..5
+    Вера: средний 4.0, медиана 4.0
+    Частая оценка класса: 5
+    ```
+  starter: |
+    import statistics
+    from collections import Counter
+
+    import marks
+  solution: |
+    import statistics
+    from collections import Counter
+
+    import marks
+
+    all_marks = Counter()
+    line = input()
+    while line != "":
+        name, text = line.split(":")
+        try:
+            student = marks.parse_marks(text)
+        except ValueError as e:
+            print(f"{name}: ошибка — {e}")
+        else:
+            all_marks.update(student)
+            print(f"{name}: средний {marks.average(student)}, медиана {statistics.median(student):.1f}")
+        line = input()
+    if all_marks:
+        print("Частая оценка класса:", all_marks.most_common(1)[0][0])
+    else:
+        print("Частая оценка класса: нет")
+  tests:
+    files:
+      marks.py: |
+        """Оценки ученика: разбор строки и средний балл."""
+
+
+        def parse_marks(text):
+            """'5 4 5' → [5, 4, 5]; оценка вне 1..5, не число или пусто — ValueError."""
+            result = []
+            for part in text.split():
+                mark = int(part)
+                if mark < 1 or mark > 5:
+                    raise ValueError(f"оценка {mark} вне 1..5")
+                result.append(mark)
+            if not result:
+                raise ValueError("нет оценок")
+            return result
+
+
+        def average(marks):
+            """Средний балл, округлённый до сотых."""
+            return round(sum(marks) / len(marks), 2)
+    io:
+    - name: Пример из условия
+      stdin: "Аня: 5 4 5\nБорис: 3 7\nВера: 4 4 5 3\n\n"
+      stdout: "Аня: средний 4.67, медиана 5.0\nБорис: ошибка — оценка 7 вне 1..5\nВера: средний 4.0, медиана 4.0\nЧастая оценка класса: 5"
+    - name: Пустые оценки и слово вместо числа
+      stdin: "Гоша:\nДина: пять\nЕгор: 2 3\n\n"
+      stdout: "Гоша: ошибка — нет оценок\nДина: ошибка — invalid literal for int() with base 10: 'пять'\nЕгор: средний 2.5, медиана 2.5\nЧастая оценка класса: 2"
+      hidden: true
+    - name: Никто не разобран
+      stdin: "Женя: 0\n\n"
+      stdout: "Женя: ошибка — оценка 0 вне 1..5\nЧастая оценка класса: нет"
+      hidden: true
+    - name: Никого нет
+      stdin: "\n"
+      stdout: "Частая оценка класса: нет"
+      hidden: true
+  explain: 'Из модуля важно прочитать три вещи: что возвращает `parse_marks` (список чисел), чем она сообщает о плохой строке (`ValueError` — в том числе от `int` для слова) и что `average` уже округляет. Оценки класса копит один `Counter` через `update` — только после удачного разбора, иначе в подсчёт попадут оценки ученика с ошибкой. `else` после `except` выполняется, только если исключения не было.'
+- id: s-code-city-months
+  type: code
+  q: |
+    **Выведите продажи из `sales.csv` по городам и месяцам.**
+
+    В файле — столбцы `город`, `дата` (ISO 8601), `сумма` (целое). Для каждого города по алфавиту — строка `город: ГГГГ-ММ сумма, ГГГГ-ММ сумма`, месяцы по возрастанию. Входа нет.
+
+    Пример 1
+    ```input
+    (входа нет; sales.csv — на вкладке)
+    ```
+    ```output
+    Казань: 2024-05 350, 2024-06 90
+    Омск: 2024-06 120
+    ```
+  starter: |
+    import csv
+    from collections import defaultdict
+  solution: |
+    import csv
+    from collections import defaultdict
+
+    sales = defaultdict(lambda: defaultdict(int))
+    with open("sales.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            sales[row["город"]][row["дата"][:7]] += int(row["сумма"])
+
+    for city in sorted(sales):
+        months = sales[city]
+        print(f"{city}: " + ", ".join(f"{m} {months[m]}" for m in sorted(months)))
+  tests:
+    files:
+      sales.csv: |
+        город,дата,сумма
+        Казань,2024-06-03,90
+        Омск,2024-06-11,120
+        Казань,2024-05-20,300
+        Казань,2024-05-02,50
+    io:
+    - name: Пример из условия
+      stdout: "Казань: 2024-05 350, 2024-06 90\nОмск: 2024-06 120"
+    - name: Декабри разных лет
+      files:
+        sales.csv: "город,дата,сумма\nТула,2024-12-01,10\nАстрахань,2023-12-31,5\nТула,2023-12-15,7\nТула,2024-01-05,3\nТула,2024-12-20,1\n"
+      stdout: "Астрахань: 2023-12 5\nТула: 2023-12 7, 2024-01 3, 2024-12 11"
+      hidden: true
+  explain: 'Это группировка внутри группировки: город → месяц → сумма. `defaultdict(int)` заводит ноль для нового месяца, а внешнему словарю нужен новый такой же словарь для нового города — его даёт функция без аргументов `lambda: defaultdict(int)`. Месяц — первые семь символов даты ISO 8601, и такие строки сортируются как даты. Подойдёт и обычный словарь с `get` или `setdefault`.'
+- id: s-code-ai-top-category
+  type: code
+  q: |
+    **Исправьте `top_category(records)`: она должна вернуть категорию с наибольшей суммой расходов, а возвращает другую.**
+
+    Код написал ИИ-ассистент. Записи — словари с ключами `date`, `category`, `amount`. При равных суммах — категория, встреченная раньше; для пустого списка — `None`.
+
+    Пример 1
+    ```input
+    top_category([{"date": date(2024, 5, 3), "category": "кафе", "amount": 300.0},
+                  {"date": date(2024, 5, 4), "category": "кафе", "amount": 250.0},
+                  {"date": date(2024, 5, 9), "category": "ремонт", "amount": 9000.0}])
+    ```
+    ```output
+    'ремонт'
+    ```
+  starter: |
+    # Решение от ИИ-ассистента
+    from collections import Counter
+    from datetime import date
+
+
+    def top_category(records):
+        """Категория с наибольшей суммой расходов; при равенстве — встреченная раньше; пусто — None."""
+        counts = Counter(r["category"] for r in records)
+        if not counts:
+            return None
+        return counts.most_common(1)[0][0]
+  solution: |
+    from collections import Counter
+    from datetime import date
+
+
+    def top_category(records):
+        """Категория с наибольшей суммой расходов; при равенстве — встреченная раньше; пусто — None."""
+        totals = Counter()
+        for r in records:
+            totals[r["category"]] += r["amount"]
+        if not totals:
+            return None
+        return totals.most_common(1)[0][0]
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        from datetime import date
+        recs = [{"date": date(2024, 5, 3), "category": "кафе", "amount": 300.0},
+                {"date": date(2024, 5, 4), "category": "кафе", "amount": 250.0},
+                {"date": date(2024, 5, 9), "category": "ремонт", "amount": 9000.0}]
+        r = top_category(recs)
+        assert r == "ремонт", f"top_category вернула {r!r}, а нужно 'ремонт': у ремонта сумма 9000, у кафе — 550"
+    - name: Равные суммы и пустой список
+      code: |
+        from datetime import date
+        recs = [{"date": date(2024, 5, 3), "category": "такси", "amount": 100.0},
+                {"date": date(2024, 5, 4), "category": "кино", "amount": 400.0},
+                {"date": date(2024, 5, 5), "category": "такси", "amount": 300.0}]
+        r = top_category(recs)
+        assert r == "такси", f"top_category вернула {r!r}, а нужно 'такси': суммы равны по 400, такси встретилось раньше"
+        assert top_category([]) is None, f"top_category([]) должна вернуть None, а вернула {top_category([])!r}"
+        recs = [{"date": date(2024, 7, 1), "category": "кафе", "amount": 300.0},
+                {"date": date(2024, 7, 2), "category": "техника", "amount": 500.0},
+                {"date": date(2024, 7, 3), "category": "кафе", "amount": 250.0}]
+        r = top_category(recs)
+        assert r == "кафе", f"top_category вернула {r!r}, а нужно 'кафе': на кафе 550, на технику 500 — считается сумма, а не самая крупная покупка"
+    - name: Много мелких против одной крупной
+      code: |
+        from datetime import date
+        recs = [{"date": date(2024, 6, d), "category": "кофе", "amount": 180.0} for d in range(1, 11)]
+        recs.append({"date": date(2024, 6, 15), "category": "обувь", "amount": 1900.0})
+        r = top_category(recs)
+        assert r == "обувь", f"top_category вернула {r!r}, а нужно 'обувь': на кофе 10 × 180 = 1800, на обувь — 1900"
+  explain: '`Counter` от категорий считает, сколько раз категория встретилась, а не сколько на неё потрачено: десять чашек кофе обгоняют одну покупку обуви. `Counter` — словарь, и в него можно прибавлять любые числа: `totals[категория] += сумма`. `most_common` при равенстве оставляет порядок первого появления — как требует условие.'
+- id: s-code-env-project
+  type: code
+  q: |
+    **Добавьте в `main()` проекта две настройки из окружения: путь к таблице и порог суммы.**
+
+    `EXPENSES_PATH` — путь к CSV, по умолчанию `expenses.csv`. `MIN_AMOUNT` — число; записи с суммой меньше него в отчёт не идут (и не считаются пропущенными), по умолчанию 0. Остальное в программе не меняйте. Модули `clean.py`, `summary.py` и таблицы — на вкладках; в песочнице переменные присваивает проверка.
+
+    Пример 1
+    ```input
+    os.environ["MIN_AMOUNT"] = "100"
+    main()
+    ```
+    ```output
+    записей: 4 пропущено: 2
+    ```
+  starter: |
+    import csv
+    import json
+    import os
+
+    import clean
+    import summary
+
+
+    def load(path):
+        """Путь к CSV → (записи, пропущенные строки с номером и причиной)."""
+        records, skipped = [], []
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            for line_no, row in enumerate(csv.DictReader(f), start=2):
+                try:
+                    records.append(clean.parse_row(row))
+                except ValueError as e:
+                    skipped.append({"строка": line_no, "причина": str(e)})
+        return records, skipped
+
+
+    def main():
+        records, skipped = load("expenses.csv")
+        report = {
+            "всего": round(sum(r["amount"] for r in records), 2),
+            "по категориям": summary.by_category(records),
+            "пропущено": skipped,
+        }
+        with open("report.json", "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        print("записей:", len(records), "пропущено:", len(skipped))
+
+
+    if __name__ == "__main__":
+        main()
+  solution: |
+    import csv
+    import json
+    import os
+
+    import clean
+    import summary
+
+
+    def load(path):
+        """Путь к CSV → (записи, пропущенные строки с номером и причиной)."""
+        records, skipped = [], []
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            for line_no, row in enumerate(csv.DictReader(f), start=2):
+                try:
+                    records.append(clean.parse_row(row))
+                except ValueError as e:
+                    skipped.append({"строка": line_no, "причина": str(e)})
+        return records, skipped
+
+
+    def main():
+        path = os.environ.get("EXPENSES_PATH", "expenses.csv")
+        min_amount = float(os.environ.get("MIN_AMOUNT", "0"))
+        records, skipped = load(path)
+        records = [r for r in records if r["amount"] >= min_amount]
+        report = {
+            "всего": round(sum(r["amount"] for r in records), 2),
+            "по категориям": summary.by_category(records),
+            "пропущено": skipped,
+        }
+        with open("report.json", "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        print("записей:", len(records), "пропущено:", len(skipped))
+
+
+    if __name__ == "__main__":
+        main()
+  tests:
+    files:
+      clean.py: |
+        from datetime import date
+
+
+        def parse_row(row):
+            if row.get("дата") is None or row.get("категория") is None or row.get("сумма") is None:
+                raise ValueError("не хватает полей")
+            amount = row["сумма"].replace(" ", "").replace(",", ".")
+            if not amount:
+                raise ValueError("пустая сумма")
+            return {"date": date.fromisoformat(row["дата"].strip()),
+                    "category": row["категория"].strip().lower(), "amount": float(amount)}
+      summary.py: |
+        def by_category(records):
+            totals = {}
+            for r in records:
+                totals[r["category"]] = totals.get(r["category"], 0) + r["amount"]
+            return totals
+      expenses.csv: |
+        дата,категория,сумма
+        2024-05-03, Продукты ,"1 250,50"
+        2024-05-03,Транспорт,60
+        2024-05-17,продукты,890
+        2024-06-01,Кафе,
+        2024-06-02,транспорт,120
+        06.06.2024,Кафе,450
+        2024-06-09,кафе,380
+      june.csv: |
+        дата,категория,сумма
+        2024-06-02,такси,99.5
+        2024-06-03,кафе,100
+        2024-06-04,кафе,
+    asserts:
+    - name: Без настроек — как раньше
+      code: |
+        import os as _os, json as _json
+        for _n in ["EXPENSES_PATH", "MIN_AMOUNT"]:
+            _os.environ.pop(_n, None)
+        main()
+        rep = _json.load(open("report.json", encoding="utf-8"))
+        assert rep["всего"] == 2700.5, f"Без настроек «всего» должно быть 2700.5, а вышло {rep['всего']}"
+        assert len(rep["пропущено"]) == 2, f"Без настроек пропущено должно быть 2 строки, а вышло {rep['пропущено']}"
+    - name: Порог суммы
+      code: |
+        import os as _os, json as _json
+        try:
+            _os.environ.pop("EXPENSES_PATH", None)
+            _os.environ["MIN_AMOUNT"] = "100"
+            main()
+            rep = _json.load(open("report.json", encoding="utf-8"))
+            assert rep["всего"] == 2640.5, f"При MIN_AMOUNT=100 «всего» должно быть 2640.5 (60 не считается, 120 — считается), а вышло {rep['всего']}"
+            assert rep["по категориям"].get("транспорт") == 120.0, f"При MIN_AMOUNT=100 транспорт — 120.0, а вышло {rep['по категориям']}"
+            assert len(rep["пропущено"]) == 2, f"Записи ниже порога — не пропущенные строки; пропущено: {rep['пропущено']}"
+            _os.environ["MIN_AMOUNT"] = "99.5"
+            main()
+            rep = _json.load(open("report.json", encoding="utf-8"))
+            assert rep["всего"] == 2640.5, f"MIN_AMOUNT может быть дробным; при 99.5 «всего» — 2640.5, а вышло {rep['всего']}"
+        finally:
+            _os.environ.pop("MIN_AMOUNT", None)
+    - name: Другой файл
+      code: |
+        import os as _os, json as _json
+        try:
+            _os.environ.pop("MIN_AMOUNT", None)
+            _os.environ["EXPENSES_PATH"] = "june.csv"
+            main()
+            rep = _json.load(open("report.json", encoding="utf-8"))
+            assert rep["всего"] == 199.5, f"При EXPENSES_PATH=june.csv «всего» должно быть 199.5, а вышло {rep['всего']}"
+            _os.environ["MIN_AMOUNT"] = "100"
+            main()
+            rep = _json.load(open("report.json", encoding="utf-8"))
+            assert rep["всего"] == 100.0 and rep["по категориям"] == {"кафе": 100.0}, f"june.csv с порогом 100: {rep}"
+        finally:
+            _os.environ.pop("EXPENSES_PATH", None)
+            _os.environ.pop("MIN_AMOUNT", None)
+  explain: 'Настройки читают внутри `main()`, а не при импорте: так значение берётся в момент запуска. Значение окружения — строка: порог переводят через `float`, а значение по умолчанию пишут строкой. Отбор по порогу — отдельный шаг после `load`: `load` по-прежнему отвечает за разбор, и строки ниже порога не смешиваются с ошибочными.'
+- id: s-code-newest-version
+  type: code
+  q: |
+    **Напишите `newest(available, spec)`: из списка версий вернуть самую новую, подходящую под ограничение, или `None`.**
+
+    Проверку ограничения и перевод версии в кортеж чисел берите из модуля `versions.py` на вкладке — прочитайте его. Список `available` идёт в любом порядке.
+
+    Пример 1
+    ```input
+    newest(["3.5.2", "4.0.0", "2.1.1", "3.10.0"], "<4,>=2")
+    ```
+    ```output
+    '3.10.0'
+    ```
+
+    Пример 2
+    ```input
+    newest(["1.0", "1.2"], ">=2")
+    ```
+    ```output
+    None
+    ```
+  starter: |
+    import versions
+
+
+    def newest(available, spec):
+        """Самая новая версия из available, подходящая под spec; нет таких — None."""
+        pass
+  solution: |
+    import versions
+
+
+    def newest(available, spec):
+        """Самая новая версия из available, подходящая под spec; нет таких — None."""
+        best = None
+        for v in available:
+            if versions.fits(v, spec):
+                if best is None or versions.as_tuple(v) > versions.as_tuple(best):
+                    best = v
+        return best
+  tests:
+    files:
+      versions.py: |
+        """Версии пакетов: сравнение по частям и проверка ограничений вида "<4,>=2"."""
+
+
+        def as_tuple(version):
+            """'2.10' → (2, 10, 0): части числами, дополнено нулями до трёх."""
+            parts = [int(x) for x in version.split(".")]
+            while len(parts) < 3:
+                parts.append(0)
+            return tuple(parts)
+
+
+        def fits(version, spec):
+            """True, если version подходит под все условия spec через запятую (==, >=, <)."""
+            v = as_tuple(version)
+            for cond in spec.split(","):
+                cond = cond.strip()
+                if cond.startswith("=="):
+                    ok = v == as_tuple(cond[2:])
+                elif cond.startswith(">="):
+                    ok = v >= as_tuple(cond[2:])
+                elif cond.startswith("<"):
+                    ok = v < as_tuple(cond[1:])
+                else:
+                    raise ValueError(f"непонятное условие: {cond}")
+                if not ok:
+                    return False
+            return True
+    asserts:
+    - name: Примеры из условия
+      code: |
+        r = newest(["3.5.2", "4.0.0", "2.1.1", "3.10.0"], "<4,>=2")
+        assert r == "3.10.0", f"newest(...) должна вернуть '3.10.0', а вернула {r!r}: 3.10 новее 3.5 — сравнивайте по частям"
+        r = newest(["1.0", "1.2"], ">=2")
+        assert r is None, f"Ни одна версия не подходит — нужен None, а вернулось {r!r}"
+    - name: Разный порядок и точная версия
+      code: |
+        for avail, spec, want in [(["2.8.0", "1.26.18", "2.10.1", "3.0.0", "1.21.0"], "<3,>=1.21.1", "2.10.1"),
+                                  (["2.32.4", "2.32.3", "2.31.0"], "==2.32.3", "2.32.3"),
+                                  (["9.9.9", "10.0.0"], ">=1", "10.0.0"),
+                                  ([], ">=1", None)]:
+            r = newest(avail, spec)
+            assert r == want, f"newest({avail}, \"{spec}\") должна вернуть {want!r}, а вернула {r!r}"
+  explain: 'Модуль уже умеет главное: `fits` проверяет ограничение, `as_tuple` делает версию сравнимой. Остаётся отобрать подходящие и взять максимум по кортежу — циклом с «лучшим на данный момент» или `max(подходящие, key=versions.as_tuple)`. Сравнение строк дало бы «3.5.2» новее «3.10.0».'
+- id: s-code-check-fits
+  type: code
+  q: |
+    **Напишите набор `check_fits(f)`: он молчит на верной функции проверки ограничений и падает на неверной.**
+
+    Что должна делать `f(version, spec)`: вернуть `True`, если версия подходит под все условия через запятую; условия — `==`, `>=`, `<`; пробелы вокруг условий допустимы; версии сравниваются по частям как числа, недостающие части — нули (`4` равно `4.0.0`). Набор запустят на верной и на нескольких сломанных функциях — какие поломки, заранее не сказано.
+
+    Пример 1
+    ```input
+    check_fits(верная fits)
+    check_fits(fits, которая сравнивает версии как строки)
+    ```
+    ```output
+    (ничего)
+    AssertionError: f("2.10.0", ">=2.9") должна вернуть True
+    ```
+  starter: |
+    def check_fits(f):
+        assert f("2.8.0", "<3,>=1.21.1"), "f(\"2.8.0\", \"<3,>=1.21.1\") должна вернуть True"
+  solution: |
+    def check_fits(f):
+        assert f("2.8.0", "<3,>=1.21.1"), "f(\"2.8.0\", \"<3,>=1.21.1\") должна вернуть True"
+        # каждое условие — с обеих сторон границы
+        assert f("1.21.1", ">=1.21.1"), "граница >= входит"
+        assert not f("1.21.0", ">=1.21.1"), "ниже границы >= — нет"
+        assert not f("3.0.0", "<3"), "граница < не входит"
+        assert f("2.99.99", "<3"), "ниже границы < — да"
+        assert f("2.32.3", "==2.32.3") and not f("2.32.4", "==2.32.3"), "== — только эта версия"
+        # запятая — «и»: каждое условие по отдельности может не выполниться
+        assert not f("1.0.0", "<3,>=1.21.1"), "нарушено второе условие — False"
+        assert not f("3.1.0", "<3,>=1.21.1"), "нарушено первое условие — False"
+        # части — числа, недостающие — нули, пробелы
+        assert f("2.10.0", ">=2.9"), "f(\"2.10.0\", \">=2.9\") должна вернуть True"
+        assert f("4", "==4.0.0"), "4 равно 4.0.0"
+        assert f("2.5", " >=2.0 , <3 "), "пробелы вокруг условий допустимы"
+  tests:
+    asserts:
+    - name: Верную fits проверки пропускают
+      code: |
+        def _t(version):
+            parts = [int(x) for x in version.split(".")]
+            while len(parts) < 3:
+                parts.append(0)
+            return tuple(parts)
+        def _ok(version, spec):
+            v = _t(version)
+            for cond in spec.split(","):
+                cond = cond.strip()
+                if cond.startswith("=="):
+                    ok = v == _t(cond[2:])
+                elif cond.startswith(">="):
+                    ok = v >= _t(cond[2:])
+                else:
+                    ok = v < _t(cond[1:])
+                if not ok:
+                    return False
+            return True
+        try:
+            check_fits(_ok)
+        except AssertionError as e:
+            assert False, f"Ваши проверки отвергли верную fits: {e}"
+    - name: Сломанные fits проверки ловят
+      code: |
+        def _t(version, pad=True):
+            parts = [int(x) for x in version.split(".")]
+            while pad and len(parts) < 3:
+                parts.append(0)
+            return tuple(parts)
+        def _make(cmp_ge=lambda a, b: a >= b, cmp_lt=lambda a, b: a < b, conv=_t, any_mode=False, strip=True):
+            def f(version, spec):
+                v = conv(version)
+                results = []
+                for cond in spec.split(","):
+                    if strip:
+                        cond = cond.strip()
+                    if cond.startswith("=="):
+                        ok = v == conv(cond[2:])
+                    elif cond.startswith(">="):
+                        ok = cmp_ge(v, conv(cond[2:]))
+                    else:
+                        ok = cmp_lt(v, conv(cond[1:]))
+                    results.append(ok)
+                return any(results) if any_mode else all(results)
+            return f
+        broken = [("строки вместо чисел", _make(conv=lambda s: s)),
+                  ("без нулей в конце", _make(conv=lambda s: _t(s, pad=False))),
+                  ("запятая как «или»", _make(any_mode=True)),
+                  (">= как >", _make(cmp_ge=lambda a, b: a > b)),
+                  ("< как <=", _make(cmp_lt=lambda a, b: a <= b)),
+                  ("пробелы не убираются", _make(strip=False))]
+        missed = []
+        for name, f in broken:
+            try:
+                check_fits(f)
+                missed.append(name)
+            except Exception:            # AssertionError или исключение самой функции
+                pass
+        assert not missed, "Проверки не поймали сломанные fits: " + "; ".join(missed)
+  explain: 'Набор строят по условию, фраза за фразой: у каждого оператора — граница с обеих сторон (там живут ошибки `>` вместо `>=` и `<=` вместо `<`); у запятой — случаи, где нарушено ровно одно из условий, иначе «и» не отличить от «или»; числа больше девяти — против сравнения строк; короткая версия — против забытых нулей; пробелы — против забытого `strip`.'

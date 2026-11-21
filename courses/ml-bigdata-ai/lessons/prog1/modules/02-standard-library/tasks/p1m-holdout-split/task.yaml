@@ -1,0 +1,91 @@
+id: p1m-holdout-split
+title: Отложенная выборка с seed
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Исправьте `split(rows, share, seed)`: она должна случайно делить строки данных на обучающую и отложенную части так, чтобы при том же `seed` деление повторялось.**
+
+  Порядок действий: `random.seed(seed)`; копию списка `rows` перемешать через `random.shuffle`; `k = round(len(rows) * share)`; первые `k` элементов копии — отложенная часть, остальные — обучающая. Вернуть кортеж `(обучающая, отложенная)`. Сам `rows` не меняется.
+
+  Пример 1
+  ```input
+  rows = list(range(10))
+  train, test = split(rows, 0.3, 42)
+  len(train), len(test), rows
+  ```
+  ```output
+  (7, 3, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+  ```
+
+  Пример 2
+  ```input
+  split(["а", "б"], 0, 1)
+  ```
+  ```output
+  (['а', 'б'], [])
+  ```
+
+  Ограничения: `0 <= share <= 1`.
+starter: |
+  import random
+
+
+  def split(rows, share, seed):
+      """(обучающая, отложенная): случайное деление rows, повторяемое при том же seed."""
+      random.seed(seed)
+      random.shuffle(rows)
+      k = round(len(rows) * share)
+      return rows[:k], rows[k:]
+solution: |
+  import random
+
+
+  def split(rows, share, seed):
+      """(обучающая, отложенная): случайное деление rows, повторяемое при том же seed."""
+      random.seed(seed)
+      mixed = list(rows)
+      random.shuffle(mixed)
+      k = round(len(rows) * share)
+      return mixed[k:], mixed[:k]
+tests:
+  asserts:
+    - name: Деление как у эталона
+      code: |
+        import random as _r
+        for n, share, s in [(10, 0.3, 42), (20, 0.25, 7), (9, 0.3, 11)]:
+            data = list(range(n))
+            _r.seed(s)
+            mixed = list(data)
+            _r.shuffle(mixed)
+            k = round(n * share)
+            want = (mixed[k:], mixed[:k])
+            got = split(list(range(n)), share, s)
+            assert got == want, f"split(list(range({n})), {share}, {s}) должна вернуть {want}, а вернула {got}"
+    - name: Исходный список не меняется
+      code: |
+        rows = ["Аня", "Борис", "Вера", "Гоша", "Дина"]
+        split(rows, 0.4, 3)
+        assert rows == ["Аня", "Борис", "Вера", "Гоша", "Дина"], f"После split список rows стал {rows}: перемешивать нужно копию"
+    - name: Тот же seed — то же деление, части без потерь
+      code: |
+        rows = list(range(100, 130))
+        a = split(rows, 0.2, 2024)
+        b = split(rows, 0.2, 2024)
+        assert a == b, "Два вызова с seed 2024 разделили по-разному"
+        train, test = a
+        assert len(test) == 6 and len(train) == 24, f"Для 30 строк и share 0.2 нужно 24 и 6, а вышло {len(train)} и {len(test)}"
+        assert sorted(train + test) == rows, "Вместе части должны содержать каждую строку ровно один раз"
+    - name: Крайние доли
+      code: |
+        r = split(["а", "б"], 0, 1)
+        assert r == (["а", "б"], []) or r == (["б", "а"], []), f"При share 0 отложенная часть пуста, а вернулось {r}"
+        tr, te = split([1, 2, 3], 1, 5)
+        assert tr == [] and sorted(te) == [1, 2, 3], f"При share 1 всё уходит в отложенную часть, а вернулось {(tr, te)}"
+        assert split([], 0.3, 1) == ([], []), "Для пустого списка — две пустые части"
+hints:
+  - level: 1
+    text: 'Запустите пример 1 со стартовым кодом и посмотрите на `rows` после вызова. Как ведёт себя `random.shuffle` — как `sorted` или как `list.sort()`? И в каком порядке функция должна вернуть части?'
+  - level: 2
+    text: '`shuffle` перемешивает сам список, который получил. Чтобы `rows` остался прежним, перемешивают копию — `list(rows)`.'
+  - level: 3
+    text: 'После `random.seed(seed)`: `mixed = list(rows)`, `random.shuffle(mixed)`, `k = round(len(rows) * share)`; вернуть `mixed[k:], mixed[:k]` — сначала обучающая часть.'

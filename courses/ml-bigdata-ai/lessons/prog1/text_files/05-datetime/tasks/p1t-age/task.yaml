@@ -1,0 +1,95 @@
+id: p1t-age
+title: Возраст в полных годах
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите `age(birth, today)`: вернуть возраст в полных годах на дату `today`.**
+
+  `birth` и `today` — значения `date`. В день рождения год уже прибавляется. У родившихся 29 февраля в невисокосный год день рождения наступает 1 марта. Если `today` раньше `birth` — `ValueError` с текстом `дата раньше рождения`.
+
+  Пример 1
+  ```input
+  age(date(2006, 5, 18), date(2024, 5, 17))
+  age(date(2006, 5, 18), date(2024, 5, 18))
+  ```
+  ```output
+  17
+  18
+  ```
+
+  Пример 2
+  ```input
+  age(date(2004, 2, 29), date(2025, 2, 28))
+  age(date(2004, 2, 29), date(2025, 3, 1))
+  ```
+  ```output
+  20
+  21
+  ```
+starter: |
+  from datetime import date
+
+
+  def age(birth, today):
+      pass
+
+
+  print(age(date(2006, 5, 18), date(2024, 5, 17)))
+solution: |
+  from datetime import date
+
+
+  def age(birth, today):
+      if today < birth:
+          raise ValueError("дата раньше рождения")
+      years = today.year - birth.year
+      if (today.month, today.day) < (birth.month, birth.day):
+          years -= 1
+      return years
+
+
+  print(age(date(2006, 5, 18), date(2024, 5, 17)))
+tests:
+  forbid: [dateutil, relativedelta]
+  asserts:
+    - name: Накануне и в день рождения
+      code: |
+        from datetime import date
+        for b, t, want in [(date(2006, 5, 18), date(2024, 5, 17), 17), (date(2006, 5, 18), date(2024, 5, 18), 18), (date(2006, 5, 18), date(2024, 12, 31), 18)]:
+            got = age(b, t)
+            assert got == want, f"age({b}, {t}) должна вернуть {want}, а вернула {got!r}"
+    - name: Родился 29 февраля
+      code: |
+        from datetime import date
+        b = date(2004, 2, 29)
+        for t, want in [(date(2025, 2, 28), 20), (date(2025, 3, 1), 21), (date(2028, 2, 28), 23), (date(2028, 2, 29), 24)]:
+            got = age(b, t)
+            assert got == want, f"age({b}, {t}) должна вернуть {want}, а вернула {got!r}"
+    - name: Високосные годы в промежутке
+      code: |
+        from datetime import date
+        for b, t, want in [(date(1950, 3, 1), date(2024, 2, 29), 73), (date(1950, 3, 1), date(2024, 3, 1), 74), (date(2001, 3, 1), date(2002, 3, 1), 1), (date(2001, 3, 1), date(2002, 2, 28), 0)]:
+            got = age(b, t)
+            assert got == want, f"age({b}, {t}) должна вернуть {want}, а вернула {got!r}"
+    - name: Новорождённый
+      code: |
+        from datetime import date
+        got = age(date(2024, 5, 17), date(2024, 5, 17))
+        assert got == 0, f"В день рождения возраст 0, а вернулось {got!r}"
+    - name: Дата раньше рождения — ValueError
+      code: |
+        from datetime import date
+        msg = None
+        try:
+            got = age(date(2024, 5, 17), date(2024, 5, 16))
+        except ValueError as e:
+            msg = str(e)
+        assert msg is not None, f"age(2024-05-17, 2024-05-16) должна выбросить ValueError, а вернула {got!r}"
+        assert msg == "дата раньше рождения", f"Текст исключения: «{msg}». Нужен: дата раньше рождения"
+hints:
+  - level: 1
+    text: 'Деление числа дней на 365 ошибается: високосные годы добавляют лишние дни. Считайте как человек: разность годов, а потом — был ли уже день рождения в этом году.'
+  - level: 2
+    text: '«Был ли уже день рождения» — это сравнение пар (месяц, день). Кортежи сравниваются по элементам слева направо — как раз то, что нужно.'
+  - level: 3
+    text: 'Прежде чем писать отдельную ветку для 29 февраля, проверьте, что ваше сравнение пар уже даёт для 28 февраля и для 1 марта невисокосного года. Может быть, ветка и не нужна.'

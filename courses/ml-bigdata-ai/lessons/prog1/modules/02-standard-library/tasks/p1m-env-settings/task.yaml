@@ -1,0 +1,154 @@
+id: p1m-env-settings
+title: Настройки магазина из окружения
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Напишите `read_settings()`: собрать настройки программы магазина из переменных окружения в словарь `{"key": …, "discount": …, "currency": …}`.**
+
+  - `SHOP_KEY` — ключ доступа, обязательный: нет переменной — `KeyError`.
+  - `SHOP_DISCOUNT` — скидка в процентах, целое число от 0 до 100; нет переменной — 0. Не целое число или вне диапазона — `ValueError` с текстом `SHOP_DISCOUNT должна быть целым числом от 0 до 100, а не «значение»`.
+  - `SHOP_CURRENCY` — знак валюты; нет переменной — `"₽"`.
+
+  В песочнице окружение снаружи не задать: проверки сами присваивают `os.environ[...]` перед вызовом.
+
+  Пример 1
+  ```input
+  os.environ["SHOP_KEY"] = "a8f3"
+  os.environ["SHOP_DISCOUNT"] = "15"
+  read_settings()
+  ```
+  ```output
+  {'key': 'a8f3', 'discount': 15, 'currency': '₽'}
+  ```
+
+  Пример 2
+  ```input
+  os.environ["SHOP_KEY"] = "a8f3"
+  os.environ["SHOP_DISCOUNT"] = "пять"
+  read_settings()
+  ```
+  ```output
+  ValueError: SHOP_DISCOUNT должна быть целым числом от 0 до 100, а не «пять»
+  ```
+starter: |
+  import os
+
+
+  def read_settings():
+      """Настройки из окружения: key обязателен, discount 0..100 (по умолчанию 0), currency (по умолчанию ₽)."""
+      pass
+
+
+  if __name__ == "__main__":
+      os.environ["SHOP_KEY"] = "a8f3"          # для примера; обычно задают снаружи
+      os.environ["SHOP_DISCOUNT"] = "15"
+      print(read_settings())
+solution: |
+  import os
+
+
+  def read_settings():
+      """Настройки из окружения: key обязателен, discount 0..100 (по умолчанию 0), currency (по умолчанию ₽)."""
+      key = os.environ["SHOP_KEY"]
+      text = os.environ.get("SHOP_DISCOUNT", "0")
+      error = f"SHOP_DISCOUNT должна быть целым числом от 0 до 100, а не «{text}»"
+      try:
+          discount = int(text)
+      except ValueError:
+          raise ValueError(error)
+      if discount < 0 or discount > 100:
+          raise ValueError(error)
+      currency = os.environ.get("SHOP_CURRENCY", "₽")
+      return {"key": key, "discount": discount, "currency": currency}
+
+
+  if __name__ == "__main__":
+      os.environ["SHOP_KEY"] = "a8f3"          # для примера; обычно задают снаружи
+      os.environ["SHOP_DISCOUNT"] = "15"
+      print(read_settings())
+tests:
+  asserts:
+    - name: Всё задано
+      code: |
+        import os as _os
+        _names = ["SHOP_KEY", "SHOP_DISCOUNT", "SHOP_CURRENCY"]
+        try:
+            _os.environ.update({"SHOP_KEY": "k-77", "SHOP_DISCOUNT": "15", "SHOP_CURRENCY": "$"})
+            r = read_settings()
+            want = {"key": "k-77", "discount": 15, "currency": "$"}
+            assert r == want, f"При SHOP_KEY=k-77, SHOP_DISCOUNT=15, SHOP_CURRENCY=$ нужно {want}, а вернулось {r!r}"
+            assert type(r["discount"]) is int, f"discount должна быть числом, а не {r['discount']!r}"
+        finally:
+            for _n in _names:
+                _os.environ.pop(_n, None)
+    - name: Значения по умолчанию
+      code: |
+        import os as _os
+        _names = ["SHOP_KEY", "SHOP_DISCOUNT", "SHOP_CURRENCY"]
+        try:
+            for _n in _names:
+                _os.environ.pop(_n, None)
+            _os.environ["SHOP_KEY"] = "abc"
+            r = read_settings()
+            want = {"key": "abc", "discount": 0, "currency": "₽"}
+            assert r == want, f"Без SHOP_DISCOUNT и SHOP_CURRENCY нужно {want}, а вернулось {r!r}"
+        finally:
+            for _n in _names:
+                _os.environ.pop(_n, None)
+    - name: Края диапазона скидки
+      code: |
+        import os as _os
+        _names = ["SHOP_KEY", "SHOP_DISCOUNT", "SHOP_CURRENCY"]
+        try:
+            _os.environ["SHOP_KEY"] = "abc"
+            for text, want in [("0", 0), ("100", 100)]:
+                _os.environ["SHOP_DISCOUNT"] = text
+                r = read_settings()["discount"]
+                assert r == want, f"При SHOP_DISCOUNT={text} скидка должна быть {want}, а вернулось {r!r}"
+        finally:
+            for _n in _names:
+                _os.environ.pop(_n, None)
+    - name: Неверная скидка — ValueError с текстом
+      code: |
+        import os as _os
+        _names = ["SHOP_KEY", "SHOP_DISCOUNT", "SHOP_CURRENCY"]
+        try:
+            _os.environ["SHOP_KEY"] = "abc"
+            for text in ["пять", "101", "-1", "7.5", ""]:
+                _os.environ["SHOP_DISCOUNT"] = text
+                msg = None
+                try:
+                    read_settings()
+                except ValueError as e:
+                    msg = str(e)
+                assert msg is not None, f"При SHOP_DISCOUNT=«{text}» должен быть ValueError"
+                want = f"SHOP_DISCOUNT должна быть целым числом от 0 до 100, а не «{text}»"
+                assert msg == want, f"Текст исключения: «{msg}». Нужен: {want}"
+        finally:
+            for _n in _names:
+                _os.environ.pop(_n, None)
+    - name: Нет ключа — KeyError
+      code: |
+        import os as _os
+        _names = ["SHOP_KEY", "SHOP_DISCOUNT", "SHOP_CURRENCY"]
+        try:
+            for _n in _names:
+                _os.environ.pop(_n, None)
+            _os.environ["SHOP_DISCOUNT"] = "10"
+            caught = None
+            try:
+                r = read_settings()
+                caught = f"вернулось {r!r}"
+            except KeyError:
+                caught = "KeyError"
+            assert caught == "KeyError", f"Без SHOP_KEY нужен KeyError, а {caught}"
+        finally:
+            for _n in _names:
+                _os.environ.pop(_n, None)
+hints:
+  - level: 1
+    text: 'Три переменные — три разных правила: обязательная, с проверкой и с запасным значением. Каким способом чтения из `os.environ` выражается каждое из них?'
+  - level: 2
+    text: 'Обязательную читают через `[]` — нет её, и `KeyError` выйдет сам. Остальные — через `get` со значением по умолчанию, и значение по умолчанию тоже строка. Перевод в число через `int` может выбросить свой `ValueError` — замените его своим, как в задаче про возраст.'
+  - level: 3
+    text: 'Текст ошибки соберите заранее из исходной строки. `int(text)` — внутри `try`, в `except ValueError` выбросьте свой `ValueError(текст)`; диапазон проверьте обычным `if` после `try`.'

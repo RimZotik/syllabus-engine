@@ -1,0 +1,393 @@
+title: Проверка темы
+pass: 0.85
+minutes: 45
+questions:
+- id: try-around-loop
+  type: single
+  q: |
+    В `load` поставили `try` вокруг всего цикла:
+    ```python
+    def load(path):
+        records, skipped = [], []
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            try:
+                for line_no, row in enumerate(csv.DictReader(f), start=2):
+                    records.append(clean.parse_row(row))
+            except ValueError as e:
+                skipped.append({"строка": line_no, "причина": str(e)})
+        return records, skipped
+    ```
+    Что напечатает `main()` на таблице проекта? В ней семь строк данных: пятая строка файла — с пустой суммой, седьмая — с датой `06.06.2024`, остальные верны.
+  options:
+  - '`записей: 3 пропущено: 1`'
+  - '`записей: 5 пропущено: 2`'
+  - '`записей: 6 пропущено: 1`'
+  - '`записей: 4 пропущено: 1`'
+  answer: 0
+  explain: 'Исключение на пятой строке файла выходит из цикла в `except`, и цикл уже не продолжается: записаны три строки до неё, пропущена одна, а последние три не прочитаны вовсе. Чтобы пропускать строку и идти дальше, `try` ставят внутри цикла — вокруг разбора одной строки.'
+- id: module-boundaries
+  type: multi
+  q: 'Какие из этих правок ломают деление проекта на модули — `clean` разбирает строки, `summary` считает сводки, `main` работает с файлами и печатью?'
+  options:
+  - 'В `by_category` добавили `print(totals)`, чтобы видеть промежуточные суммы'
+  - '`summary.by_month` теперь сама открывает `expenses.csv`, чтобы не ждать записей от `main`'
+  - '`clean.py` делает `import main`, чтобы взять оттуда имя файла с таблицей'
+  - 'В `main.py` добавили функцию `rounded`, которая округляет суммы отчёта'
+  - '`clean.py` импортирует `math`, чтобы распознать `nan` в сумме'
+  answer:
+  - 0
+  - 1
+  - 2
+  explain: 'В `clean` и `summary` — только чистые функции: `print` в сводке — побочное действие, которое увидит каждый, кто её вызовет. Сводка, читающая файл, начинает знать формат CSV, и её уже не применить к записям из другого источника. `import main` из `clean` замыкает импорты в круг. Округление для отчёта — забота `main`, а стандартный модуль в `clean` ничего не нарушает.'
+- id: bom-diagnosis
+  type: single
+  q: 'Коллега сохранил таблицу в Excel как «CSV UTF-8». Программа отработала без падений, но в отчёте все строки пропущены с причиной «не хватает полей», хотя в Excel таблица целая. Где ошибка вероятнее всего?'
+  options:
+  - '`load` открывает файл с `encoding="utf-8"`, а не `"utf-8-sig"`'
+  - 'Суммы в таблице записаны с запятой вместо точки'
+  - '`load` открывает файл без `newline=""`'
+  - 'Даты в таблице записаны не в ISO 8601'
+  answer: 0
+  explain: 'Excel ставит в начало невидимую метку, и с простым `utf-8` она становится частью названия первого столбца: ключа `дата` в словаре нет, `row.get("дата")` даёт `None` — и так в каждой строке. Запятые в суммах `parse_amount` разбирает, а неверная дата дала бы другую причину, и не во всех строках. Без `newline=""` ломаются переносы внутри ячеек, а не все строки разом.'
+- id: code-fix-month-key
+  type: code
+  q: |
+    **Исправьте `by_month(records)`: ключ должен быть вида `ГГГГ-ММ`, а сейчас май 2024 года выходит ключом `2024-5`.**
+
+    Записи — словари с ключами `date`, `category`, `amount`. Возвращается обычный словарь «месяц → сумма».
+
+    Пример 1
+    ```input
+    by_month([{"date": date(2024, 5, 3), "category": "кафе", "amount": 100.0},
+              {"date": date(2024, 11, 2), "category": "кафе", "amount": 50.0}])
+    ```
+    ```output
+    {'2024-05': 100.0, '2024-11': 50.0}
+    ```
+  starter: |
+    from collections import defaultdict
+    from datetime import date
+
+
+    def by_month(records):
+        """Сумма расходов по месяцам: ключ — 'ГГГГ-ММ'."""
+        totals = defaultdict(float)
+        for r in records:
+            d = r["date"]
+            totals[f"{d.year}-{d.month}"] += r["amount"]
+        return dict(totals)
+  solution: |
+    from collections import defaultdict
+    from datetime import date
+
+
+    def by_month(records):
+        """Сумма расходов по месяцам: ключ — 'ГГГГ-ММ'."""
+        totals = defaultdict(float)
+        for r in records:
+            totals[r["date"].strftime("%Y-%m")] += r["amount"]
+        return dict(totals)
+  tests:
+    asserts:
+    - name: Ключи с двумя цифрами месяца
+      code: |
+        from datetime import date
+        recs = [{"date": date(2024, 5, 3), "category": "кафе", "amount": 100.0},
+                {"date": date(2024, 11, 2), "category": "кафе", "amount": 50.0},
+                {"date": date(2024, 5, 20), "category": "такси", "amount": 30.0}]
+        r = by_month(recs)
+        assert r == {"2024-05": 130.0, "2024-11": 50.0}, f"by_month вернула {r}, а нужно {{'2024-05': 130.0, '2024-11': 50.0}}"
+    - name: Разные годы и пустой список
+      code: |
+        from datetime import date
+        recs = [{"date": date(2023, 1, 9), "category": "кафе", "amount": 10.0},
+                {"date": date(2024, 1, 9), "category": "кафе", "amount": 20.0}]
+        r = by_month(recs)
+        assert r == {"2023-01": 10.0, "2024-01": 20.0}, f"by_month вернула {r}"
+        assert by_month([]) == {}, "by_month([]) должна вернуть {}"
+  explain: 'Число в f-строке выводится без ведущего нуля: `5`, а не `05`. Такой ключ не совпадёт с договорённым форматом и сортируется как текст неверно: `2024-11` окажется раньше `2024-5`. Готовый формат даёт `strftime("%Y-%m")`; подойдёт и `f"{d.year}-{d.month:02d}"`.'
+- id: code-fix-bom
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести, сколько строк таблицы `expenses.csv` разобрано и сколько пропущено, а на таблице из Excel пропускает все.**
+
+    Файл может начинаться с невидимой метки, которую ставит Excel. Модуль `clean.py` и таблица — на вкладках.
+
+    Пример 1
+    ```input
+    (входа нет; expenses.csv — на вкладке)
+    ```
+    ```output
+    записей: 3 пропущено: 1
+    ```
+  starter: |
+    import csv
+
+    import clean
+
+    records, skipped = [], []
+    with open("expenses.csv", encoding="utf-8", newline="") as f:
+        for line_no, row in enumerate(csv.DictReader(f), start=2):
+            try:
+                records.append(clean.parse_row(row))
+            except ValueError as e:
+                skipped.append((line_no, str(e)))
+    print("записей:", len(records), "пропущено:", len(skipped))
+  solution: |
+    import csv
+
+    import clean
+
+    records, skipped = [], []
+    with open("expenses.csv", encoding="utf-8-sig", newline="") as f:
+        for line_no, row in enumerate(csv.DictReader(f), start=2):
+            try:
+                records.append(clean.parse_row(row))
+            except ValueError as e:
+                skipped.append((line_no, str(e)))
+    print("записей:", len(records), "пропущено:", len(skipped))
+  tests:
+    files:
+      clean.py: |
+        from datetime import date
+
+
+        def parse_row(row):
+            if row.get("дата") is None or row.get("категория") is None or row.get("сумма") is None:
+                raise ValueError("не хватает полей")
+            amount = row["сумма"].replace(" ", "").replace(",", ".")
+            if not amount:
+                raise ValueError("пустая сумма")
+            return {"date": date.fromisoformat(row["дата"].strip()),
+                    "category": row["категория"].strip().lower(), "amount": float(amount)}
+      expenses.csv: "\uFEFFдата,категория,сумма\n2024-05-03,Продукты,\"1 250,50\"\n2024-05-03,Транспорт,60\n2024-06-01,Кафе,\n2024-06-09,кафе,380\n"
+    io:
+    - name: Таблица из Excel
+      stdout: "записей: 3 пропущено: 1"
+    - name: Таблица без метки
+      files:
+        expenses.csv: "дата,категория,сумма\n2024-07-01,кафе,100\n2024-07-02,такси,\n"
+      stdout: "записей: 1 пропущено: 1"
+      hidden: true
+  explain: 'Метка в начале файла — три байта, которые `utf-8` читает как символ и приклеивает к названию первого столбца: ключ становится `"\ufeffдата"`, и `parse_row` не находит `дата` ни в одной строке. Кодировка `utf-8-sig` метку пропускает, а файл без метки читает так же, как `utf-8`.'
+- id: code-fix-broad-except
+  type: code
+  q: |
+    **Исправьте программу: `load(path)` на почти верной таблице пропускает все строки, а должна пропускать только плохие и не прятать ошибки в коде.**
+
+    `load` возвращает `(записи, пропущенные)`; пропущенная строка — `(номер строки файла, текст исключения)`. Пропускать можно только строки, на которых разбор выбросил `ValueError`; другие исключения должны уронить программу. Таблица `expenses.csv` — на вкладке.
+
+    Пример 1
+    ```input
+    records, skipped = load("expenses.csv")
+    len(records), skipped
+    ```
+    ```output
+    (3, [(3, "could not convert string to float: 'сто'")])
+    ```
+  starter: |
+    import csv
+    from datetime import date
+
+
+    def parse_row(row):
+        """Строка таблицы → запись; плохая строка — ValueError."""
+        return {"date": date.fromisoformat(row["дата"]),
+                "category": row["категория"].strip().lower(),
+                "amount": float(row["Сумма"].replace(",", "."))}
+
+
+    def load(path):
+        """Путь к CSV → (записи, пропущенные строки)."""
+        records, skipped = [], []
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            for line_no, row in enumerate(csv.DictReader(f), start=2):
+                try:
+                    records.append(parse_row(row))
+                except Exception as e:
+                    skipped.append((line_no, str(e)))
+        return records, skipped
+  solution: |
+    import csv
+    from datetime import date
+
+
+    def parse_row(row):
+        """Строка таблицы → запись; плохая строка — ValueError."""
+        return {"date": date.fromisoformat(row["дата"]),
+                "category": row["категория"].strip().lower(),
+                "amount": float(row["сумма"].replace(",", "."))}
+
+
+    def load(path):
+        """Путь к CSV → (записи, пропущенные строки)."""
+        records, skipped = [], []
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            for line_no, row in enumerate(csv.DictReader(f), start=2):
+                try:
+                    records.append(parse_row(row))
+                except ValueError as e:
+                    skipped.append((line_no, str(e)))
+        return records, skipped
+  tests:
+    files:
+      expenses.csv: "дата,категория,сумма\n2024-05-03,Продукты,\"1250,50\"\n2024-05-03,Транспорт,сто\n2024-05-17,продукты,890\n2024-06-02,такси,120\n"
+    asserts:
+    - name: Верные строки разобраны, плохая пропущена
+      code: |
+        records, skipped = load("expenses.csv")
+        assert len(records) == 3, f"load должна вернуть 3 записи, а вернула {len(records)}; пропущено: {skipped}"
+        assert skipped == [(3, "could not convert string to float: 'сто'")], f"Пропущенные строки: {skipped}"
+        assert records[0]["amount"] == 1250.5, f"Первая запись: {records[0]}"
+    - name: Ошибка в коде не прячется
+      code: |
+        import csv as _csv
+        _old = parse_row
+        def _broken(row):
+            return row["нет такого столбца"]
+        globals()["parse_row"] = _broken
+        caught = None
+        try:
+            load("expenses.csv")
+            caught = "ничего"
+        except KeyError:
+            caught = "KeyError"
+        finally:
+            globals()["parse_row"] = _old
+        assert caught == "KeyError", "Если parse_row падает с KeyError, load должна упасть с ним же, а не пропустить строки: ловите только ValueError"
+  explain: '`except Exception` ловит и `KeyError: ''Сумма''` — опечатку в имени столбца, то есть ошибку в коде, а не в данных. Поэтому каждая строка тихо ушла в «пропущенные» с непонятной причиной. Ловят только тот тип, которым функция сообщает о плохих данных, — `ValueError`; тогда опечатка сразу уронит программу с понятной трассировкой. Исправить нужно и `except`, и саму опечатку.'
+- id: code-add-weekday
+  type: code
+  q: |
+    **Добавьте в модуль сводок функцию `by_weekday(records)`: суммы расходов по дням недели.**
+
+    Ключи — `"пн"`, `"вт"`, `"ср"`, `"чт"`, `"пт"`, `"сб"`, `"вс"`; в словаре — только дни, где были расходы, в порядке от понедельника к воскресенью. Возвращается обычный словарь.
+
+    Пример 1
+    ```input
+    by_weekday([{"date": date(2024, 5, 19), "category": "кафе", "amount": 300.0},
+                {"date": date(2024, 5, 17), "category": "кафе", "amount": 100.0},
+                {"date": date(2024, 5, 24), "category": "такси", "amount": 50.0}])
+    ```
+    ```output
+    {'пт': 150.0, 'вс': 300.0}
+    ```
+  starter: |
+    from collections import defaultdict
+    from datetime import date
+
+    DAYS = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
+
+
+    def by_month(records):
+        """Сумма расходов по месяцам: ключ — 'ГГГГ-ММ'."""
+        totals = defaultdict(float)
+        for r in records:
+            totals[r["date"].strftime("%Y-%m")] += r["amount"]
+        return dict(totals)
+
+
+    def by_weekday(records):
+        """Сумма расходов по дням недели, от понедельника к воскресенью."""
+        pass
+  solution: |
+    from collections import defaultdict
+    from datetime import date
+
+    DAYS = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
+
+
+    def by_month(records):
+        """Сумма расходов по месяцам: ключ — 'ГГГГ-ММ'."""
+        totals = defaultdict(float)
+        for r in records:
+            totals[r["date"].strftime("%Y-%m")] += r["amount"]
+        return dict(totals)
+
+
+    def by_weekday(records):
+        """Сумма расходов по дням недели, от понедельника к воскресенью."""
+        totals = defaultdict(float)
+        for r in records:
+            totals[r["date"].weekday()] += r["amount"]
+        return {DAYS[day]: totals[day] for day in sorted(totals)}
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        from datetime import date
+        recs = [{"date": date(2024, 5, 19), "category": "кафе", "amount": 300.0},
+                {"date": date(2024, 5, 17), "category": "кафе", "amount": 100.0},
+                {"date": date(2024, 5, 24), "category": "такси", "amount": 50.0}]
+        r = by_weekday(recs)
+        assert r == {"пт": 150.0, "вс": 300.0}, f"by_weekday вернула {r}"
+        assert list(r) == ["пт", "вс"], f"Дни должны идти от понедельника к воскресенью, а идут {list(r)}"
+    - name: Вся неделя вразнобой
+      code: |
+        from datetime import date
+        recs = [{"date": date(2024, 6, d), "category": "x", "amount": float(d)} for d in [9, 3, 8, 4, 7, 5, 6, 10]]
+        r = by_weekday(recs)
+        want = {"пн": 13.0, "вт": 4.0, "ср": 5.0, "чт": 6.0, "пт": 7.0, "сб": 8.0, "вс": 9.0}
+        assert r == want, f"by_weekday вернула {r}, а нужно {want}"
+        assert list(r) == ["пн", "вт", "ср", "чт", "пт", "сб", "вс"], f"Порядок дней: {list(r)}"
+        assert type(r) is dict, f"Нужен обычный словарь, а вернулся {type(r).__name__}"
+    - name: Пустой список
+      code: |
+        assert by_weekday([]) == {}, "by_weekday([]) должна вернуть {}"
+    - name: by_month не сломана
+      code: |
+        from datetime import date
+        r = by_month([{"date": date(2024, 5, 3), "category": "x", "amount": 1.0}])
+        assert r == {"2024-05": 1.0}, f"by_month вернула {r}"
+  explain: '`weekday()` даёт номер дня, понедельник — 0, и этот номер — готовый индекс в списке `DAYS`. Суммы удобно копить по номеру: тогда порядок «от понедельника» — это `sorted` по номерам, а не по названиям: по алфавиту «вс» оказалась бы первой. Новая сводка живёт в `summary`, рядом с остальными, и ничего не знает про CSV.'
+- id: code-write-report-lines
+  type: code
+  q: |
+    **Напишите `report_lines(totals)`: из словаря «категория → сумма» сделать строки для печати отчёта ровными столбцами.**
+
+    Строки — от большей суммы к меньшей, при равенстве — в порядке словаря. Строка: категория, выровненная влево по ширине 12, и сумма, выровненная вправо по ширине 10, с двумя знаками после точки. Последняя строка — `Итого` в том же формате. Возвращается список строк.
+
+    Пример 1
+    ```input
+    for line in report_lines({"транспорт": 180.0, "продукты": 2140.5}):
+        print(line)
+    ```
+    ```output
+    продукты       2140.50
+    транспорт       180.00
+    Итого          2320.50
+    ```
+  starter: |
+    def report_lines(totals):
+        """{категория: сумма} → строки отчёта: от большей суммы, в конце Итого."""
+        pass
+  solution: |
+    def report_lines(totals):
+        """{категория: сумма} → строки отчёта: от большей суммы, в конце Итого."""
+        lines = []
+        for category in sorted(totals, key=lambda c: totals[c], reverse=True):
+            lines.append(f"{category:<12}{totals[category]:>10.2f}")
+        lines.append(f"{'Итого':<12}{sum(totals.values()):>10.2f}")
+        return lines
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        r = report_lines({"транспорт": 180.0, "продукты": 2140.5})
+        want = ["продукты       2140.50", "транспорт       180.00", "Итого          2320.50"]
+        assert r == want, f"report_lines вернула {r}, а нужно {want}"
+    - name: Равные суммы и копейки
+      code: |
+        r = report_lines({"кино": 380.0, "такси": 99.999, "кафе": 380.0})
+        want = ["кино            380.00", "кафе            380.00", "такси           100.00", "Итого           860.00"]
+        assert r == want, f"report_lines вернула {r}, а нужно {want}"
+    - name: От большей суммы, а не по алфавиту
+      code: |
+        r = report_lines({"кафе": 50.0, "аптека": 10.0, "такси": 700.0})
+        want = ["такси           700.00", "кафе             50.00", "аптека           10.00", "Итого           760.00"]
+        assert r == want, f"report_lines вернула {r}, а нужно {want}"
+    - name: Пустой словарь
+      code: |
+        r = report_lines({})
+        assert r == ["Итого             0.00"], f"report_lines({{}}) должна вернуть ['Итого             0.00'], а вернула {r}"
+  explain: 'Сортировка по значению — `sorted` по ключам словаря с `key`, который берёт сумму, и `reverse=True`. Python сортирует устойчиво, поэтому равные суммы остаются в порядке словаря. Ширина и выравнивание — форматная спецификация: `:<12` для текста, `:>10.2f` для числа. Итог — сумма значений в том же формате, чтобы столбцы совпали.'

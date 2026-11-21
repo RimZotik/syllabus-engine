@@ -972,3 +972,255 @@
     значения по обе стороны порога, повторяющиеся значения. На них чаще всего и проявляются ошибки на единицу.
   example: для «с 7 до 17 лет — 250 рублей» граничные случаи — 6, 7, 17 и 18.
   introduced_in: prog1.errors.3
+
+# ── prog1.text_files
+
+- id: whitespace
+  term: пробельные символы
+  en: whitespace
+  short: Символы, которые видны как пустое место, — пробел, табуляция \t, перевод строки \n, возврат каретки \r и несколько
+    редких, например неразрывный пробел. split() без аргумента режет по любой их цепочке, strip() без аргумента убирает их
+    с краёв.
+  example: '"a \t b\n".split() даёт [''a'', ''b'']'
+  introduced_in: prog1.text_files.1
+
+- id: format-spec
+  term: спецификация формата
+  en: format specification
+  short: Запись после двоеточия в фигурных скобках f-строки, которая задаёт вид значения — выравнивание (< > ^), ширину, разделитель
+    тысяч, точность и тип (f, %, d). Меняет только вывод, не само значение.
+  example: f"{1234.5:>10,.1f}" даёт "   1,234.5"
+  introduced_in: prog1.text_files.1
+
+- id: regex
+  term: регулярное выражение
+  en: regular expression (regex)
+  short: 'Шаблон, описывающий форму текста: например, \d+ — «одна или больше цифр». В Python с ним работает модуль re — search,
+    fullmatch, findall, sub.'
+  example: re.findall(r"\d+", "3 шт. по 120 руб.") даёт ['3', '120']
+  introduced_in: prog1.text_files.2
+
+- id: raw-string
+  term: сырая строка
+  en: raw string
+  short: Строка с буквой r перед кавычками, в которой обратная косая черта — обычный символ, а не начало особого сочетания.
+    Так пишут шаблоны регулярных выражений; для путей Windows тоже годится, но сырая строка не может кончаться одиночной обратной
+    чертой.
+  example: len(r"\n") — 2, а len("\n") — 1
+  introduced_in: prog1.text_files.2
+
+- id: quantifier
+  term: квантификатор
+  en: quantifier
+  short: Знак в регулярном выражении после символа или класса, задающий число повторений — + (один или больше), * (ноль или
+    больше), ? (ноль или один), {n,m}. + и * жадные — захватывают как можно больше; +? и *? — как можно меньше.
+  example: \d{6} — ровно шесть цифр
+  introduced_in: prog1.text_files.2
+
+- id: regex-group
+  term: группа (в регулярном выражении)
+  en: capturing group
+  short: Часть шаблона в круглых скобках; её текст достают через group(n), а в строке замены sub — через \1, \2 и так далее.
+    Группы нумеруются с 1 по открывающим скобкам.
+  example: re.sub(r"(\d{4})-(\d{2})-(\d{2})", r"\3.\2.\1", "2024-05-17") даёт "17.05.2024"
+  introduced_in: prog1.text_files.2
+
+- id: file-object
+  term: файловый объект
+  en: file object
+  short: Значение, которое возвращает open() и через которое программа читает и пишет файл — read(), write(), перебор строк
+    файла в for. Открывают через with, чтобы файл закрылся сам.
+  example: with open("marks.txt", encoding="utf-8") as f — здесь f файловый объект
+  introduced_in: prog1.text_files.3
+
+- id: code-point
+  term: кодовая точка
+  en: code point
+  short: Номер символа в таблице Юникода — целое число от 0 до 1 114 111. Строка Python — последовательность кодовых точек;
+    ord даёт номер символа, chr — символ по номеру.
+  example: ord("я") — 1103, ord("ё") — 1105
+  introduced_in: prog1.text_files.3
+
+- id: encoding
+  term: кодировка
+  en: character encoding
+  short: Правило перевода символов в байты и обратно. Файл читается верно, только если указана та кодировка, в которой его
+    записали; иначе — кракозябры или UnicodeDecodeError.
+  example: open("data.txt", encoding="utf-8")
+  introduced_in: prog1.text_files.3
+
+- id: utf-8
+  term: UTF-8
+  en: UTF-8
+  decode: Unicode Transformation Format, 8-bit
+  short: Самая распространённая кодировка Юникода; символ занимает от 1 до 4 байтов — латиница и цифры по 1 байту, кириллица
+    по 2.
+  example: len("привет".encode("utf-8")) — 12
+  introduced_in: prog1.text_files.3
+
+- id: csv
+  term: CSV
+  en: CSV
+  decode: Comma-Separated Values — «значения, разделённые запятыми»
+  short: Таблица обычным текстом — строка файла — это запись, поля через разделитель; поле с разделителем или кавычкой берут
+    в кавычки (RFC 4180). Все поля читаются как строки. Разбирают модулем csv, а не split.
+  example: город,магазин,сумма / Казань,"Ромашка, ИП",1200
+  introduced_in: prog1.text_files.4
+
+- id: json
+  term: JSON
+  en: JSON
+  decode: JavaScript Object Notation — «запись объектов JavaScript»
+  short: Текстовый формат обмена данными — объекты (в Python dict), массивы (list), строки в двойных кавычках, числа, true/false,
+    null (None). Ключи объектов — только строки. Модуль json — loads/dumps, load/dump.
+  example: '{"id": 17, "paid": true, "coupon": null}'
+  introduced_in: prog1.text_files.4
+
+- id: serialization
+  term: сериализация
+  en: serialization
+  short: Перевод значения программы в текст или байты, чтобы сохранить его в файл или передать другой программе; обратный
+    перевод — десериализация.
+  example: 'json.dumps({"a": 1}) даёт строку {"a": 1}'
+  introduced_in: prog1.text_files.4
+
+- id: datetime
+  term: date и datetime
+  en: date, datetime
+  short: Типы модуля datetime — date (год, месяц, день) и datetime (дата и время). Сравниваются по времени, знают календарь
+    и високосные годы; разность двух значений — timedelta.
+  example: date(2024, 5, 17).weekday() — 4 (пятница; понедельник — 0)
+  introduced_in: prog1.text_files.5
+
+- id: timedelta
+  term: timedelta
+  en: timedelta
+  short: Тип промежутка времени — разность двух дат или моментов; его можно прибавить к дате. Хранит сутки, секунды и микросекунды;
+    месяцев и лет в нём нет.
+  example: date(2024, 2, 28) + timedelta(days=1) — 2024-02-29
+  introduced_in: prog1.text_files.5
+
+- id: iso-8601
+  term: ISO 8601
+  en: ISO 8601
+  short: Международный стандарт записи даты и времени — от старшей единицы к младшей, ГГГГ-ММ-ДДTчч:мм:сс, смещение от UTC
+    в конце (+03:00 или Z). Если все записи одного вида и с одним смещением, они сортируются верно даже как обычные строки.
+  example: '2024-05-17T14:30:00+03:00'
+  introduced_in: prog1.text_files.5
+
+- id: utc
+  term: UTC
+  en: UTC
+  decode: Coordinated Universal Time — всемирное координированное время
+  short: Шкала времени, от которой отсчитывают часовые пояса (Москва — UTC+3). Моменты принято хранить и сравнивать в UTC,
+    а в местное время переводить для показа.
+  example: datetime.now(timezone.utc)
+  introduced_in: prog1.text_files.5
+
+- id: naive-datetime
+  term: наивное время
+  en: naive datetime
+  short: Значение даты и времени без часового пояса (tzinfo — None). Что оно означает — местное время, UTC или другой пояс,
+    — решает программа. С осведомлённым его нельзя сравнивать через < и вычитать — TypeError.
+  example: datetime(2024, 5, 17, 14, 30)
+  introduced_in: prog1.text_files.5
+
+- id: aware-datetime
+  term: осведомлённое время
+  en: aware datetime
+  short: Значение даты и времени с часовым поясом — знает смещение от UTC и поэтому обозначает один точный момент.
+  example: datetime(2024, 5, 17, 14, 30, tzinfo=timezone(timedelta(hours=3)))
+  introduced_in: prog1.text_files.5
+
+# ── prog1.modules
+
+- id: namespace
+  term: пространство имён
+  en: namespace
+  short: Набор имён, каждое из которых связано со своим значением. У каждого модуля своё пространство глобальных имён, у каждого
+    вызова функции — локальных, поэтому total в программе и shop.total не мешают друг другу.
+  example: shop.total — имя total из пространства имён модуля shop.
+  introduced_in: prog1.modules.1
+
+- id: script
+  term: скрипт
+  en: script
+  short: Файл с кодом на Python, который запускают как программу. У запущенного файла __name__ равно "__main__", у импортированного
+    — имя модуля; код под if __name__ == "__main__" выполняется только при запуске.
+  example: python temperature.py — temperature.py работает как скрипт; import temperature — как модуль.
+  introduced_in: prog1.modules.1
+
+- id: standard-library
+  term: стандартная библиотека
+  en: standard library
+  short: Модули, которые поставляются вместе с Python и подключаются через import без установки — math, random, collections,
+    csv, json, datetime, os и сотни других.
+  example: from collections import Counter — Counter из стандартной библиотеки.
+  introduced_in: prog1.modules.2
+
+- id: pseudo-random
+  term: псевдослучайные числа
+  en: pseudo-random numbers
+  short: Числа, которые выглядят случайными, но вычисляются формулой из внутреннего состояния генератора. При одинаковом начальном
+    состоянии последовательность повторяется.
+  example: модуль random даёт псевдослучайные числа; для паролей нужен модуль secrets.
+  introduced_in: prog1.modules.2
+
+- id: random-seed
+  term: seed (сид)
+  en: random seed
+  synonyms:
+  - сид
+  - начальное значение генератора
+  short: Число, которое задаёт начальное состояние генератора псевдослучайных чисел. Одинаковый seed — одинаковая последовательность,
+    поэтому результаты можно повторить в проверках и опытах.
+  example: после random.seed(42) три вызова random.randint(1, 6) всегда дают 6 1 1.
+  introduced_in: prog1.modules.2
+
+- id: environment-variable
+  term: переменная окружения
+  en: environment variable
+  short: Именованная строка-настройка, которую программа получает от операционной системы при запуске. Через переменные окружения
+    передают ключи доступа, адреса и режимы, чтобы не писать их в код.
+  example: int(os.environ.get("SHOP_DISCOUNT", "0")) — скидка из окружения или 0.
+  introduced_in: prog1.modules.2
+
+- id: package
+  term: пакет (дистрибутив)
+  en: package (distribution package)
+  short: Чужой код, упакованный для установки, — модули, номер версии и список зависимостей. Устанавливают командой pip install,
+    после чего его модули подключаются через import.
+  example: пакет scikit-learn устанавливают как scikit-learn, а подключают через import sklearn.
+  introduced_in: prog1.modules.3
+
+- id: pypi
+  term: PyPI
+  en: PyPI (Python Package Index)
+  decode: Python Package Index — «каталог пакетов Python»
+  short: Общий сайт pypi.org, куда авторы выкладывают пакеты Python и откуда их скачивает pip. Выложить пакет может любой,
+    поэтому имя и автора проверяют перед установкой.
+  example: python -m pip install requests скачивает requests с PyPI.
+  introduced_in: prog1.modules.3
+
+- id: pip
+  term: pip
+  en: pip
+  short: Программа, которая устанавливает пакеты с PyPI вместе с их зависимостями в папку того Python, который её запустил.
+  example: python -m pip install requests==2.32.3
+  introduced_in: prog1.modules.3
+
+- id: dependency
+  term: зависимость
+  en: dependency
+  short: Пакет, без которого другой пакет или проект не работает. pip ставит зависимости сам; в файле зависимостей (requirements.txt)
+    их перечисляют с версиями.
+  example: requests зависит от urllib3, idna, certifi и charset-normalizer.
+  introduced_in: prog1.modules.3
+
+- id: virtual-environment
+  term: виртуальное окружение
+  en: virtual environment (venv)
+  short: Отдельная папка проекта со своими пакетами; Python в ней не новый — окружение опирается на уже установленный. Пакеты
+    разных окружений не мешают друг другу, поэтому у каждого проекта могут быть свои версии. Папку окружения другим не передают.
+  example: python -m venv .venv создаёт окружение в папке .venv.
+  introduced_in: prog1.modules.3

@@ -1,0 +1,92 @@
+id: p1t-email-check
+title: Упрощённая проверка почты
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Для каждого адреса выведите `да`, если он подходит под упрощённое правило ниже, иначе — `нет`.**
+
+  Ввод — адреса по одному в строке, в конце пустая строка. Правило (настоящее правило записи адреса намного сложнее, здесь оно не нужно):
+  - ровно один `@`;
+  - до `@` — от 1 до 64 символов: латинские буквы, цифры, `.`, `_`, `-`;
+  - после `@` — домен: две или больше частей через точку, каждая часть — одна или больше латинских букв, цифр или `-`;
+  - последняя часть домена — только латинские буквы, не меньше двух.
+
+  Пример 1
+  ```input
+  anna.petrova_1@yandex.ru
+  ivan@mail.spb.ru
+  anna@mail
+  анна@mail.ru
+
+  ```
+  ```output
+  да
+  да
+  нет
+  нет
+  ```
+starter: |
+  import re
+
+  # План:
+  # 1. Функция is_email(s): проверить число «@», разрезать на имя и домен
+  # 2. Имя — проверка формы всей строки: набор символов и длина
+  # 3. Домен — разрезать по точкам и проверить каждую часть,
+  #    отдельно последнюю
+  # 4. Читать адреса до пустой строки и печатать «да» или «нет»
+stdin: "anna.petrova_1@yandex.ru\nivan@mail.spb.ru\nanna@mail\nанна@mail.ru\n\n"
+solution: |
+  import re
+
+
+  def is_email(s):
+      if s.count("@") != 1:
+          return False
+      name, domain = s.split("@")
+      if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", name):
+          return False
+      parts = domain.split(".")
+      if len(parts) < 2:
+          return False
+      for part in parts:
+          if not re.fullmatch(r"[A-Za-z0-9-]+", part):
+              return False
+      return bool(re.fullmatch(r"[A-Za-z]{2,}", parts[-1]))
+
+
+  line = input()
+  while line != "":
+      print("да" if is_email(line) else "нет")
+      line = input()
+tests:
+  io:
+    - name: Пример 1
+      stdin: "anna.petrova_1@yandex.ru\nivan@mail.spb.ru\nanna@mail\nанна@mail.ru\n\n"
+      stdout: "да\nда\nнет\nнет"
+    - name: Верные адреса
+      stdin: "a@b.co\nIVAN@MAIL.RU\nmy-shop@my-site.com\n\n"
+      stdout: "да\nда\nда"
+      hidden: true
+    - name: Ошибки в «@» и имени
+      stdin: "anna@@mail.ru\n@mail.ru\nanna mail@mail.ru\nannamail.ru\n\n"
+      stdout: "нет\nнет\nнет\nнет"
+      hidden: true
+    - name: Ошибки в домене
+      stdin: "anna@mail..ru\nanna@.ru\nanna@mail.ru.\nanna@mail_ru.com\n\n"
+      stdout: "нет\nнет\nнет\nнет"
+      hidden: true
+    - name: Последняя часть домена
+      stdin: "anna@mail.r\nanna@mail.ru1\nanna@mail.рф\n\n"
+      stdout: "нет\nнет\nнет"
+      hidden: true
+    - name: Длина имени
+      stdin: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.ru\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.ru\n\n"
+      stdout: "да\nнет"
+      hidden: true
+hints:
+  - level: 1
+    text: 'Одним шаблоном такое правило не записать коротко — и не нужно. Разбейте адрес методами строк на части и проверяйте каждую своим простым шаблоном.'
+  - level: 2
+    text: 'Проверка формы части — `fullmatch`: `search` найдёт подходящий кусок внутри неподходящей строки. `\w` не годится: он пропускает кириллицу.'
+  - level: 3
+    text: 'Пустая часть домена — признак двух точек подряд или точки с краю: `"mail..ru".split(".")` даёт пустую строку в середине. Шаблон с `+` такую часть не пропустит.'

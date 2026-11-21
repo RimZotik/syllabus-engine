@@ -1,0 +1,431 @@
+title: Проверка темы
+pass: 0.85
+minutes: 30
+questions:
+- id: seconds-vs-total
+  type: single
+  q: |
+    Смена началась 17 мая в 6:30 и закончилась 18 мая в 8:00. Что выведет программа?
+    ```python
+    from datetime import datetime
+    d = datetime(2024, 5, 18, 8, 0) - datetime(2024, 5, 17, 6, 30)
+    print(d.seconds // 60, d.total_seconds() // 60)
+    ```
+  options:
+  - '`90 1530.0`'
+  - '`1530 1530.0`'
+  - '`90 90.0`'
+  - '`1530 90.0`'
+  answer: 0
+  explain: 'Промежуток — 1 сутки и 1:30. `seconds` — только секунды сверх целых суток: 5400, то есть 90 минут. `total_seconds()` считает весь промежуток: 91 800 секунд, 1530 минут; это `float`, и `//` от него тоже даёт `float`.'
+- id: iso-without-zero
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    print(sorted(["2024-5-17", "2024-05-09", "2024-11-01"]))
+    ```
+  options:
+  - "`['2024-05-09', '2024-11-01', '2024-5-17']`"
+  - "`['2024-05-09', '2024-5-17', '2024-11-01']`"
+  - "`['2024-5-17', '2024-05-09', '2024-11-01']`"
+  - "`['2024-11-01', '2024-05-09', '2024-5-17']`"
+  answer: 0
+  traps:
+  - 1
+  explain: 'Строки сравниваются посимвольно. После «2024-» у мая без нуля стоит «5», а у ноября — «1», и «5» больше: запись «2024-5-17» уходит в конец. Даты ISO 8601 сортируются как строки, только когда месяц и день всегда двузначные — «2024-5-17» этому правилу не следует.'
+- id: strptime-us-order
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    from datetime import date, datetime
+    t = datetime.strptime("05.06.2024", "%m.%d.%Y")
+    print(t.day, t.month, t.date() < date(2024, 6, 1))
+    ```
+  options:
+  - '`6 5 True`'
+  - '`5 6 False`'
+  - '`5 6 True`'
+  - '`6 5 False`'
+  answer: 0
+  explain: 'Формат говорит, что первым идёт месяц: «05» — май, «06» — день. Получается 6 мая — раньше 1 июня. Сам текст ничего не знает о порядке частей: как его прочитать, решает формат, поэтому «05.06» — 5 июня в России и 6 мая в США.'
+- id: aware-naive-statements
+  type: multi
+  q: |
+    Какие утверждения о значениях ниже верны?
+    ```python
+    from datetime import datetime, timedelta, timezone
+    msk = timezone(timedelta(hours=3))
+    a = datetime(2024, 5, 17, 12, 0, tzinfo=msk)
+    b = datetime(2024, 5, 17, 9, 0, tzinfo=timezone.utc)
+    c = datetime(2024, 5, 17, 12, 0)
+    ```
+  options:
+  - '`a == b` даёт `True`'
+  - '`a - c` выбрасывает `TypeError`'
+  - '`a == c` даёт `True`: у них одинаковые дата и часы'
+  - '`b.astimezone(msk).hour` равно 12'
+  - '`sorted([a, b])` выбрасывает `TypeError`: у них разные пояса'
+  answer:
+  - 0
+  - 1
+  - 3
+  explain: '12:00 по UTC+3 и 9:00 по UTC — один и тот же момент, поэтому `a == b`, а `b` на московских часах — 12:00. Осведомлённые значения с разными поясами сравниваются и сортируются как моменты. `c` наивное: с осведомлённым его нельзя вычитать и упорядочивать, а `==` просто отвечает `False`.'
+- id: age-by-days
+  type: single
+  q: |
+    Человек родился 18 мая 2006 года. Возраст на 17 мая 2024 года посчитали так. Что выведет программа?
+    ```python
+    from datetime import date
+    print((date(2024, 5, 17) - date(2006, 5, 18)).days // 365)
+    ```
+  options:
+  - '`18`'
+  - '`17`'
+  - '`19`'
+  - 'Ошибку `TypeError`: разность дат нельзя делить'
+  answer: 0
+  explain: 'До 18-летия не хватает одного дня, полных лет — 17. Но в промежутке пять 29 февраля: 6574 дня, а 18 × 365 = 6570, и деление даёт 18. Год — не 365 дней, как месяц — не 30: возраст считают сравнением месяца и дня, а не делением. `days` — обычное целое, его делить можно.'
+- id: code-fix-percent-m
+  type: code
+  q: |
+    **Исправьте программу: она получает дату `ДД.ММ.ГГГГ` и печатает её в ISO 8601 — `ГГГГ-ММ-ДД`.** Сейчас для 17 мая она печатает 17 января.
+    ```input
+    17.05.2024
+    ```
+    ```output
+    2024-05-17
+    ```
+  starter: |
+    from datetime import datetime
+
+    d = datetime.strptime(input(), "%d.%M.%Y").date()
+    print(d.isoformat())
+  solution: |
+    from datetime import datetime
+
+    d = datetime.strptime(input(), "%d.%m.%Y").date()
+    print(d.isoformat())
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "17.05.2024\n"
+      stdout: "2024-05-17"
+    - name: Конец года
+      stdin: "31.12.2023\n"
+      stdout: "2023-12-31"
+      hidden: true
+    - name: 29 февраля
+      stdin: "29.02.2024\n"
+      stdout: "2024-02-29"
+      hidden: true
+  explain: '`%M` — минуты, а месяц — `%m`. Ошибки не было: «05» прочитано как пять минут, а месяц остался по умолчанию — январь. Тихая ошибка: её видно только по результату, поэтому формат проверяют на дате, где месяц не январь.'
+- id: code-fix-weekday-name
+  type: code
+  q: |
+    **Исправьте программу: она получает дату `ДД.ММ.ГГГГ` и печатает день недели словом.** Сейчас для пятницы она печатает «суббота».
+    ```input
+    17.05.2024
+    ```
+    ```output
+    пятница
+    ```
+  starter: |
+    from datetime import datetime
+
+    DAYS = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
+    d = datetime.strptime(input(), "%d.%m.%Y")
+    print(DAYS[d.isoweekday()])
+  solution: |
+    from datetime import datetime
+
+    DAYS = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
+    d = datetime.strptime(input(), "%d.%m.%Y")
+    print(DAYS[d.weekday()])
+  tests:
+    io:
+    - name: Пятница
+      stdin: "17.05.2024\n"
+      stdout: "пятница"
+    - name: Воскресенье
+      stdin: "19.05.2024\n"
+      stdout: "воскресенье"
+      hidden: true
+    - name: Понедельник
+      stdin: "01.01.2024\n"
+      stdout: "понедельник"
+      hidden: true
+  explain: '`isoweekday()` считает с единицы: понедельник — 1, воскресенье — 7. А индексы списка — с нуля, поэтому всё сдвигалось на день, а на воскресенье программа падала с `IndexError`. С индексами списка совпадает `weekday()`: понедельник — 0.'
+- id: code-complete-days-until
+  type: code
+  q: |
+    **Допишите `days_until(deadline_text, today)`: вернуть, сколько дней осталось до срока `ДД.ММ.ГГГГ` от даты `today`.** Срок сегодня — 0, срок прошёл — отрицательное число.
+    ```input
+    days_until("31.12.2024", date(2024, 5, 17))
+    days_until("10.05.2024", date(2024, 5, 17))
+    ```
+    ```output
+    228
+    -7
+    ```
+  starter: |
+    from datetime import date, datetime
+
+
+    def days_until(deadline_text, today):
+        deadline = datetime.strptime(deadline_text, "%d.%m.%Y").date()
+        # допишите
+
+
+    print(days_until("31.12.2024", date(2024, 5, 17)))
+  solution: |
+    from datetime import date, datetime
+
+
+    def days_until(deadline_text, today):
+        deadline = datetime.strptime(deadline_text, "%d.%m.%Y").date()
+        return (deadline - today).days
+
+
+    print(days_until("31.12.2024", date(2024, 5, 17)))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        from datetime import date
+        for text, today, want in [("31.12.2024", date(2024, 5, 17), 228), ("10.05.2024", date(2024, 5, 17), -7)]:
+            got = days_until(text, today)
+            assert got == want, f"days_until({text!r}, {today!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Срок сегодня и через Новый год
+      code: |
+        from datetime import date
+        for text, today, want in [("17.05.2024", date(2024, 5, 17), 0), ("01.01.2025", date(2024, 12, 31), 1), ("01.03.2024", date(2024, 2, 28), 2)]:
+            got = days_until(text, today)
+            assert got == want, f"days_until({text!r}, {today!r}) должна вернуть {want}, а вернула {got!r}"
+  explain: 'Разность двух дат — `timedelta`, а число целых суток в нём — атрибут `days`; для прошедшего срока он отрицательный. Високосный год `date` учитывает сам: от 28 февраля до 1 марта 2024 года — два дня.'
+- id: code-fix-midnight-trip
+  type: code
+  q: |
+    **Исправьте программу: она получает время начала и конца поездки `ЧЧ:ММ` и печатает длительность в минутах.** Поездка короче суток и может проходить через полночь; сейчас для ночной поездки выходит отрицательное число.
+    ```input
+    22:40
+    01:15
+    ```
+    ```output
+    155
+    ```
+  starter: |
+    from datetime import datetime
+
+    start = datetime.strptime(input(), "%H:%M")
+    end = datetime.strptime(input(), "%H:%M")
+    print(int((end - start).total_seconds() // 60))
+  solution: |
+    from datetime import datetime, timedelta
+
+    start = datetime.strptime(input(), "%H:%M")
+    end = datetime.strptime(input(), "%H:%M")
+    if end < start:
+        end += timedelta(days=1)
+    print(int((end - start).total_seconds() // 60))
+  tests:
+    io:
+    - name: Через полночь
+      stdin: "22:40\n01:15\n"
+      stdout: "155"
+    - name: Днём
+      stdin: "09:05\n10:00\n"
+      stdout: "55"
+      hidden: true
+    - name: Ровно до полуночи и сразу после
+      stdin: "23:59\n00:00\n"
+      stdout: "1"
+      hidden: true
+    - name: Почти сутки
+      stdin: "10:00\n09:59\n"
+      stdout: "1439"
+      hidden: true
+  explain: 'Время без даты `strptime` ставит на одну и ту же дату, поэтому 01:15 оказывается *раньше* 22:40. Раз поездка короче суток, конец раньше начала означает «на следующий день» — к концу прибавляют `timedelta(days=1)`.'
+- id: code-change-to-iso-msk
+  type: code
+  q: |
+    **Измените `to_iso(text)`: время `ДД.ММ.ГГГГ ЧЧ:ММ` — московское (UTC+3), и результат должен быть в ISO 8601 со смещением.** Сейчас функция возвращает время без пояса.
+    ```input
+    to_iso("12.05.2024 14:30")
+    ```
+    ```output
+    2024-05-12T14:30:00+03:00
+    ```
+  starter: |
+    from datetime import datetime, timedelta, timezone
+
+
+    def to_iso(text):
+        t = datetime.strptime(text, "%d.%m.%Y %H:%M")
+        return t.isoformat()
+
+
+    print(to_iso("12.05.2024 14:30"))
+  solution: |
+    from datetime import datetime, timedelta, timezone
+
+    MSK = timezone(timedelta(hours=3))
+
+
+    def to_iso(text):
+        t = datetime.strptime(text, "%d.%m.%Y %H:%M")
+        aware = datetime(t.year, t.month, t.day, t.hour, t.minute, tzinfo=MSK)
+        return aware.isoformat()
+
+
+    print(to_iso("12.05.2024 14:30"))
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        got = to_iso("12.05.2024 14:30")
+        assert got == "2024-05-12T14:30:00+03:00", f"Нужно '2024-05-12T14:30:00+03:00', а вернулось {got!r}"
+    - name: Полночь и конец года
+      code: |
+        for text, want in [("01.01.2025 00:00", "2025-01-01T00:00:00+03:00"), ("31.12.2024 23:59", "2024-12-31T23:59:00+03:00")]:
+            got = to_iso(text)
+            assert got == want, f"to_iso({text!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Пояс компьютера не важен
+      code: |
+        # Компьютер с часами по UTC: astimezone считает наивное время местным, то есть UTC
+        import datetime as _dtm
+        _real = _dtm.datetime
+        _utc = _dtm.timezone.utc
+
+
+        class _UtcClock(_real):
+            def astimezone(self, tz=None):
+                base = self if self.tzinfo is not None else _real.replace(self, tzinfo=_utc)
+                return _real.astimezone(base, tz if tz is not None else _utc)
+
+
+        _swapped = [k for k, v in globals().items() if v is _real and not k.startswith("_")]
+        for k in _swapped:
+            globals()[k] = _UtcClock
+        _dtm.datetime = _UtcClock
+        try:
+            got = to_iso("12.05.2024 14:30")
+        finally:
+            _dtm.datetime = _real
+            for k in _swapped:
+                globals()[k] = _real
+        assert got == "2024-05-12T14:30:00+03:00", f"На компьютере с часами по UTC вернулось {got!r}, а нужно '2024-05-12T14:30:00+03:00': время в строке уже московское, его не переводят из местного пояса"
+  explain: 'Наивное время не знает пояса, и `isoformat()` пишет его без смещения — по такой записи момент не восстановить. Осведомлённое значение создают с `tzinfo`: части даты берут из разобранного значения. Часы при этом не меняются — меняется только то, что известно, по чьим они часам. `astimezone` здесь не подходит: он переводит момент на другие часы.'
+- id: code-write-to-local
+  type: code
+  q: |
+    **Напишите `to_local(iso_text, offset_hours)`: момент в ISO 8601 со смещением показать по местным часам пояса UTC+`offset_hours` в виде `ДД.ММ.ГГГГ ЧЧ:ММ`.**
+    ```input
+    to_local("2024-05-17T23:30:00+00:00", 3)
+    to_local("2024-05-17T14:30:00+03:00", 5)
+    ```
+    ```output
+    18.05.2024 02:30
+    17.05.2024 16:30
+    ```
+    - `offset_hours` — целое, бывает отрицательным.
+  starter: |
+    from datetime import datetime, timedelta, timezone
+
+
+    def to_local(iso_text, offset_hours):
+        pass
+
+
+    print(to_local("2024-05-17T23:30:00+00:00", 3))
+  solution: |
+    from datetime import datetime, timedelta, timezone
+
+
+    def to_local(iso_text, offset_hours):
+        moment = datetime.fromisoformat(iso_text)
+        local = moment.astimezone(timezone(timedelta(hours=offset_hours)))
+        return local.strftime("%d.%m.%Y %H:%M")
+
+
+    print(to_local("2024-05-17T23:30:00+00:00", 3))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for args, want in [(("2024-05-17T23:30:00+00:00", 3), "18.05.2024 02:30"), (("2024-05-17T14:30:00+03:00", 5), "17.05.2024 16:30")]:
+            got = to_local(*args)
+            assert got == want, f"to_local{args} должна вернуть {want!r}, а вернула {got!r}"
+    - name: Отрицательное смещение и смена года
+      code: |
+        for args, want in [(("2025-01-01T02:00:00+00:00", -5), "31.12.2024 21:00"), (("2024-05-17T10:00:00+05:00", 0), "17.05.2024 05:00"), (("2024-02-28T22:00:00+00:00", 3), "29.02.2024 01:00")]:
+            got = to_local(*args)
+            assert got == want, f"to_local{args} должна вернуть {want!r}, а вернула {got!r}"
+    - name: Тот же пояс
+      code: |
+        got = to_local("2024-05-17T09:05:00+03:00", 3)
+        assert got == "17.05.2024 09:05", f"Нужно '17.05.2024 09:05', а вернулось {got!r}"
+  explain: '`fromisoformat` разбирает и смещение — получается осведомлённое значение, один точный момент. `astimezone` показывает тот же момент на других часах: дата меняется сама, если через полночь. `strftime` с `%d`, `%m`, `%H`, `%M` даёт две цифры с ведущим нулём.'
+- id: code-write-working-days
+  type: code
+  q: |
+    **Напишите `working_days(start, end)`: сколько будних дней (понедельник — пятница) от даты `start` до `end` включительно.** Если `start` позже `end` — 0.
+    ```input
+    working_days(date(2024, 5, 13), date(2024, 5, 19))
+    working_days(date(2024, 5, 17), date(2024, 5, 20))
+    ```
+    ```output
+    5
+    2
+    ```
+  starter: |
+    from datetime import date, timedelta
+
+
+    def working_days(start, end):
+        pass
+
+
+    print(working_days(date(2024, 5, 13), date(2024, 5, 19)))
+  solution: |
+    from datetime import date, timedelta
+
+
+    def working_days(start, end):
+        count = 0
+        day = start
+        while day <= end:
+            if day.weekday() < 5:
+                count += 1
+            day += timedelta(days=1)
+        return count
+
+
+    print(working_days(date(2024, 5, 13), date(2024, 5, 19)))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        from datetime import date
+        for s, e, want in [(date(2024, 5, 13), date(2024, 5, 19), 5), (date(2024, 5, 17), date(2024, 5, 20), 2)]:
+            got = working_days(s, e)
+            assert got == want, f"working_days({s}, {e}) должна вернуть {want}, а вернула {got!r}"
+    - name: Один день
+      code: |
+        from datetime import date
+        for d, want in [(date(2024, 5, 17), 1), (date(2024, 5, 18), 0)]:
+            got = working_days(d, d)
+            assert got == want, f"working_days({d}, {d}) должна вернуть {want}, а вернула {got!r}"
+    - name: Через месяц и год
+      code: |
+        from datetime import date
+        for s, e, want in [(date(2024, 2, 26), date(2024, 3, 3), 5), (date(2024, 12, 30), date(2025, 1, 5), 5), (date(2024, 1, 1), date(2024, 12, 31), 262)]:
+            got = working_days(s, e)
+            assert got == want, f"working_days({s}, {e}) должна вернуть {want}, а вернула {got!r}"
+    - name: Начало позже конца
+      code: |
+        from datetime import date
+        got = working_days(date(2024, 5, 20), date(2024, 5, 13))
+        assert got == 0, f"Если start позже end, нужен 0, а вернулось {got!r}"
+  explain: 'К дате прибавляют `timedelta(days=1)` — и конец месяца, и 29 февраля, и Новый год `date` учитывает сам. День недели — `weekday()`: будни — от 0 (понедельник) до 4 (пятница). Даты сравниваются по времени, поэтому `while day <= end` и даёт «включительно», а при `start` позже `end` цикл не выполнится ни разу.'

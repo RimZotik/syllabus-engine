@@ -1,0 +1,149 @@
+id: p1m-proj-clean
+title: 'Шаг 1. Модуль разбора clean'
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Напишите модуль разбора таблицы расходов: функции `parse_amount(text)`, `clean_category(text)` и `parse_row(row)`.**
+
+  - `parse_amount`: убрать пробелы и неразрывные пробелы `"\xa0"`, запятую заменить точкой, вернуть `float`. Пусто после очистки — `ValueError("пустая сумма")`; не число — `ValueError` (его выбросит `float`); `"nan"` — `ValueError(f"не число: {text}")`: особое значение «не число» распознаёт `math.isnan` (найдите в документации модуля `math`).
+  - `clean_category`: убрать пробелы по краям, перевести в нижний регистр; пусто — `ValueError("пустая категория")`.
+  - `parse_row`: из словаря `csv.DictReader` с ключами `дата`, `категория`, `сумма` вернуть `{"date": date, "category": str, "amount": float}`. Если значение какого-то из трёх ключей `None` или ключа нет — `ValueError("не хватает полей")`. Дальше по порядку: дата (`date.fromisoformat` после `strip`), категория, сумма.
+
+  В модуле нет `print`, `input` и работы с файлами: при `import main` он ничего не печатает.
+
+  Пример 1
+  ```input
+  parse_amount("1 250,50")
+  parse_row({"дата": "2024-05-03", "категория": " Продукты ", "сумма": "60"})
+  ```
+  ```output
+  1250.5
+  {'date': datetime.date(2024, 5, 3), 'category': 'продукты', 'amount': 60.0}
+  ```
+
+  Пример 2
+  ```input
+  parse_amount("nan")
+  ```
+  ```output
+  ValueError: не число: nan
+  ```
+starter: |
+  """Разбор и очистка строк таблицы расходов."""
+  import math
+  from datetime import date
+
+
+  def parse_amount(text):
+      """'1 250,50' → 1250.5; пустой текст, не число или nan — ValueError."""
+      pass
+
+
+  def clean_category(text):
+      """' Продукты ' → 'продукты'; пустая категория — ValueError."""
+      pass
+
+
+  def parse_row(row):
+      """Словарь из csv.DictReader → запись {'date', 'category', 'amount'}; плохая строка — ValueError."""
+      pass
+solution: |
+  """Разбор и очистка строк таблицы расходов."""
+  import math
+  from datetime import date
+
+
+  def parse_amount(text):
+      """'1 250,50' → 1250.5; пустой текст, не число или nan — ValueError."""
+      cleaned = text.replace(" ", "").replace("\xa0", "").replace(",", ".")
+      if not cleaned:
+          raise ValueError("пустая сумма")
+      amount = float(cleaned)
+      if math.isnan(amount):
+          raise ValueError(f"не число: {text}")
+      return amount
+
+
+  def clean_category(text):
+      """' Продукты ' → 'продукты'; пустая категория — ValueError."""
+      category = text.strip().lower()
+      if not category:
+          raise ValueError("пустая категория")
+      return category
+
+
+  def parse_row(row):
+      """Словарь из csv.DictReader → запись {'date', 'category', 'amount'}; плохая строка — ValueError."""
+      if row.get("дата") is None or row.get("категория") is None or row.get("сумма") is None:
+          raise ValueError("не хватает полей")
+      return {
+          "date": date.fromisoformat(row["дата"].strip()),
+          "category": clean_category(row["категория"]),
+          "amount": parse_amount(row["сумма"]),
+      }
+tests:
+  asserts:
+    - name: При импорте модуль молчит
+      code: |
+        import io as _io, contextlib as _cl
+        _buf = _io.StringIO()
+        with _cl.redirect_stdout(_buf):
+            import main
+        assert _buf.getvalue() == "", f"При import main напечаталось {_buf.getvalue()!r}: в модуле разбора не должно быть print"
+    - name: parse_amount — обычные и граничные суммы
+      code: |
+        for text, want in [("60", 60.0), ("1 250,50", 1250.5), ("1\xa0250,50", 1250.5), (" 380 ", 380.0), ("0,5", 0.5), ("-120", -120.0)]:
+            r = parse_amount(text)
+            assert r == want, f"parse_amount({text!r}) должна вернуть {want}, а вернула {r!r}"
+    - name: parse_amount — «плохие» суммы
+      code: |
+        for text, want_msg in [("", "пустая сумма"), ("   ", "пустая сумма"), ("nan", "не число: nan"), ("сто", None)]:
+            msg = None
+            try:
+                parse_amount(text)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"parse_amount({text!r}) должна выбросить ValueError"
+            if want_msg is not None:
+                assert msg == want_msg, f"Текст исключения для {text!r}: «{msg}». Нужен: {want_msg}"
+    - name: clean_category
+      code: |
+        for text, want in [(" Продукты ", "продукты"), ("КАФЕ", "кафе"), ("транспорт", "транспорт")]:
+            r = clean_category(text)
+            assert r == want, f"clean_category({text!r}) должна вернуть {want!r}, а вернула {r!r}"
+        msg = None
+        try:
+            clean_category("   ")
+        except ValueError as e:
+            msg = str(e)
+        assert msg == "пустая категория", f"clean_category('   ') должна выбросить ValueError(\"пустая категория\"), а вышло: {msg!r}"
+    - name: parse_row — верная строка
+      code: |
+        from datetime import date as _date
+        r = parse_row({"дата": " 2024-05-03", "категория": " Продукты ", "сумма": "1 250,50"})
+        want = {"date": _date(2024, 5, 3), "category": "продукты", "amount": 1250.5}
+        assert r == want, f"parse_row вернула {r!r}, а нужно {want!r}"
+    - name: parse_row — плохие строки
+      code: |
+        cases = [({"дата": "2024-06-06", "категория": "кафе", "сумма": None}, "не хватает полей"),
+                 ({"дата": "2024-06-06", "категория": None, "сумма": None}, "не хватает полей"),
+                 ({"дата": "2024-06-06", "категория": "кафе"}, "не хватает полей"),
+                 ({"дата": "2024-06-01", "категория": "Кафе", "сумма": ""}, "пустая сумма"),
+                 ({"дата": "2024-06-01", "категория": " ", "сумма": ""}, "пустая категория"),
+                 ({"дата": "06.06.2024", "категория": "Кафе", "сумма": "450"}, None)]
+        for row, want_msg in cases:
+            msg = None
+            try:
+                parse_row(row)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"parse_row({row!r}) должна выбросить ValueError"
+            if want_msg is not None:
+                assert msg == want_msg, f"Текст исключения для {row!r}: «{msg}». Нужен: {want_msg}"
+hints:
+  - level: 1
+    text: 'Три функции — три мысли. Начните с `parse_amount`: какие «плохие» суммы `float` поймает сам, а какую пропустит без ошибки?'
+  - level: 2
+    text: '`float("nan")` ошибки не даёт — проверьте результат через `math.isnan`. Нехватку полей проверяйте первой: `row.get("сумма")` вернёт `None` и для `None`, и для отсутствующего ключа.'
+  - level: 3
+    text: 'В `parse_row` сначала одно условие на три `get(...) is None`, затем словарь из трёх значений: `date.fromisoformat(row["дата"].strip())`, `clean_category(...)`, `parse_amount(...)` — в этом порядке их ошибки и всплывут.'

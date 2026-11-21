@@ -1,0 +1,103 @@
+id: p1m-dependency-tree
+title: Что поставит pip
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Выведите все пакеты, которые придётся установить вместе с данным: сам пакет, его зависимости, их зависимости и так далее.**
+
+  В `deps.json` — словарь «пакет → список его зависимостей»; пакета, которого нет среди ключей, считайте пакетом без зависимостей. На входе — имя пакета. Вывод — каждый пакет один раз, по алфавиту, по строке. Если введённого пакета нет среди ключей — `нет в каталоге: имя`.
+
+  Пример 1
+  ```input
+  requests
+  ```
+  ```output
+  certifi
+  charset-normalizer
+  idna
+  requests
+  urllib3
+  ```
+
+  Пример 2
+  ```input
+  pandas
+  ```
+  ```output
+  numpy
+  pandas
+  python-dateutil
+  pytz
+  six
+  tzdata
+  ```
+starter: |
+  import json
+
+  name = input()
+  with open("deps.json", encoding="utf-8") as f:
+      deps = json.load(f)
+stdin: "requests\n"
+solution: |
+  import json
+
+  name = input()
+  with open("deps.json", encoding="utf-8") as f:
+      deps = json.load(f)
+
+  if name not in deps:
+      print(f"нет в каталоге: {name}")
+  else:
+      found = {name}
+      todo = [name]
+      while todo:
+          current = todo.pop()
+          for dep in deps.get(current, []):
+              if dep not in found:
+                  found.add(dep)
+                  todo.append(dep)
+      for package in sorted(found):
+          print(package)
+tests:
+  files:
+    deps.json: |
+      {
+        "requests": ["charset-normalizer", "idna", "urllib3", "certifi"],
+        "pandas": ["numpy", "python-dateutil", "pytz", "tzdata"],
+        "python-dateutil": ["six"],
+        "matplotlib": ["numpy", "pillow", "python-dateutil", "pyparsing"],
+        "numpy": [],
+        "six": []
+      }
+  io:
+    - name: Пример 1
+      stdin: "requests\n"
+      stdout: "certifi\ncharset-normalizer\nidna\nrequests\nurllib3"
+    - name: Пример 2
+      stdin: "pandas\n"
+      stdout: "numpy\npandas\npython-dateutil\npytz\nsix\ntzdata"
+    - name: Общие зависимости — по одному разу
+      stdin: "matplotlib\n"
+      stdout: "matplotlib\nnumpy\npillow\npyparsing\npython-dateutil\nsix"
+      hidden: true
+    - name: Без зависимостей
+      stdin: "six\n"
+      stdout: "six"
+      hidden: true
+    - name: Нет в каталоге
+      stdin: "reqeusts\n"
+      stdout: "нет в каталоге: reqeusts"
+      hidden: true
+    - name: Глубокая цепочка
+      stdin: "app\n"
+      files:
+        deps.json: '{"app": ["web"], "web": ["http", "templates"], "http": ["sockets"], "templates": ["markup"], "markup": ["sockets"], "sockets": []}'
+      stdout: "app\nhttp\nmarkup\nsockets\ntemplates\nweb"
+      hidden: true
+hints:
+  - level: 1
+    text: 'Зависимости зависимостей — это уже третий, четвёртый уровень, и сколько их, заранее неизвестно. Как обойти все уровни циклом, если держать список «ещё не просмотренных» пакетов?'
+  - level: 2
+    text: 'Два набора: множество найденных (чтобы не брать пакет дважды) и список «надо просмотреть». Пока список не пуст — снять из него пакет и добавить его ещё не найденные зависимости в оба набора.'
+  - level: 3
+    text: 'Начните с `found = {name}` и `todo = [name]`; цикл `while todo:`, внутри `current = todo.pop()` и перебор `deps.get(current, [])` — `get` со списком по умолчанию решает случай пакета без записи. В конце — `sorted(found)`.'

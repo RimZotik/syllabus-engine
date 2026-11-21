@@ -1,0 +1,83 @@
+id: p1t-merge-emails
+title: Общий список рассылки
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Объедините адреса из файлов `a.txt` и `b.txt` в файл `all.txt`: каждый адрес один раз, строчными буквами, по алфавиту. На экран выведите `Адресов: N`.**
+
+  В файлах — по адресу в строке; вокруг адреса могут быть пробелы, бывают пустые строки. Адреса, которые различаются только регистром букв, — один адрес. Каждый адрес в `all.txt` — отдельной строкой.
+
+  Пример 1
+  ```input
+  (a.txt)
+  anna@mail.ru
+   Boris@Yandex.ru
+
+  (b.txt)
+  boris@yandex.ru
+  vera@mail.ru
+  ```
+  ```output
+  Адресов: 3
+  (all.txt)
+  anna@mail.ru
+  boris@yandex.ru
+  vera@mail.ru
+  ```
+starter: |
+  # План:
+  # 1. Функция: прочитать файл и вернуть список очищенных адресов
+  #    строчными буквами, без пустых
+  # 2. Собрать адреса из двух файлов без повторов
+  # 3. Записать all.txt по алфавиту и вывести число адресов
+solution: |
+  def read_emails(path):
+      with open(path, encoding="utf-8") as f:
+          return [line.strip().lower() for line in f if line.strip()]
+
+
+  emails = set(read_emails("a.txt")) | set(read_emails("b.txt"))
+  with open("all.txt", "w", encoding="utf-8") as f:
+      for email in sorted(emails):
+          f.write(email + "\n")
+  print(f"Адресов: {len(emails)}")
+tests:
+  files:
+    a.txt: "anna@mail.ru\n Boris@Yandex.ru\n\n"
+    b.txt: "boris@yandex.ru\nvera@mail.ru\n"
+  io:
+    - name: Пример 1
+      stdout: "Адресов: 3"
+      files_out:
+        all.txt: "anna@mail.ru\nboris@yandex.ru\nvera@mail.ru\n"
+    - name: Повторы внутри одного файла
+      files:
+        a.txt: "z@z.ru\nZ@Z.RU\nz@z.ru  \n"
+        b.txt: "a@a.ru"
+      stdout: "Адресов: 2"
+      files_out:
+        all.txt: "a@a.ru\nz@z.ru\n"
+      hidden: true
+    - name: Один файл пустой
+      files:
+        a.txt: ""
+        b.txt: "\n  \nkate@mail.ru\n"
+      stdout: "Адресов: 1"
+      files_out:
+        all.txt: "kate@mail.ru\n"
+      hidden: true
+    - name: Оба файла пустые
+      files:
+        a.txt: ""
+        b.txt: "\n"
+      stdout: "Адресов: 0"
+      files_out:
+        all.txt: ""
+      hidden: true
+hints:
+  - level: 1
+    text: 'Оба файла читаются одинаково — это повод для функции, которая принимает путь и возвращает список готовых адресов.'
+  - level: 2
+    text: '«Каждый адрес один раз» — какая коллекция сама не хранит повторов? Приводить к одному виду (без пробелов, строчными) нужно до того, как адрес туда попадёт.'
+  - level: 3
+    text: 'Множество не упорядочено: перед записью его сортируют. `write` перевод строки не добавляет.'

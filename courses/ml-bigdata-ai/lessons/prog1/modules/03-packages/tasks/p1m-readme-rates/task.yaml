@@ -1,0 +1,98 @@
+id: p1m-readme-rates
+title: Покупки в валюте по README
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Переведите покупки в рубли через учебный пакет `tinybank` и выведите итог, пользуясь только его README.**
+
+  Строки ввода — `сумма код_валюты`, до пустой строки. Для каждой — `сумма код = рубли ₽`: сумма и код — как во вводе, рубли с двумя знаками после точки; для валюты, которую пакет не знает, — `код: неизвестная валюта`, покупка в итог не идёт. Последняя строка — `Итого: рубли ₽`, тоже с двумя знаками. Модуль `tinybank.py` — на вкладке. Фрагмент README:
+
+  ```
+  >>> from tinybank import to_rub
+  >>> to_rub(12.5, "USD")
+  1156.25
+  >>> to_rub(10, "XYZ")
+  Traceback (most recent call last):
+    ...
+  ValueError: неизвестная валюта: XYZ
+  ```
+
+  Пример 1
+  ```input
+  12.5 USD
+  300 KZT
+  10 XYZ
+
+  ```
+  ```output
+  12.5 USD = 1156.25 ₽
+  300 KZT = 54.00 ₽
+  XYZ: неизвестная валюта
+  Итого: 1210.25 ₽
+  ```
+starter: |
+  from tinybank import to_rub
+
+  # Читайте строки до пустой: сумма и код валюты.
+solution: |
+  from tinybank import to_rub
+
+  total = 0
+  line = input()
+  while line != "":
+      amount_text, code = line.split()
+      try:
+          rub = to_rub(float(amount_text), code)
+      except ValueError:
+          print(f"{code}: неизвестная валюта")
+      else:
+          total += rub
+          print(f"{amount_text} {code} = {rub:.2f} ₽")
+      line = input()
+  print(f"Итого: {total:.2f} ₽")
+tests:
+  files:
+    tinybank.py: |
+      """Учебный «пакет» курсов валют: курсы зашиты на 20.11.2026."""
+      _RATES = {"USD": 92.5, "EUR": 99.8, "CNY": 12.75, "KZT": 0.18, "RUB": 1.0}
+
+
+      def to_rub(amount, code):
+          """Сумма amount в валюте code, переведённая в рубли и округлённая до копеек."""
+          if code not in _RATES:
+              raise ValueError(f"неизвестная валюта: {code}")
+          return round(amount * _RATES[code], 2)
+  io:
+    - name: Пример из условия
+      stdin: "12.5 USD\n300 KZT\n10 XYZ\n\n"
+      stdout: "12.5 USD = 1156.25 ₽\n300 KZT = 54.00 ₽\nXYZ: неизвестная валюта\nИтого: 1210.25 ₽"
+    - name: Ничего не куплено
+      stdin: "\n"
+      stdout: "Итого: 0.00 ₽"
+      hidden: true
+    - name: Евро и юани
+      stdin: "20 EUR\n100 CNY\n1 RUB\n\n"
+      stdout: "20 EUR = 1996.00 ₽\n100 CNY = 1275.00 ₽\n1 RUB = 1.00 ₽\nИтого: 3272.00 ₽"
+      hidden: true
+    - name: Курсы в пакете обновились
+      stdin: "10 USD\n5 GBP\n\n"
+      files:
+        tinybank.py: |
+          """Учебный «пакет» курсов валют: курсы зашиты на 21.11.2026."""
+          _RATES = {"USD": 93.1, "GBP": 117.4}
+
+
+          def to_rub(amount, code):
+              """Сумма amount в валюте code, переведённая в рубли и округлённая до копеек."""
+              if code not in _RATES:
+                  raise ValueError(f"неизвестная валюта: {code}")
+              return round(amount * _RATES[code], 2)
+      stdout: "10 USD = 931.00 ₽\n5 GBP = 587.00 ₽\nИтого: 1518.00 ₽"
+      hidden: true
+hints:
+  - level: 1
+    text: 'README отвечает на три вопроса: что импортировать, что вызвать и что случится с незнакомой валютой. Какое исключение показано в последней строке примера?'
+  - level: 2
+    text: 'Вызов `to_rub` — внутри `try`, `except ValueError` печатает про неизвестную валюту. Сумму из ввода переведите в `float` до вызова. Два знака после точки — спецификация `:.2f`.'
+  - level: 3
+    text: 'Добавляйте к итогу только в ветке, где исключения не было: в `else` после `except` или сразу после вызова внутри `try`. Сумму выводите так, как её ввели, — исходной строкой.'

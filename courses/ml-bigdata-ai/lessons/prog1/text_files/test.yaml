@@ -1,0 +1,673 @@
+title: Контрольная раздела «Текст и файлы»
+pass: 0.85
+minutes: 30
+questions:
+- id: s-fullmatch-file-lines
+  type: single
+  q: |
+    В файле `codes.txt` три строки: `123456`, `12345`, `654321`; в конце каждой — перевод строки. Что выведет программа?
+    ```python
+    import re
+    with open("codes.txt", encoding="utf-8") as f:
+        good = [line for line in f if re.fullmatch(r"\d{6}", line)]
+    print(len(good))
+    ```
+  options:
+  - '`0`'
+  - '`2`'
+  - '`3`'
+  - '`1`'
+  answer: 0
+  explain: 'Строка файла приходит вместе с `\n`, а `fullmatch` требует, чтобы *вся* строка была шестью цифрами: перевод строки — седьмой символ, и ни одна строка не подходит. Сначала строку чистят: `line.strip()`. Две строки подошли бы у `search` с `^…$` — там `$` допускает `\n` в конце.'
+- id: s-csv-default-align
+  type: single
+  q: |
+    В `prices.csv` заголовок `товар,цена` и одна запись `чай,45`. Что выведет программа?
+    ```python
+    import csv
+    with open("prices.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            print(f"[{row['товар']:>6}][{row['цена']:6}]")
+    ```
+  options:
+  - '`[   чай][45    ]`'
+  - '`[   чай][    45]`'
+  - '`[чай   ][45    ]`'
+  - '`[   чай][    45.00]`'
+  answer: 0
+  explain: 'Без знака выравнивания числа прижимаются вправо, а строки — влево. Цена из CSV — строка «45», а не число, поэтому она встала влево. Название прижато вправо явным `>`. Чтобы цена встала как число, её переводят: `float(row["цена"])`.'
+- id: s-json-date
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    import json
+    from datetime import date
+    event = {"title": "Сдача", "day": date(2024, 5, 17)}
+    print(json.dumps(event, ensure_ascii=False))
+    ```
+  options:
+  - 'Ошибку `TypeError`: дату `json.dumps` не принимает'
+  - '`{"title": "Сдача", "day": "2024-05-17"}`'
+  - '`{"title": "Сдача", "day": "17.05.2024"}`'
+  - '`{"title": "Сдача", "day": [2024, 5, 17]}`'
+  answer: 0
+  explain: 'Типа «дата» в JSON нет, и сам `json.dumps` дату ни во что не превращает — `TypeError: Object of type date is not JSON serializable`. Дату переводят в строку заранее, в ISO 8601: `day.isoformat()`. Обратно её разбирает `date.fromisoformat`.'
+- id: s-iso-offset-sort
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    from datetime import datetime
+    times = ["2024-05-17T23:30:00+03:00", "2024-05-17T21:00:00+00:00"]
+    as_dt = [datetime.fromisoformat(t) for t in times]
+    print(min(times) == times[1], min(as_dt) == as_dt[1])
+    ```
+  options:
+  - '`True False`'
+  - '`True True`'
+  - '`False False`'
+  - 'Ошибку `TypeError`: моменты с разными смещениями не сравнить'
+  answer: 0
+  explain: 'Как строки, «…T21:00» меньше «…T23:30» — первые различающиеся символы «1» и «3». Но 23:30 по UTC+3 — это 20:30 по UTC, раньше 21:00 по UTC, и как моменты меньше первый. ISO 8601 сортируется как строка только при одном смещении. Оба значения осведомлённые, сравнивать их можно.'
+- id: s-bom-first-key
+  type: single
+  q: |
+    Файл `excel.csv` сохранён из Excel в UTF-8 с меткой BOM: заголовок `дата;сумма`, запись `2024-05-17;100`. Что произойдёт при запуске?
+    ```python
+    import csv
+    with open("excel.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f, delimiter=";"):
+            print(row["сумма"], row["дата"])
+    ```
+  options:
+  - 'Остановится с `KeyError: ''дата''`, ничего не напечатав'
+  - 'Напечатает `100`, затем остановится с `KeyError: ''дата''`'
+  - 'Остановится с `KeyError: ''сумма''`'
+  - 'Напечатает `100 2024-05-17`'
+  answer: 0
+  explain: 'С `encoding="utf-8"` метка BOM остаётся первым символом файла и прилипает к первому заголовку: ключ — `''\ufeffдата''`. «сумма» находится, а «дата» — нет. `print` получает аргументы только после того, как вычислены оба, поэтому до печати дело не доходит. Помогает `encoding="utf-8-sig"`.'
+- id: s-write-in-loop-csv
+  type: single
+  q: |
+    В `rows` — три словаря с ключами `город` и `сумма`. Сколько строк окажется в `out.csv`?
+    ```python
+    import csv
+    for row in rows:
+        with open("out.csv", "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["город", "сумма"])
+            writer.writeheader()
+            writer.writerow(row)
+    ```
+  options:
+  - 'Две: заголовок и последняя запись'
+  - 'Четыре: заголовок и три записи'
+  - 'Шесть: заголовок перед каждой записью'
+  - 'Одна: только заголовок'
+  answer: 0
+  explain: 'Файл открывается в режиме «w» на каждом шаге цикла и каждый раз стирается — остаётся то, что записал последний шаг: заголовок и третья запись. Открыть файл и записать заголовок нужно один раз, до цикла, а в цикле — только `writerow`.'
+- id: s-code-fix-error-days
+  type: code
+  q: |
+    **Исправьте программу: она должна вывести, сколько строк с уровнем `ERROR` было в каждый день по журналу `server.log`, — строки `дата: N` по возрастанию даты.** Сейчас она считает и строки, где слово ERROR встречается в сообщении.
+    Строка журнала — `дата время уровень сообщение`; бывают пустые строки. Дни без ошибок не выводятся.
+    ```input
+    (server.log)
+    2024-05-17 10:02:11 ERROR оплата не прошла
+    2024-05-17 10:05:00 INFO повтор после ERROR
+
+    2024-05-18 09:00:00 ERROR склад
+    2024-05-17 23:59:59 ERROR диск
+    ```
+    ```output
+    2024-05-17: 2
+    2024-05-18: 1
+    ```
+  starter: |
+    counts = {}
+    with open("server.log", encoding="utf-8") as f:
+        for line in f:
+            if "ERROR" in line:
+                day = line[:10]
+                counts[day] = counts.get(day, 0) + 1
+    for day in sorted(counts):
+        print(f"{day}: {counts[day]}")
+  solution: |
+    counts = {}
+    with open("server.log", encoding="utf-8") as f:
+        for line in f:
+            parts = line.split()
+            if len(parts) >= 3 and parts[2] == "ERROR":
+                day = parts[0]
+                counts[day] = counts.get(day, 0) + 1
+    for day in sorted(counts):
+        print(f"{day}: {counts[day]}")
+  tests:
+    files:
+      server.log: "2024-05-17 10:02:11 ERROR оплата не прошла\n2024-05-17 10:05:00 INFO повтор после ERROR\n\n2024-05-18 09:00:00 ERROR склад\n2024-05-17 23:59:59 ERROR диск\n"
+    io:
+    - name: Журнал из условия
+      stdout: "2024-05-17: 2\n2024-05-18: 1"
+    - name: ERROR в сообщении и похожие уровни
+      files:
+        server.log: "2024-06-01 08:00:00 WARNING ERROR-код 42\n2024-06-01 08:01:00 ERRORS много\n2024-05-31 23:00:00 ERROR\n"
+      stdout: "2024-05-31: 1"
+      hidden: true
+    - name: Ошибок нет
+      files:
+        server.log: "2024-06-01 08:00:00 INFO старт\n\n"
+      stdout: ""
+      hidden: true
+  explain: '`"ERROR" in line` ищет кусок где угодно — и в сообщении, и в «ERRORS». Уровень — третье слово строки, и сравнивать нужно его целиком. Проверка длины спасает от пустых строк и обрывков, где третьего слова нет. Даты ISO 8601 одного вида сортируются как строки — `sorted` по ключам годится.'
+- id: s-code-fix-visits-iso
+  type: code
+  q: |
+    **Исправьте программу: она переписывает `visits.csv` в `visits_iso.csv`, переводя даты из `ДД.ММ.ГГГГ` в ISO 8601.** Сейчас вместо месяца в датах стоит `00`.
+    ```input
+    (visits.csv)
+    имя,дата
+    Аня,17.05.2024
+    "Петров, Борис",03.06.2024
+    ```
+    ```output
+    (visits_iso.csv)
+    имя,дата
+    Аня,2024-05-17
+    "Петров, Борис",2024-06-03
+    ```
+  starter: |
+    import csv
+    from datetime import datetime
+
+    rows = []
+    with open("visits.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            day = datetime.strptime(row["дата"], "%d.%m.%Y")
+            rows.append({"имя": row["имя"], "дата": day.strftime("%Y-%M-%d")})
+
+    with open("visits_iso.csv", "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["имя", "дата"])
+        writer.writeheader()
+        writer.writerows(rows)
+  solution: |
+    import csv
+    from datetime import datetime
+
+    rows = []
+    with open("visits.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            day = datetime.strptime(row["дата"], "%d.%m.%Y")
+            rows.append({"имя": row["имя"], "дата": day.strftime("%Y-%m-%d")})
+
+    with open("visits_iso.csv", "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["имя", "дата"])
+        writer.writeheader()
+        writer.writerows(rows)
+  tests:
+    files:
+      visits.csv: "имя,дата\nАня,17.05.2024\n\"Петров, Борис\",03.06.2024\n"
+    io:
+    - name: Файл из условия
+      stdout: ""
+      files_out:
+        visits_iso.csv: "имя,дата\nАня,2024-05-17\n\"Петров, Борис\",2024-06-03\n"
+    - name: Конец года
+      files:
+        visits.csv: "имя,дата\nВера,31.12.2023\n"
+      stdout: ""
+      files_out:
+        visits_iso.csv: "имя,дата\nВера,2023-12-31\n"
+      hidden: true
+  explain: 'При разборе формат верный, а при выводе `%M` — минуты, а не месяц: у даты без времени минуты нулевые. Месяц — `%m`. Для ISO 8601 есть и готовое: `day.date().isoformat()`.'
+- id: s-code-complete-parse-message
+  type: code
+  q: |
+    **Допишите `parse_message(line)`: для строки чата `[ДД.ММ.ГГГГ ЧЧ:ММ] автор: текст` вернуть кортеж `(момент как datetime, автор, текст)`, для другой строки — `None`.**
+    В тексте сообщения тоже может быть двоеточие. Несуществующая дата — `ValueError`, как у `strptime`.
+    ```input
+    parse_message("[17.05.2024 14:30] Аня: встреча в 15:00")
+    parse_message("продолжение прошлого сообщения")
+    ```
+    ```output
+    (datetime(2024, 5, 17, 14, 30), 'Аня', 'встреча в 15:00')
+    None
+    ```
+  starter: |
+    import re
+    from datetime import datetime
+
+
+    def parse_message(line):
+        m = re.fullmatch(r"\[(\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})\] ([^:]+): (.*)", line)
+        if not m:
+            return None
+        # допишите
+
+
+    print(parse_message("[17.05.2024 14:30] Аня: встреча в 15:00"))
+  solution: |
+    import re
+    from datetime import datetime
+
+
+    def parse_message(line):
+        m = re.fullmatch(r"\[(\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})\] ([^:]+): (.*)", line)
+        if not m:
+            return None
+        moment = datetime.strptime(m.group(1), "%d.%m.%Y %H:%M")
+        return moment, m.group(2), m.group(3)
+
+
+    print(parse_message("[17.05.2024 14:30] Аня: встреча в 15:00"))
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        from datetime import datetime
+        got = parse_message("[17.05.2024 14:30] Аня: встреча в 15:00")
+        want = (datetime(2024, 5, 17, 14, 30), "Аня", "встреча в 15:00")
+        assert got == want, f"Нужно {want}, а вернулось {got!r}"
+    - name: Автор из двух слов и пустой текст
+      code: |
+        from datetime import datetime
+        got = parse_message("[01.01.2025 00:05] Борис Петров: ")
+        want = (datetime(2025, 1, 1, 0, 5), "Борис Петров", "")
+        assert got == want, f"Нужно {want}, а вернулось {got!r}"
+    - name: Не сообщение — None
+      code: |
+        for line in ["продолжение прошлого сообщения", "[17.05.24 14:30] Аня: x", "17.05.2024 14:30 Аня: x", ""]:
+            got = parse_message(line)
+            assert got is None, f"parse_message({line!r}) должна вернуть None, а вернула {got!r}"
+    - name: Несуществующая дата — ValueError
+      code: |
+        what = None
+        try:
+            what = "вернула " + repr(parse_message("[31.02.2024 10:00] Аня: x"))
+        except ValueError:
+            what = "ValueError"
+        assert what == "ValueError", f"Для 31.02.2024 нужен ValueError, а функция {what}"
+  explain: 'Шаблон уже разобрал строку на части: дата и время — первая группа, автор — вторая, текст — третья. Остаётся превратить первую группу в `datetime` через `strptime` с тем же порядком частей. Автор — `[^:]+`, «всё до первого двоеточия», поэтому двоеточие в тексте не мешает.'
+- id: s-code-change-receipt-ru
+  type: code
+  q: |
+    **Измените программу: суммы в чеке нужно печатать по-русски — тысячи через пробел, два знака после запятой.** Ширины столбцов не меняются: название — влево, 24 символа; сумма — вправо, 12.
+    ```input
+    (receipt.csv)
+    товар,цена,количество
+    хлеб,45,2
+    "Сыр ""Российский"", 1 кг",820.5,1
+    телевизор,35990,1
+    ```
+    ```output
+    хлеб                           90,00
+    Сыр "Российский", 1 кг        820,50
+    телевизор                  35 990,00
+    Итого                      36 900,50
+    ```
+  starter: |
+    import csv
+
+    total = 0
+    with open("receipt.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            cost = float(row["цена"]) * int(row["количество"])
+            total += cost
+            print(f"{row['товар']:<24}{cost:>12,.2f}")
+    print(f"{'Итого':<24}{total:>12,.2f}")
+  solution: |
+    import csv
+
+
+    def rub(x):
+        return f"{x:,.2f}".replace(",", " ").replace(".", ",")
+
+
+    total = 0
+    with open("receipt.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            cost = float(row["цена"]) * int(row["количество"])
+            total += cost
+            print(f"{row['товар']:<24}{rub(cost):>12}")
+    print(f"{'Итого':<24}{rub(total):>12}")
+  tests:
+    files:
+      receipt.csv: "товар,цена,количество\nхлеб,45,2\n\"Сыр \"\"Российский\"\", 1 кг\",820.5,1\nтелевизор,35990,1\n"
+    io:
+    - name: Чек из условия
+      stdout: "хлеб                           90,00\nСыр \"Российский\", 1 кг        820,50\nтелевизор                  35 990,00\nИтого                      36 900,50"
+    - name: Миллион
+      files:
+        receipt.csv: "товар,цена,количество\nноутбук,99999.99,10\n"
+      stdout: "ноутбук                   999 999,90\nИтого                     999 999,90"
+      hidden: true
+    - name: Только заголовок
+      files:
+        receipt.csv: "товар,цена,количество\n"
+      stdout: "Итого                           0,00"
+      hidden: true
+  explain: 'Формата «по-русски» нет: число сначала оформляют стандартно, с запятой между тысячами, потом заменяют запятые на пробелы и только затем точку — на запятую. Получается строка, поэтому ширину и выравнивание задают уже ей, и `>` обязателен: строки по умолчанию прижимаются влево. Повторять замены в двух местах неудобно — их выносят в функцию.'
+- id: s-code-fix-settings
+  type: code
+  q: |
+    **Исправьте `load_settings(path)`: вернуть новый словарь — настройки по умолчанию `DEFAULTS`, поверх которых записаны значения из JSON-файла.**
+    Нет файла — копия `DEFAULTS`. Битый JSON — `json.JSONDecodeError` уходит к вызывающему коду. `DEFAULTS` не меняется никогда, в том числе когда вызывающий код меняет полученный словарь. Сейчас функция нарушает два из этих правил.
+    ```input
+    (settings.json)
+    {"тема": "тёмная"}
+
+    load_settings("settings.json")
+    load_settings("нет.json")
+    ```
+    ```output
+    {'тема': 'тёмная', 'размер': 14, 'язык': 'ru'}
+    {'тема': 'светлая', 'размер': 14, 'язык': 'ru'}
+    ```
+  starter: |
+    import json
+
+    DEFAULTS = {"тема": "светлая", "размер": 14, "язык": "ru"}
+
+
+    def load_settings(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                settings = DEFAULTS
+                settings.update(json.load(f))
+                return settings
+        except Exception:
+            return DEFAULTS
+
+
+    print(load_settings("settings.json"))
+    print(load_settings("нет.json"))
+  solution: |
+    import json
+
+    DEFAULTS = {"тема": "светлая", "размер": 14, "язык": "ru"}
+
+
+    def load_settings(path):
+        settings = dict(DEFAULTS)
+        try:
+            with open(path, encoding="utf-8") as f:
+                settings.update(json.load(f))
+        except FileNotFoundError:
+            pass
+        return settings
+
+
+    print(load_settings("settings.json"))
+    print(load_settings("нет.json"))
+  tests:
+    files:
+      settings.json: "{\"тема\": \"тёмная\"}"
+    asserts:
+    - name: Файл есть, файла нет
+      code: |
+        got = load_settings("settings.json")
+        want = {"тема": "тёмная", "размер": 14, "язык": "ru"}
+        assert got == want, f"load_settings('settings.json') должна вернуть {want}, а вернула {got}"
+        got = load_settings("нет.json")
+        want = {"тема": "светлая", "размер": 14, "язык": "ru"}
+        assert got == want, f"Без файла нужны настройки по умолчанию {want}, а вернулось {got}"
+    - name: DEFAULTS не меняется
+      code: |
+        before = {"тема": "светлая", "размер": 14, "язык": "ru"}
+        load_settings("settings.json")
+        s = load_settings("нет.json")
+        s["размер"] = 99
+        assert DEFAULTS == before, f"DEFAULTS изменился: {DEFAULTS}. Функция должна возвращать новый словарь"
+        again = load_settings("нет.json")
+        assert again["размер"] == 14, f"После правки полученного словаря следующий вызов вернул размер {again['размер']}, а нужен 14"
+    - name: Битый JSON — JSONDecodeError
+      code: |
+        import json
+        with open("broken.json", "w", encoding="utf-8") as f:
+            f.write("{'тема': 'тёмная',}")
+        what = None
+        try:
+            what = "вернула " + repr(load_settings("broken.json"))
+        except json.JSONDecodeError:
+            what = "JSONDecodeError"
+        assert what == "JSONDecodeError", f"Для битого JSON нужен JSONDecodeError, а функция {what}: ловите только отсутствие файла"
+  explain: '`settings = DEFAULTS` не копирует словарь, а даёт ему второе имя: `update` меняет сами настройки по умолчанию, и следующий вызов видит чужие значения. Нужна копия — `dict(DEFAULTS)`. `except Exception` прятал битый JSON: испорченный файл выглядел бы как отсутствующий, и пользователь молча терял бы настройки. Ловят только `FileNotFoundError`.'
+- id: s-code-write-shift-hours
+  type: code
+  q: |
+    **Напишите программу: по табелю `shifts.csv` выведите, сколько часов отработал каждый сотрудник, — строки `имя: H.HH ч` по алфавиту, в конце `Пропущено строк: N`.**
+    Разделитель `;`, столбцы `сотрудник;начало;конец`, время — `ДД.ММ.ГГГГ ЧЧ:ММ`; смена может переходить через полночь. Строка пропускается, если время не разбирается или конец раньше начала.
+    ```input
+    (shifts.csv)
+    сотрудник;начало;конец
+    Аня;17.05.2024 09:00;17.05.2024 18:00
+    Борис;17.05.2024 22:00;18.05.2024 06:30
+    Аня;18.05.2024 10:00;18.05.2024 13:30
+    Вера;18.05.2024 08:00;17.05.2024 20:00
+    Глеб;31.02.2024 09:00;31.02.2024 18:00
+    ```
+    ```output
+    Аня: 12.50 ч
+    Борис: 8.50 ч
+    Пропущено строк: 2
+    ```
+  starter: |
+    import csv
+    from datetime import datetime
+
+    # План:
+    # 1. Читать табель; разобрать начало и конец (не вышло — пропуск)
+    # 2. Конец раньше начала — пропуск; иначе добавить часы сотруднику
+    # 3. Вывести по алфавиту и число пропущенных строк
+  solution: |
+    import csv
+    from datetime import datetime
+
+    FORMAT = "%d.%m.%Y %H:%M"
+    hours = {}
+    skipped = 0
+    with open("shifts.csv", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f, delimiter=";"):
+            try:
+                start = datetime.strptime(row["начало"], FORMAT)
+                end = datetime.strptime(row["конец"], FORMAT)
+            except ValueError:
+                skipped += 1
+                continue
+            if end < start:
+                skipped += 1
+                continue
+            name = row["сотрудник"]
+            hours[name] = hours.get(name, 0) + (end - start).total_seconds() / 3600
+    for name in sorted(hours):
+        print(f"{name}: {hours[name]:.2f} ч")
+    print(f"Пропущено строк: {skipped}")
+  tests:
+    files:
+      shifts.csv: "сотрудник;начало;конец\nАня;17.05.2024 09:00;17.05.2024 18:00\nБорис;17.05.2024 22:00;18.05.2024 06:30\nАня;18.05.2024 10:00;18.05.2024 13:30\nВера;18.05.2024 08:00;17.05.2024 20:00\nГлеб;31.02.2024 09:00;31.02.2024 18:00\n"
+    io:
+    - name: Табель из условия
+      stdout: "Аня: 12.50 ч\nБорис: 8.50 ч\nПропущено строк: 2"
+    - name: Длинная смена и минуты
+      files:
+        shifts.csv: "сотрудник;начало;конец\nДина;31.12.2024 20:15;01.01.2025 20:35\nЕгор;29.02.2024 23:50;01.03.2024 00:10\n"
+      stdout: "Дина: 24.33 ч\nЕгор: 0.33 ч\nПропущено строк: 0"
+      hidden: true
+    - name: Чужой формат и все строки плохие
+      files:
+        shifts.csv: "сотрудник;начало;конец\nЖеня;2024-05-17 09:00;2024-05-17 18:00\nЗоя;17.05.2024 9;17.05.2024 18:00\n"
+      stdout: "Пропущено строк: 2"
+      hidden: true
+  explain: 'С полными датами переход через полночь и даже через Новый год решает сам `datetime`: разность — `timedelta`, а `total_seconds() / 3600` — часы с дробной частью. Атрибут `seconds` здесь дал бы неверный ответ для смены длиннее суток. Неразборчивое время `strptime` превращает в `ValueError` — его ловят для одной строки и идут дальше.'
+- id: s-code-write-chat-stats
+  type: code
+  q: |
+    **Напишите программу: по файлу переписки `chat.txt` выведите, сколько сообщений написал каждый автор (по убыванию, при равенстве — по алфавиту), и последней строкой `Самый активный час: ЧЧ`.**
+    Сообщение начинается строкой `[ДД.ММ.ГГГГ ЧЧ:ММ] автор: текст`; строка другого вида — продолжение прошлого сообщения и не считается. Самый активный час — час, в который написано больше всего сообщений, при равенстве — более ранний. Если сообщений нет, выведите `Сообщений нет`.
+    ```input
+    (chat.txt)
+    [17.05.2024 09:15] Аня: Доброе утро!
+    [17.05.2024 09:20] Борис: Привет: как дела?
+    Всё хорошо, кстати
+    [17.05.2024 14:05] Вера: Обед?
+    [18.05.2024 09:59] Вера: Я опоздаю
+    [18.05.2024 14:30] Борис: Ок
+    ```
+    ```output
+    Борис: 2
+    Вера: 2
+    Аня: 1
+    Самый активный час: 09
+    ```
+  starter: |
+    import re
+
+    # План:
+    # 1. Шаблон строки-сообщения с группами для часа и автора
+    # 2. Для каждой строки файла: подошла — посчитать автора и час
+    # 3. Вывести авторов в нужном порядке и самый активный час
+  solution: |
+    import re
+
+    authors = {}
+    hours = {}
+    with open("chat.txt", encoding="utf-8") as f:
+        for line in f:
+            m = re.fullmatch(r"\[\d{2}\.\d{2}\.\d{4} (\d{2}):\d{2}\] ([^:]+): .*", line.rstrip("\n"))
+            if m:
+                hour, author = m.group(1), m.group(2)
+                authors[author] = authors.get(author, 0) + 1
+                hours[hour] = hours.get(hour, 0) + 1
+
+    if not authors:
+        print("Сообщений нет")
+    else:
+        for author, n in sorted(authors.items(), key=lambda p: (-p[1], p[0])):
+            print(f"{author}: {n}")
+        best = sorted(hours.items(), key=lambda p: (-p[1], p[0]))[0][0]
+        print(f"Самый активный час: {best}")
+  tests:
+    files:
+      chat.txt: "[17.05.2024 09:15] Аня: Доброе утро!\n[17.05.2024 09:20] Борис: Привет: как дела?\nВсё хорошо, кстати\n[17.05.2024 14:05] Вера: Обед?\n[18.05.2024 09:59] Вера: Я опоздаю\n[18.05.2024 14:30] Борис: Ок\n"
+    io:
+    - name: Переписка из условия
+      stdout: "Борис: 2\nВера: 2\nАня: 1\nСамый активный час: 09"
+    - name: Равные часы — более ранний
+      files:
+        chat.txt: "[17.05.2024 18:00] Глеб: вечер\n[17.05.2024 07:30] Глеб: утро\n[18.05.2024 18:10] Дина: да\n[18.05.2024 07:00] Дина: нет\n"
+      stdout: "Глеб: 2\nДина: 2\nСамый активный час: 07"
+      hidden: true
+    - name: Строки, похожие на сообщения
+      files:
+        chat.txt: "[17.05.2024 10:00] Ира: Пишу [18.05.2024 11:00] Коля: x\nцитата: [18.05.2024 11:00] Коля: да\n17.05.2024 10:00 Коля: без скобок\n[17.05.24 10:00] Коля: короткий год\n[17.05.2024 11:00]Коля: без пробела\n"
+      stdout: "Ира: 1\nСамый активный час: 10"
+      hidden: true
+    - name: Пустой файл
+      files:
+        chat.txt: ""
+      stdout: "Сообщений нет"
+      hidden: true
+  explain: 'Шаблон проверяет форму всей строки — `fullmatch` после `rstrip("\n")`, иначе строка-продолжение, в которой случайно есть похожий кусок, тоже бы посчиталась. Нужные части — в группах: час и автор. Автор — `[^:]+`, всё до первого двоеточия. Два правила порядка — ключ-кортеж; час хранится строкой из двух цифр, и строки «07» и «18» сравниваются так же, как числа.'
+- id: s-code-extend-split-log
+  type: code
+  q: |
+    **Доработайте чужую программу: она уже разбирает `server.log` по дням; нужно записать строки каждого дня в файл `log-ГГГГ-ММ-ДД.txt`, а строки, где первое слово — не дата, в `log-bad.txt`, и вывести имена созданных файлов.**
+    Строки в файлах — в порядке журнала, каждая со своим переводом строки; пустые строки журнала пропускаются. Имена файлов выводятся по возрастанию даты, `log-bad.txt` — последним и только если такие строки были.
+    ```input
+    (server.log)
+    2024-05-17 10:02 INFO вход
+    2024-05-18 09:00 ERROR склад
+    обрыв строки
+    2024-05-17 23:59 ERROR диск
+    ```
+    ```output
+    log-2024-05-17.txt
+    log-2024-05-18.txt
+    log-bad.txt
+    (log-2024-05-17.txt)
+    2024-05-17 10:02 INFO вход
+    2024-05-17 23:59 ERROR диск
+    ```
+  starter: |
+    import re
+
+    days = {}
+    bad = []
+    with open("server.log", encoding="utf-8") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if not line.strip():
+                continue
+            parts = line.split(maxsplit=1)
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", parts[0]):
+                days[parts[0]] = days.get(parts[0], []) + [line]
+            else:
+                bad.append(line)
+
+    print(len(days), len(bad))
+  solution: |
+    import re
+
+    days = {}
+    bad = []
+    with open("server.log", encoding="utf-8") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if not line.strip():
+                continue
+            parts = line.split(maxsplit=1)
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", parts[0]):
+                days[parts[0]] = days.get(parts[0], []) + [line]
+            else:
+                bad.append(line)
+
+
+    def save(name, lines):
+        with open(name, "w", encoding="utf-8") as f:
+            for line in lines:
+                f.write(line + "\n")
+        print(name)
+
+
+    for day in sorted(days):
+        save(f"log-{day}.txt", days[day])
+    if bad:
+        save("log-bad.txt", bad)
+  tests:
+    files:
+      server.log: "2024-05-17 10:02 INFO вход\n2024-05-18 09:00 ERROR склад\nобрыв строки\n2024-05-17 23:59 ERROR диск\n"
+    io:
+    - name: Журнал из условия
+      stdout: "log-2024-05-17.txt\nlog-2024-05-18.txt\nlog-bad.txt"
+      files_out:
+        log-2024-05-17.txt: "2024-05-17 10:02 INFO вход\n2024-05-17 23:59 ERROR диск\n"
+        log-2024-05-18.txt: "2024-05-18 09:00 ERROR склад\n"
+        log-bad.txt: "обрыв строки\n"
+    - name: Порядок дат и пустые строки
+      files:
+        server.log: "2024-06-02 a\n\n2024-05-31 b\n   \n2024-06-02 c\n"
+      stdout: "log-2024-05-31.txt\nlog-2024-06-02.txt"
+      files_out:
+        log-2024-05-31.txt: "2024-05-31 b\n"
+        log-2024-06-02.txt: "2024-06-02 a\n2024-06-02 c\n"
+      hidden: true
+    - name: Дата в другом виде и последняя строка без перевода
+      files:
+        server.log: "17.05.2024 сбой формата\n2024-05-17 ok"
+      stdout: "log-2024-05-17.txt\nlog-bad.txt"
+      files_out:
+        log-2024-05-17.txt: "2024-05-17 ok\n"
+        log-bad.txt: "17.05.2024 сбой формата\n"
+      hidden: true
+  explain: 'Разбор уже сделан: `days` — «дата → строки дня», `bad` — остальное. Дописать — значит для каждой даты открыть свой файл в режиме «w» и записать строки с `\n`: `rstrip` его убрал. Запись одного файла повторяется для дней и для `log-bad.txt` — удобно вынести её в функцию. Даты ISO 8601 одного вида сортируются как строки, поэтому `sorted(days)` даёт хронологический порядок.'
+- id: s-open-time-format
+  type: open
+  q: 'Серверы в Москве (UTC+3) и Новосибирске (UTC+7) пишут время в журнал по своим часам в виде «05.06.2024 14:30». Журналы сливают в один файл и сортируют строки как текст. Объясните, какие две проблемы у такой записи времени, и как его нужно записывать.'
+  rubric:
+  - 'Порядок: строки «ДД.ММ.ГГГГ» сравниваются посимвольно, а первым идёт день — сортировка как текста не хронологическая'
+  - 'Пояс: время без смещения — наивное; «14:30» в Москве и в Новосибирске — разные моменты, и по записи их не различить и не упорядочить'
+  - 'Решение: ISO 8601 с указанием смещения, лучше всё в UTC (например, 2024-06-05T11:30:00+00:00) — при одном виде и одном смещении строки сортируются верно, момент однозначен'
+  wrong_answers:
+  - Достаточно перевести даты в формат ГГГГ-ММ-ДД, пояс не важен
+  - Нужно хранить время по московским часам без указания пояса — так принято в России
+  followups:
+  - Почему строки ISO 8601 с разными смещениями нельзя сортировать как текст?

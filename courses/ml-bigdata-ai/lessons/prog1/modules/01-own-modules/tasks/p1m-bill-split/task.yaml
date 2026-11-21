@@ -1,0 +1,96 @@
+id: p1m-bill-split
+title: Делим счёт — программа и модуль
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите файл, который работает и как программа, и как модуль: функция `share(total, people, tip=10)` и программа, которая ею пользуется.**
+
+  `share` возвращает долю каждого: `total` плюс `tip` процентов чаевых, делённое на `people`, округлённое до копеек через `round(…, 2)`. Если `people` меньше 1 — `ValueError("людей должно быть хотя бы 1")`. Программа читает сумму счёта и число людей — целые числа, по одному в строке, — и выводит `С каждого: доля ₽`. При `import main` файл ничего не печатает и не ждёт ввода.
+
+  Пример 1
+  ```input
+  3000
+  4
+  ```
+  ```output
+  С каждого: 825.0 ₽
+  ```
+
+  Пример 2
+  ```input
+  share(1000, 3, tip=0)
+  ```
+  ```output
+  333.33
+  ```
+starter: |
+  def share(total, people, tip=10):
+      """Доля каждого: счёт плюс tip процентов чаевых, поровну на people человек."""
+      pass
+
+
+  total = int(input())
+  people = int(input())
+  print(f"С каждого: {share(total, people)} ₽")
+stdin: "3000\n4\n"
+solution: |
+  def share(total, people, tip=10):
+      """Доля каждого: счёт плюс tip процентов чаевых, поровну на people человек."""
+      if people < 1:
+          raise ValueError("людей должно быть хотя бы 1")
+      return round(total * (100 + tip) / 100 / people, 2)
+
+
+  if __name__ == "__main__":
+      total = int(input())
+      people = int(input())
+      print(f"С каждого: {share(total, people)} ₽")
+tests:
+  stdin: "3000\n4\n"
+  io:
+    - name: Пример из условия
+      stdin: "3000\n4\n"
+      stdout: "С каждого: 825.0 ₽"
+    - name: Один человек
+      stdin: "1500\n1\n"
+      stdout: "С каждого: 1650.0 ₽"
+      hidden: true
+    - name: Доля с копейками
+      stdin: "1000\n3\n"
+      stdout: "С каждого: 366.67 ₽"
+      hidden: true
+  asserts:
+    - name: import main молчит и не ждёт ввода
+      code: |
+        import io as _io, contextlib as _cl
+        _buf = _io.StringIO()
+        try:
+            with _cl.redirect_stdout(_buf):
+                import main
+        except EOFError:
+            assert False, "При import main программа ждёт ввод: чтение ввода должно стоять под if __name__ == \"__main__\""
+        assert _buf.getvalue() == "", f"При import main напечаталось {_buf.getvalue()!r}, а не должно ничего"
+        assert main.share(3000, 4) == 825.0, f"main.share(3000, 4) должна вернуть 825.0, а вернула {main.share(3000, 4)!r}"
+    - name: Чаевые и округление
+      code: |
+        for args, kw, want in [((1000, 3), {"tip": 0}, 333.33), ((1000, 3), {}, 366.67), ((500, 2), {"tip": 20}, 300.0), ((0, 5), {}, 0.0)]:
+            r = share(*args, **kw)
+            how = f"tip={kw['tip']}" if kw else "tip по умолчанию"
+            assert r == want, f"share{args} с {how} должна вернуть {want}, а вернула {r!r}"
+    - name: Меньше одного человека — ValueError
+      code: |
+        for people in [0, -2]:
+            msg = None
+            try:
+                share(1000, people)
+            except ValueError as e:
+                msg = str(e)
+            assert msg is not None, f"share(1000, {people}) должна выбросить ValueError"
+            assert msg == "людей должно быть хотя бы 1", f"Текст исключения: «{msg}». Нужен: людей должно быть хотя бы 1"
+hints:
+  - level: 1
+    text: 'Что нужно и при запуске, и при импорте, а что — только при запуске? Сейчас импорт этого файла сразу ждёт ввода.'
+  - level: 2
+    text: 'Чаевые `tip` процентов — это умножить счёт на (100 + tip) / 100. Проверку людей ставьте в начало функции, до деления. Чтение ввода и печать — под условием, где `__name__` сравнивают с `"__main__"`.'
+  - level: 3
+    text: 'В функции: `if people < 1: raise ValueError(...)`, затем `return round(total * (100 + tip) / 100 / people, 2)`. Три строки программы перенесите под `if __name__ == "__main__":` с отступом.'

@@ -1,0 +1,66 @@
+id: p1m-birthdays
+title: Дни рождения по месяцам
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Сгруппируйте дни рождения из `birthdays.csv` по месяцам и выведите, кто родился в каком месяце.**
+
+  В файле — столбцы `имя` и `дата`, дата в ISO 8601 (`ГГГГ-ММ-ДД`). Вывод — по строке на каждый месяц, где есть дни рождения, месяцы по возрастанию: `ММ: имя, имя` (номер месяца двумя цифрами, имена через запятую с пробелом, в порядке файла). Входа нет.
+
+  Пример 1
+  ```input
+  (входа нет; birthdays.csv — на вкладке)
+  ```
+  ```output
+  03: Борис
+  05: Аня, Вера
+  11: Гоша
+  ```
+starter: |
+  import csv
+  from collections import defaultdict
+  from datetime import date
+
+  # Прочитайте birthdays.csv через csv.DictReader
+  # и соберите имена по номеру месяца.
+solution: |
+  import csv
+  from collections import defaultdict
+  from datetime import date
+
+  by_month = defaultdict(list)
+  with open("birthdays.csv", encoding="utf-8", newline="") as f:
+      for row in csv.DictReader(f):
+          month = date.fromisoformat(row["дата"]).month
+          by_month[month].append(row["имя"])
+
+  for month in sorted(by_month):
+      print(f"{month:02d}: {', '.join(by_month[month])}")
+tests:
+  files:
+    birthdays.csv: |
+      имя,дата
+      Аня,2010-05-14
+      Борис,2009-03-02
+      Вера,2011-05-30
+      Гоша,2010-11-07
+  io:
+    - name: Пример из условия
+      stdout: "03: Борис\n05: Аня, Вера\n11: Гоша"
+    - name: Другой класс
+      files:
+        birthdays.csv: "имя,дата\nЛиза,2010-12-31\nМарк,2010-01-01\nНина,2011-12-01\nОля,2009-10-10\nПетя,2010-01-20\n"
+      stdout: "01: Марк, Петя\n10: Оля\n12: Лиза, Нина"
+      hidden: true
+    - name: Пустой список
+      files:
+        birthdays.csv: "имя,дата\n"
+      stdout: ""
+      hidden: true
+hints:
+  - level: 1
+    text: 'Какой ключ у группы и что в ней лежит? Ключ — номер месяца, значение — список имён в порядке файла.'
+  - level: 2
+    text: '`defaultdict(list)` сам заведёт пустой список для нового месяца. Номер месяца даёт `date.fromisoformat(...).month`. Месяцы по возрастанию — `sorted` по ключам словаря.'
+  - level: 3
+    text: 'Число двумя цифрами — форматная спецификация `:02d` в f-строке. Имена склеивает `", ".join(список)`.'

@@ -1,0 +1,122 @@
+id: p1t-city-report
+title: Отчёт по городам в JSON
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Напишите `city_report(src, dst)`: прочитать выгрузку продаж `src` (CSV), записать в `dst` JSON-отчёт по городам и вернуть список номеров пропущенных строк файла.**
+
+  Выгрузка: UTF-8 с меткой BOM, разделитель `;`, столбцы `дата`, `город`, `сумма` — в любом порядке. Город приводится к строчным буквам без пробелов по краям. Сумма — по-русски: запятая перед копейками, между тысячами пробел (бывает неразрывный). Строка, где сумма не число или её нет, пропускается; номер строки файла считается с 1, заголовок — строка 1. Отчёт — объект JSON `{"город": {"сумма": S, "чеков": N}}`, где `S` округлено до двух знаков; кириллица записана как есть.
+
+  Пример 1
+  ```input
+  (raw.csv)
+  дата;город;сумма
+  2024-05-17; Казань ;1 200,50
+  2024-05-17;Омск;
+  2024-05-18;казань;980
+  2024-05-18;Омск;сто
+
+  city_report("raw.csv", "report.json")
+  ```
+  ```output
+  [3, 5]
+  (report.json)
+  {
+    "казань": {
+      "сумма": 2180.5,
+      "чеков": 2
+    }
+  }
+  ```
+starter: |
+  import csv
+  import json
+
+
+  def city_report(src, dst):
+      pass
+
+
+  print(city_report("raw.csv", "report.json"))
+solution: |
+  import csv
+  import json
+
+
+  def to_amount(text):
+      return float("".join(text.split()).replace(",", "."))
+
+
+  def city_report(src, dst):
+      report = {}
+      skipped = []
+      with open(src, encoding="utf-8-sig", newline="") as f:
+          for n, row in enumerate(csv.DictReader(f, delimiter=";"), start=2):
+              if row["сумма"] is None:
+                  skipped.append(n)
+                  continue
+              try:
+                  amount = to_amount(row["сумма"])
+              except ValueError:
+                  skipped.append(n)
+                  continue
+              city = row["город"].strip().lower()
+              if city not in report:
+                  report[city] = {"сумма": 0, "чеков": 0}
+              report[city]["сумма"] += amount
+              report[city]["чеков"] += 1
+      for city in report:
+          report[city]["сумма"] = round(report[city]["сумма"], 2)
+      with open(dst, "w", encoding="utf-8") as f:
+          json.dump(report, f, ensure_ascii=False, indent=2)
+      return skipped
+
+
+  print(city_report("raw.csv", "report.json"))
+tests:
+  files:
+    raw.csv: "﻿дата;город;сумма\n2024-05-17; Казань ;1 200,50\n2024-05-17;Омск;\n2024-05-18;казань;980\n2024-05-18;Омск;сто\n"
+  asserts:
+    - name: Пример 1
+      code: |
+        import json
+        got = city_report("raw.csv", "report.json")
+        assert got == [3, 5], f"Пропущены должны быть строки [3, 5], а функция вернула {got!r}"
+        with open("report.json", encoding="utf-8") as f:
+            report = json.load(f)
+        want = {"казань": {"сумма": 2180.5, "чеков": 2}}
+        assert report == want, f"В report.json ожидалось {want}, а в нём {report}"
+    - name: Кириллица записана как есть
+      code: |
+        city_report("raw.csv", "report.json")
+        with open("report.json", encoding="utf-8") as f:
+            text = f.read()
+        assert "казань" in text, f"В report.json город должен быть записан буквами, а в нём: {text[:80]!r}"
+    - name: Обычный пробел, копейки и короткая строка
+      code: |
+        import json
+        with open("s2.csv", "w", encoding="utf-8-sig") as f:
+            f.write("город;дата;сумма\nТУЛА;2024-06-01;10 000\nТула;2024-06-01;0,1\nТула;2024-06-02;0,2\nОмск;2024-06-02\n омск;2024-06-03;5,5\n")
+        got = city_report("s2.csv", "r2.json")
+        assert got == [5], f"Пропущена должна быть строка [5], а функция вернула {got!r}"
+        with open("r2.json", encoding="utf-8") as f:
+            report = json.load(f)
+        want = {"тула": {"сумма": 10000.3, "чеков": 3}, "омск": {"сумма": 5.5, "чеков": 1}}
+        assert report == want, f"В отчёте ожидалось {want}, а в нём {report}"
+    - name: Все строки плохие
+      code: |
+        import json
+        with open("s3.csv", "w", encoding="utf-8-sig") as f:
+            f.write("дата;город;сумма\n2024-06-01;Тула;—\n")
+        got = city_report("s3.csv", "r3.json")
+        assert got == [2], f"Пропущена должна быть строка [2], а функция вернула {got!r}"
+        with open("r3.json", encoding="utf-8") as f:
+            report = json.load(f)
+        assert report == {}, f"Если ни одна строка не разобрана, отчёт — пустой объект, а в нём {report}"
+hints:
+  - level: 1
+    text: 'Сначала функция «текст суммы → число» — её легко проверить отдельно. Потом чтение с подходящими кодировкой и разделителем и номера строк через `enumerate`.'
+  - level: 2
+    text: 'Отчёт — словарь словарей: для нового города сначала заводят `{"сумма": 0, "чеков": 0}`, потом увеличивают оба поля. Сравните, как сложить суммы для «Казань» и « казань».'
+  - level: 3
+    text: 'Сумма дробных чисел накапливает погрешность: 0,1 + 0,2 — не ровно 0,3. Округлите суммы перед записью. Для кириллицы в файле — аргумент `ensure_ascii=False`.'

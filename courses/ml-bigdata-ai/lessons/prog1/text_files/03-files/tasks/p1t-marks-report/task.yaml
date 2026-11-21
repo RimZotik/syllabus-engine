@@ -1,0 +1,92 @@
+id: p1t-marks-report
+title: Средний балл из журнала
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Прочитайте журнал `marks.txt` (строки `фамилия оценка`) и запишите в `report.txt` средний балл каждого ученика строками `фамилия: среднее` по алфавиту; на экран выведите `Учеников: N`.**
+
+  У ученика может быть несколько оценок в разных строках файла. Между фамилией и оценкой — пробельные символы, сколько угодно, по краям строки они тоже бывают; пустые строки пропускаются. Среднее — с двумя знаками после точки. Если файла `marks.txt` нет, выведите `Файл marks.txt не найден` и `report.txt` не создавайте.
+
+  Пример 1
+  ```input
+  (marks.txt)
+  Петров 5
+  Иванова 4
+
+  Петров   3
+  Иванова 5
+  Иванова 5
+  ```
+  ```output
+  Учеников: 2
+  (report.txt)
+  Иванова: 4.67
+  Петров: 4.00
+  ```
+starter: |
+  # План:
+  # 1. Попробовать открыть marks.txt; нет файла — сообщение и конец
+  # 2. Собрать словарь «фамилия -> список оценок»
+  # 3. Записать report.txt: фамилии по алфавиту, среднее с двумя знаками
+  # 4. Вывести число учеников
+solution: |
+  marks = {}
+  try:
+      with open("marks.txt", encoding="utf-8") as f:
+          for line in f:
+              if line.strip():
+                  name, mark = line.split()
+                  if name not in marks:
+                      marks[name] = []
+                  marks[name].append(int(mark))
+  except FileNotFoundError:
+      print("Файл marks.txt не найден")
+  else:
+      with open("report.txt", "w", encoding="utf-8") as f:
+          for name in sorted(marks):
+              values = marks[name]
+              f.write(f"{name}: {sum(values) / len(values):.2f}\n")
+      print(f"Учеников: {len(marks)}")
+tests:
+  io:
+    - name: Пример 1
+      files:
+        marks.txt: "Петров 5\nИванова 4\n\nПетров   3\nИванова 5\nИванова 5\n"
+      stdout: "Учеников: 2"
+      files_out:
+        report.txt: "Иванова: 4.67\nПетров: 4.00\n"
+    - name: Файла нет
+      stdout: "Файл marks.txt не найден"
+    - name: Один ученик, табуляция
+      files:
+        marks.txt: "\nСидоров\t2\n  Сидоров 3  \n"
+      stdout: "Учеников: 1"
+      files_out:
+        report.txt: "Сидоров: 2.50\n"
+      hidden: true
+    - name: Пустой журнал
+      files:
+        marks.txt: "\n\n"
+      stdout: "Учеников: 0"
+      files_out:
+        report.txt: ""
+      hidden: true
+    - name: Порядок по алфавиту
+      files:
+        marks.txt: "Яковлев 5\nАбрамова 3\nМельник 4\nАбрамова 4\n"
+      stdout: "Учеников: 3"
+      files_out:
+        report.txt: "Абрамова: 3.50\nМельник: 4.00\nЯковлев: 5.00\n"
+      hidden: true
+  asserts:
+    - name: Нет журнала — нет отчёта
+      code: |
+        import os
+        assert not os.path.exists("report.txt"), "Файла marks.txt нет — report.txt создаваться не должен, а он создан"
+hints:
+  - level: 1
+    text: 'Отсутствие файла — ожидаемая ситуация: её ловят по конкретному типу исключения, и только вокруг чтения.'
+  - level: 2
+    text: 'Оценки одного ученика разбросаны по файлу — соберите словарь «фамилия → список оценок». Средние считаются, когда весь файл уже прочитан.'
+  - level: 3
+    text: 'Отчёт пишут, только если чтение удалось: для этого есть блок `else` у `try`. Формат `:.2f` даёт и `4.00`, и `4.67`.'

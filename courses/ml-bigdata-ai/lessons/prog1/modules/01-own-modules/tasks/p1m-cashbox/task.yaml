@@ -1,0 +1,93 @@
+id: p1m-cashbox
+title: Касса на чужом модуле
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите программу-кассу: прочитайте позиции чека и выведите стоимость каждой и итог, считая через модуль `shop`.**
+
+  Каждая строка ввода — `товар количество`, ввод заканчивается пустой строкой. Для товара из `shop.PRICES` выведите `товар × количество = стоимость`, где стоимость даёт `shop.line_total`; для остальных — `товар — нет в продаже`. Последняя строка — `Итого: сумма` по проданным позициям. Модуль `shop.py` — на вкладке над редактором; цены и скидку сами не пишите.
+
+  Пример 1
+  ```input
+  хлеб 2
+  кефир 1
+  яйца 10
+
+  ```
+  ```output
+  хлеб × 2 = 90
+  кефир — нет в продаже
+  яйца × 10 = 1045
+  Итого: 1135
+  ```
+starter: |
+  import shop
+
+  # Читайте строки до пустой; для каждой — товар и количество.
+  # Есть ли товар в продаже — смотрите в shop.PRICES,
+  # стоимость строки — shop.line_total(товар, количество).
+stdin: "хлеб 2\nкефир 1\nяйца 10\n\n"
+solution: |
+  import shop
+
+  total = 0
+  line = input()
+  while line != "":
+      name, qty_text = line.split()
+      qty = int(qty_text)
+      if name in shop.PRICES:
+          amount = shop.line_total(name, qty)
+          total += amount
+          print(f"{name} × {qty} = {amount}")
+      else:
+          print(f"{name} — нет в продаже")
+      line = input()
+  print("Итого:", total)
+tests:
+  files:
+    shop.py: |
+      """Цены магазина и стоимость строки чека."""
+      PRICES = {"молоко": 89, "хлеб": 45, "сыр": 320, "яйца": 110}
+
+
+      def line_total(name, qty):
+          """Стоимость qty штук товара name: от 10 штук — скидка 5 %, округление до рубля."""
+          amount = PRICES[name] * qty
+          if qty >= 10:
+              amount = round(amount * 0.95)
+          return amount
+  io:
+    - name: Пример из условия
+      stdin: "хлеб 2\nкефир 1\nяйца 10\n\n"
+      stdout: "хлеб × 2 = 90\nкефир — нет в продаже\nяйца × 10 = 1045\nИтого: 1135"
+    - name: Пустой чек
+      stdin: "\n"
+      stdout: "Итого: 0"
+      hidden: true
+    - name: Только то, чего нет
+      stdin: "чай 1\nкофе 2\n\n"
+      stdout: "чай — нет в продаже\nкофе — нет в продаже\nИтого: 0"
+      hidden: true
+    - name: В модуле другие цены и скидка
+      stdin: "сыр 1\nчай 12\nмолоко 3\n\n"
+      files:
+        shop.py: |
+          """Цены магазина и стоимость строки чека."""
+          PRICES = {"молоко": 95, "сыр": 349, "чай": 150}
+
+
+          def line_total(name, qty):
+              """Стоимость qty штук товара name: от 12 штук — скидка 10 %, округление до рубля."""
+              amount = PRICES[name] * qty
+              if qty >= 12:
+                  amount = round(amount * 0.9)
+              return amount
+      stdout: "сыр × 1 = 349\nчай × 12 = 1620\nмолоко × 3 = 285\nИтого: 2254"
+      hidden: true
+hints:
+  - level: 1
+    text: 'Чего в вашем файле нет и что уже есть в модуле? Цены и правило скидки живут в `shop.py` — программа только спрашивает у модуля.'
+  - level: 2
+    text: 'После `import shop` словарь цен — `shop.PRICES`, функция — `shop.line_total`. Есть ли товар в продаже, скажет оператор `in` со словарём. Чтение до пустой строки — цикл `while`.'
+  - level: 3
+    text: 'Заведите `total = 0` до цикла. В цикле: `name, qty_text = line.split()`, `qty = int(qty_text)`; если `name in shop.PRICES` — посчитать `shop.line_total(name, qty)`, прибавить к `total` и напечатать строку, иначе — «нет в продаже».'

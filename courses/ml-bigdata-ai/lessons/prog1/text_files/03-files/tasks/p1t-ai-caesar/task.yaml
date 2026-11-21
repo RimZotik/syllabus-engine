@@ -1,0 +1,110 @@
+id: p1t-ai-caesar
+title: ИИ-ассистент расшифровывает записку
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Исправьте программу: она читает ключ `k` из ввода, расшифровывает файл `secret.txt` и записывает результат в `plain.txt`.**
+
+  Шифр — сдвиг по русскому алфавиту из 33 букв `абвгдеёжзийклмнопрстуфхцчшщъыьэюя` по кругу: при шифровании каждую букву заменили буквой на `k` позиций дальше (после «я» — снова «а»). Расшифровка сдвигает на `k` назад. Заглавные буквы сдвигаются так же и остаются заглавными, остальные символы не меняются. Код в редакторе написал ИИ-ассистент: на примере 1 в расшифровке появляется лишняя «ё».
+
+  Пример 1
+  ```input
+  1
+  (secret.txt)
+  Гтусёшб г 18:00 ф ань!
+  ```
+  ```output
+  (plain.txt)
+  Встреча в 18:00 у ямы!
+  ```
+
+  Пример 2
+  ```input
+  3
+  (secret.txt)
+  Ионг е озфц, зйл тсж ионсм.
+  ```
+  ```output
+  (plain.txt)
+  Ёлка в лесу, ежи под ёлкой.
+  ```
+starter: |
+  # Решение от ИИ-ассистента
+  k = int(input())
+  with open("secret.txt", encoding="utf-8") as f:
+      text = f.read()
+  result = ""
+  for ch in text:
+      if "а" <= ch <= "я":
+          result += chr((ord(ch) - ord("а") - k) % 32 + ord("а"))
+      elif "А" <= ch <= "Я":
+          result += chr((ord(ch) - ord("А") - k) % 32 + ord("А"))
+      else:
+          result += ch
+  with open("plain.txt", "w", encoding="utf-8") as f:
+      f.write(result)
+stdin: "1\n"
+solution: |
+  LOWER = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+  UPPER = LOWER.upper()
+
+  k = int(input())
+  with open("secret.txt", encoding="utf-8") as f:
+      text = f.read()
+  result = []
+  for ch in text:
+      if ch in LOWER:
+          result.append(LOWER[(LOWER.index(ch) - k) % 33])
+      elif ch in UPPER:
+          result.append(UPPER[(UPPER.index(ch) - k) % 33])
+      else:
+          result.append(ch)
+  with open("plain.txt", "w", encoding="utf-8") as f:
+      f.write("".join(result))
+tests:
+  files:
+    secret.txt: "Гтусёшб г 18:00 ф ань!"
+  io:
+    - name: Пример 1
+      stdin: "1\n"
+      stdout: ""
+      files_out:
+        plain.txt: "Встреча в 18:00 у ямы!"
+    - name: Пример 2
+      stdin: "3\n"
+      files:
+        secret.txt: "Ионг е озфц, зйл тсж ионсм."
+      stdout: ""
+      files_out:
+        plain.txt: "Ёлка в лесу, ежи под ёлкой."
+    - name: Ключ больше 33
+      stdin: "34\n"
+      files:
+        secret.txt: "Авмплп, жз, Юц"
+      stdout: ""
+      files_out:
+        plain.txt: "Яблоко, ёж, Эх"
+      hidden: true
+    - name: Несколько строк файла
+      stdin: "5\n"
+      files:
+        secret.txt: "Фхнжйч\nснх\n"
+      stdout: ""
+      files_out:
+        plain.txt: "Привет\nмир\n"
+      hidden: true
+    - name: Ключ 0 и латиница
+      stdin: "0\n"
+      files:
+        secret.txt: "Ёж and Ель 2024"
+      stdout: ""
+      files_out:
+        plain.txt: "Ёж and Ель 2024"
+      hidden: true
+hints:
+  - level: 1
+    text: 'Посмотрите, где стоит «ё» по `ord`: между «е» и «ж» или в другом месте? Помните, как `sorted` ставил «ёж» после «яблока».'
+  - level: 2
+    text: 'Арифметика с `ord` работает, только если номера букв идут подряд без пропусков. У русского алфавита это не так — и букв в нём 33, а не 32.'
+  - level: 3
+    text: 'Место буквы в алфавите можно узнать не по `ord`, а по строке-алфавиту: `index` даёт позицию, а `% 33` — счёт по кругу. Для заглавных — такая же строка через `upper()`.'

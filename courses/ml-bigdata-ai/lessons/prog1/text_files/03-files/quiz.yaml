@@ -1,0 +1,463 @@
+title: Проверка темы
+pass: 0.85
+minutes: 30
+questions:
+- id: read-after-break
+  type: single
+  q: |
+    В файле `todo.txt` четыре строки: `купить хлеб`, `СТОП`, `позвонить маме`, `оплатить`. Что выведет программа?
+    ```python
+    with open("todo.txt", encoding="utf-8") as f:
+        for line in f:
+            if line.strip() == "СТОП":
+                break
+        rest = f.read()
+    print(rest.split())
+    ```
+  options:
+  - "`['позвонить', 'маме', 'оплатить']`"
+  - "`['купить', 'хлеб', 'СТОП', 'позвонить', 'маме', 'оплатить']`"
+  - "`[]`"
+  - "`['СТОП', 'позвонить', 'маме', 'оплатить']`"
+  answer: 0
+  explain: 'Чтение продолжается с того места, где остановилось предыдущее. Цикл прочитал две строки файла и вышел на «СТОП», поэтому `read()` отдаёт остаток — с «позвонить маме». С начала файл читается, только если открыть его заново. Пустой список был бы, если бы цикл дошёл до конца файла.'
+- id: write-in-loop
+  type: single
+  q: |
+    Что окажется в файле `out.txt` после программы?
+    ```python
+    for name in ["Аня", "Борис"]:
+        with open("out.txt", "w", encoding="utf-8") as f:
+            f.write(name)
+    with open("out.txt", "a", encoding="utf-8") as f:
+        f.write("Вера")
+    ```
+  options:
+  - '`БорисВера` — одной строкой'
+  - '`Борис` и `Вера` — двумя строками'
+  - '`АняБорисВера` — одной строкой'
+  - '`Вера`'
+  answer: 0
+  explain: 'Файл открывается в режиме «w» на каждом шаге цикла, и каждое открытие стирает то, что было: «Аня» исчезла. Режим «a» дописывает в конец, не стирая «Борис». Перевод строки `write` сам не ставит — имена слиплись.'
+- id: chars-vs-bytes
+  type: single
+  q: 'В файле в UTF-8 записана строка `Цена: 100₽` без перевода строки в конце. Сколько символов вернёт `len` от прочитанного текста и сколько байтов занимает файл?'
+  options:
+  - '10 символов, 16 байтов'
+  - '10 символов, 10 байтов'
+  - '16 символов, 16 байтов'
+  - '10 символов, 20 байтов'
+  answer: 0
+  explain: '`len` считает символы — кодовые точки, а не байты: их 10. В UTF-8 цифры, пробел и двоеточие занимают по байту (`: 100` — 5 байтов), каждая из четырёх букв «Цена» — по два (8 байтов), знак рубля — три. Всего 16.'
+- id: path-parts
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    from pathlib import Path
+    p = Path("backup") / "база.2024.json"
+    print(p.name, p.stem, p.suffix)
+    ```
+  options:
+  - '`база.2024.json база.2024 .json`'
+  - '`база.2024.json база .2024.json`'
+  - '`backup/база.2024.json база.2024 .json`'
+  - '`база.2024.json база.2024 json`'
+  answer: 0
+  explain: '`name` — только имя файла, без папки. Расширение — часть после *последней* точки, вместе с точкой: `.json`; всё, что до неё, — `stem`, и точка внутри «база.2024» остаётся в нём.'
+- id: return-file-object
+  type: single
+  q: |
+    Что произойдёт при запуске? Файл `marks.txt` есть, в нём три строки.
+    ```python
+    def load(path):
+        with open(path, encoding="utf-8") as f:
+            return f
+
+    for line in load("marks.txt"):
+        print(line.strip())
+    ```
+  options:
+  - 'Программа остановится с `ValueError`: файл уже закрыт'
+  - 'Программа напечатает три строки файла'
+  - 'Программа ничего не напечатает: файловый объект после `return` пуст'
+  - 'Программа остановится с `FileNotFoundError`: после `with` файла уже нет'
+  answer: 0
+  explain: '`with` закрывает файл при любом выходе из блока, в том числе через `return`. Функция возвращает файловый объект, но уже закрытый, и чтение из него — `ValueError: I/O operation on closed file`. Сам файл на диске никуда не делся. Нужное читают внутри блока и возвращают результат — например, список строк.'
+- id: code-fix-guests
+  type: code
+  q: |
+    **Исправьте программу: она печатает имена гостей из файла `guests.txt` по одному в строке — без пустых строк между ними.**
+    Пустые строки файла и строки из одних пробелов пропускаются, пробелы по краям имени убираются.
+    ```input
+    (guests.txt)
+    Аня
+      Борис
+
+    Вера
+    ```
+    ```output
+    Аня
+    Борис
+    Вера
+    ```
+  starter: |
+    with open("guests.txt", encoding="utf-8") as f:
+        for line in f:
+            print(line)
+  solution: |
+    with open("guests.txt", encoding="utf-8") as f:
+        for line in f:
+            name = line.strip()
+            if name:
+                print(name)
+  tests:
+    files:
+      guests.txt: "Аня\n  Борис\n\nВера\n"
+    io:
+    - name: Файл из условия
+      stdout: "Аня\nБорис\nВера"
+    - name: Строки из пробелов и нет перевода строки в конце
+      files:
+        guests.txt: "  \nГлеб  \n\t\nДина"
+      stdout: "Глеб\nДина"
+      hidden: true
+    - name: Пустой файл
+      files:
+        guests.txt: ""
+      stdout: ""
+      hidden: true
+  explain: 'Каждая строка файла, кроме, может быть, последней, оканчивается на `\n`, а `print` добавляет свой перевод строки — получается пустая строка между именами. `strip()` убирает и `\n`, и пробелы по краям; пустая после этого строка ложна — её пропускает `if`.'
+- id: code-fix-note-mode
+  type: code
+  q: |
+    **Исправьте `add_note(text)`: она дописывает заметку отдельной строкой в конец файла `notes.txt`.** Сейчас после двух вызовов в файле остаётся только последняя заметка.
+    ```input
+    (notes.txt до вызовов)
+    купить хлеб
+    (вызовы)
+    add_note("позвонить маме")
+    add_note("оплатить связь")
+    ```
+    ```output
+    (notes.txt после вызовов)
+    купить хлеб
+    позвонить маме
+    оплатить связь
+    ```
+    - Если файла нет, `add_note` его создаёт.
+  starter: |
+    def add_note(text):
+        with open("notes.txt", "w", encoding="utf-8") as f:
+            f.write(text + "\n")
+  solution: |
+    def add_note(text):
+        with open("notes.txt", "a", encoding="utf-8") as f:
+            f.write(text + "\n")
+  tests:
+    files:
+      notes.txt: "купить хлеб\n"
+    asserts:
+    - name: Две заметки к существующей
+      code: |
+        add_note("позвонить маме")
+        add_note("оплатить связь")
+        with open("notes.txt", encoding="utf-8") as f:
+            got = f.read()
+        want = "купить хлеб\nпозвонить маме\nоплатить связь\n"
+        assert got == want, f"В notes.txt ожидалось {want!r}, а в нём {got!r}"
+    - name: Файла нет — создаётся
+      code: |
+        from pathlib import Path
+        Path("notes.txt").unlink()
+        add_note("первая")
+        with open("notes.txt", encoding="utf-8") as f:
+            got = f.read()
+        assert got == "первая\n", f"Если файла не было, в нём должна оказаться одна заметка 'первая\\n', а в нём {got!r}"
+  explain: 'Режим «w» стирает содержимое файла сразу при открытии, ещё до записи, — каждый вызов уничтожал прошлые заметки. Дописывают в режиме «a»: новое идёт в конец, старое остаётся, а если файла нет — он создаётся, как и с «w».'
+- id: code-complete-read-numbers
+  type: code
+  q: |
+    **Допишите `read_numbers(path)`: вернуть список целых чисел из файла — по числу в строке; пустые строки и строки из одних пробелов пропускаются.**
+    ```input
+    (prices.txt)
+    45
+     320
+
+    89
+    ```
+    ```output
+    read_numbers("prices.txt") → [45, 320, 89]
+    ```
+  starter: |
+    def read_numbers(path):
+        numbers = []
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                pass  # допишите
+        return numbers
+
+
+    print(read_numbers("prices.txt"))
+  solution: |
+    def read_numbers(path):
+        numbers = []
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    numbers.append(int(line))
+        return numbers
+
+
+    print(read_numbers("prices.txt"))
+  tests:
+    files:
+      prices.txt: "45\n 320\n\n89\n"
+    asserts:
+    - name: Файл из условия
+      code: |
+        got = read_numbers("prices.txt")
+        assert got == [45, 320, 89], f"read_numbers('prices.txt') должна вернуть [45, 320, 89], а вернула {got!r}"
+    - name: Другой файл
+      code: |
+        with open("t.txt", "w", encoding="utf-8") as f:
+            f.write("\n  \n7\n\t\n-3\n0")
+        got = read_numbers("t.txt")
+        assert got == [7, -3, 0], f"Для файла '\\n  \\n7\\n\\t\\n-3\\n0' нужно [7, -3, 0], а вернулось {got!r}"
+    - name: Пустой файл
+      code: |
+        with open("empty.txt", "w", encoding="utf-8") as f:
+            pass
+        got = read_numbers("empty.txt")
+        assert got == [], f"Для пустого файла нужен [], а вернулось {got!r}"
+  explain: 'У строки файла на конце `\n`, но `int` сам пропускает пробельные символы по краям, так что `int(" 320\n")` — 320. А пустая строка файла — это `"\n"`, и `int` на ней упадёт: её сначала проверяют через `strip()`, пустая строка ложна.'
+- id: code-change-missing-file
+  type: code
+  q: |
+    **Измените `load_marks(path)`: если файла нет, вернуть пустой список.** Остальное поведение не меняется: строка, которая не число, по-прежнему даёт `ValueError`.
+    ```input
+    load_marks("marks.txt")
+    load_marks("нет_такого.txt")
+    ```
+    ```output
+    [5, 4, 3]
+    []
+    ```
+  starter: |
+    def load_marks(path):
+        with open(path, encoding="utf-8") as f:
+            return [int(line) for line in f if line.strip()]
+
+
+    print(load_marks("marks.txt"))
+  solution: |
+    def load_marks(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                return [int(line) for line in f if line.strip()]
+        except FileNotFoundError:
+            return []
+
+
+    print(load_marks("marks.txt"))
+  tests:
+    files:
+      marks.txt: "5\n4\n3\n"
+    asserts:
+    - name: Файл есть
+      code: |
+        got = load_marks("marks.txt")
+        assert got == [5, 4, 3], f"load_marks('marks.txt') должна вернуть [5, 4, 3], а вернула {got!r}"
+    - name: Файла нет
+      code: |
+        got = load_marks("нет_такого.txt")
+        assert got == [], f"Для отсутствующего файла нужен [], а вернулось {got!r}"
+    - name: Не число в файле — ValueError
+      code: |
+        with open("bad.txt", "w", encoding="utf-8") as f:
+            f.write("5\nпять\n")
+        what = None
+        try:
+            what = "вернула " + repr(load_marks("bad.txt"))
+        except ValueError:
+            what = "ValueError"
+        assert what == "ValueError", f"Для файла со строкой «пять» нужен ValueError, а функция {what}: ловите только отсутствие файла"
+  explain: 'Отсутствующий файл — `FileNotFoundError`, и ловят именно его. `except Exception` или `except` без типа заодно спрятали бы `ValueError` от неверной оценки — и испорченный журнал выглядел бы как пустой. `try` охватывает весь `with`: исключение возникает уже в `open`.'
+- id: code-write-passed-file
+  type: code
+  q: |
+    **Напишите программу: прочитать `scores.txt` (строки `имя балл`) и записать в `passed.txt` тех, у кого балл 60 или больше, — строками `имя: балл` по убыванию балла; на экран вывести `Сдали: N из M`.**
+    Между именем и баллом — пробельные символы, сколько угодно; пустые строки файла пропускаются. При равных баллах — в порядке файла. Если не сдал никто, `passed.txt` создаётся пустым.
+    ```input
+    (scores.txt)
+    Аня 72
+    Борис 45
+    Вера   91
+    ```
+    ```output
+    Сдали: 2 из 3
+    (passed.txt)
+    Вера: 91
+    Аня: 72
+    ```
+  starter: |
+    # План:
+    # 1. Прочитать scores.txt: пары (имя, балл), пустые строки пропустить
+    # 2. Отобрать сдавших и отсортировать по убыванию балла
+    # 3. Записать passed.txt и вывести итог
+  solution: |
+    people = []
+    with open("scores.txt", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                name, score = line.split()
+                people.append((name, int(score)))
+    passed = sorted([p for p in people if p[1] >= 60], key=lambda p: p[1], reverse=True)
+    with open("passed.txt", "w", encoding="utf-8") as f:
+        for name, score in passed:
+            f.write(f"{name}: {score}\n")
+    print(f"Сдали: {len(passed)} из {len(people)}")
+  tests:
+    files:
+      scores.txt: "Аня 72\nБорис 45\nВера   91\n"
+    io:
+    - name: Файл из условия
+      stdout: "Сдали: 2 из 3"
+      files_out:
+        passed.txt: "Вера: 91\nАня: 72\n"
+    - name: Граница 60 и равные баллы
+      files:
+        scores.txt: "Глеб 60\n\nДина 59\nЕгор\t80\nЖеня 60\nЗоя 80\n"
+      stdout: "Сдали: 4 из 5"
+      files_out:
+        passed.txt: "Егор: 80\nЗоя: 80\nГлеб: 60\nЖеня: 60\n"
+      hidden: true
+    - name: Не сдал никто
+      files:
+        scores.txt: "Ира 10\nКоля 59\n"
+      stdout: "Сдали: 0 из 2"
+      files_out:
+        passed.txt: ""
+      hidden: true
+  explain: 'Файл читают один раз и собирают пары в список — дальше это обычная работа со списком. `split()` без аргумента режет по любой цепочке пробельных символов. `sorted` с `reverse=True` сохраняет порядок равных элементов — тех, у кого одинаковый балл. В файл пишут через `write` с явным `\n` или через `print(..., file=f)`; режим «w» создаёт файл, даже если записывать нечего.'
+- id: code-write-shift-latin
+  type: code
+  q: |
+    **Напишите `shift_latin(text, k)`: сдвинуть каждую строчную латинскую букву на `k` позиций по алфавиту по кругу (после `z` — снова `a`); остальные символы не менять.**
+    `k` — любое целое, в том числе отрицательное и больше 26.
+    ```input
+    shift_latin("hello, world!", 3)
+    shift_latin("abc xyz", -1)
+    ```
+    ```output
+    khoor, zruog!
+    zab wxy
+    ```
+  starter: |
+    def shift_latin(text, k):
+        pass
+
+
+    print(shift_latin("hello, world!", 3))
+  solution: |
+    def shift_latin(text, k):
+        result = []
+        for ch in text:
+            if "a" <= ch <= "z":
+                result.append(chr((ord(ch) - ord("a") + k) % 26 + ord("a")))
+            else:
+                result.append(ch)
+        return "".join(result)
+
+
+    print(shift_latin("hello, world!", 3))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for args, want in [(("hello, world!", 3), "khoor, zruog!"), (("abc xyz", -1), "zab wxy")]:
+            got = shift_latin(*args)
+            assert got == want, f"shift_latin{args} должна вернуть {want!r}, а вернула {got!r}"
+    - name: Сдвиг через z и больше 26
+      code: |
+        for args, want in [(("xyz", 3), "abc"), (("abc", 27), "bcd"), (("abc", -27), "zab"), (("python", 26), "python")]:
+            got = shift_latin(*args)
+            assert got == want, f"shift_latin{args} должна вернуть {want!r}, а вернула {got!r}"
+    - name: Другие символы не меняются
+      code: |
+        for args, want in [(("ABC Привет 123", 5), "ABC Привет 123"), (("", 4), "")]:
+            got = shift_latin(*args)
+            assert got == want, f"shift_latin{args} должна вернуть {want!r}, а вернула {got!r}"
+  explain: '`ord` даёт номер символа, и у букв a–z номера идут подряд: номер минус `ord("a")` — место буквы в алфавите от 0 до 25. К месту прибавляют сдвиг и берут остаток от деления на 26 — так счёт идёт по кругу; в Python остаток от отрицательного числа тоже от 0 до 25. `chr` возвращает символ по новому номеру.'
+- id: code-write-log-visit
+  type: code
+  q: |
+    **Напишите `log_visit(name)`: дописать в `visits.txt` строку `N. имя`, где `N` — номер посещения: число непустых строк в файле плюс один.** Если файла нет, нумерация начинается с 1 и файл создаётся.
+    ```input
+    (visits.txt до вызова)
+    1. Аня
+    2. Борис
+    (вызов)
+    log_visit("Вера")
+    ```
+    ```output
+    (visits.txt после вызова)
+    1. Аня
+    2. Борис
+    3. Вера
+    ```
+  starter: |
+    def log_visit(name):
+        pass
+  solution: |
+    def log_visit(name):
+        try:
+            with open("visits.txt", encoding="utf-8") as f:
+                count = len([line for line in f if line.strip()])
+        except FileNotFoundError:
+            count = 0
+        with open("visits.txt", "a", encoding="utf-8") as f:
+            f.write(f"{count + 1}. {name}\n")
+  tests:
+    files:
+      visits.txt: "1. Аня\n2. Борис\n"
+    asserts:
+    - name: Дописать к существующему файлу
+      code: |
+        log_visit("Вера")
+        with open("visits.txt", encoding="utf-8") as f:
+            got = f.read()
+        want = "1. Аня\n2. Борис\n3. Вера\n"
+        assert got == want, f"В visits.txt ожидалось {want!r}, а в нём {got!r}"
+    - name: Файла нет — нумерация с 1
+      code: |
+        from pathlib import Path
+        Path("visits.txt").unlink()
+        log_visit("Глеб")
+        log_visit("Дина")
+        with open("visits.txt", encoding="utf-8") as f:
+            got = f.read()
+        want = "1. Глеб\n2. Дина\n"
+        assert got == want, f"Если файла не было, после двух вызовов в нём должно быть {want!r}, а в нём {got!r}"
+    - name: Пустая строка в конце файла
+      code: |
+        with open("visits.txt", "w", encoding="utf-8") as f:
+            f.write("1. Ира\n\n")
+        log_visit("Коля")
+        with open("visits.txt", encoding="utf-8") as f:
+            lines = [line.strip() for line in f if line.strip()]
+        assert lines[-1] == "2. Коля", f"Пустые строки не считаются: последняя запись должна быть '2. Коля', а она {lines[-1]!r}"
+  explain: 'Нужно два шага: сначала прочитать файл и посчитать записи, потом дописать новую в режиме «a». Отсутствие файла — обычная ситуация, а не ошибка: `FileNotFoundError` ловят и считают, что записей 0. Режим «w» здесь стёр бы журнал, а открытие в «a» до подсчёта не дало бы прочитать файл: этот режим только пишет.'
+- id: open-cp1251-garbage
+  type: open
+  q: 'Программа читает отчёт так: `open("report.txt").read()`. У автора на Linux текст верный, а у коллеги на Windows вместо «Отчёт» — «РћС‚С‡С‘С‚», без ошибки. Объясните, почему так получилось, и что исправить в программе.'
+  rubric:
+  - Без encoding Python берёт кодировку системы — на Linux это UTF-8, а на Windows часто cp1251
+  - Файл записан в UTF-8, а его байты прочитаны по таблице cp1251 — каждой букве кириллицы (2 байта) достались два чужих символа; ошибки нет, потому что эти байты в cp1251 что-то значат
+  - Исправление — указать в open кодировку, в которой файл записан, encoding="utf-8"
+  wrong_answers:
+  - Python на Windows не поддерживает кириллицу
+  - Файл испортился при копировании на другой компьютер
+  - Нужно обернуть чтение в try/except UnicodeDecodeError
+  followups:
+  - Что изменится, если файл, наоборот, записан в cp1251, а читают его с encoding="utf-8"?

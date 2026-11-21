@@ -1,0 +1,82 @@
+id: p1t-flight
+title: Когда прилетит самолёт
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **По времени вылета, длительности полёта и поясу прилёта выведите время прилёта по местным часам и разницу во времени с городом вылета.**
+
+  Ввод — три строки: вылет `ДД.ММ.ГГГГ ЧЧ:ММ ±Ч` (местное время и смещение от UTC в часах), длительность полёта `Ч:ММ`, смещение пояса прилёта `±Ч`. Вывод — две строки: `Прилёт: ДД.ММ.ГГГГ ЧЧ:ММ` по местному времени и `Часы: +N ч` — на сколько часов часы в городе прилёта спешат относительно города вылета (может быть `+0 ч` или минус).
+
+  Пример 1
+  ```input
+  17.05.2024 23:00 +3
+  4:30
+  +5
+  ```
+  ```output
+  Прилёт: 18.05.2024 05:30
+  Часы: +2 ч
+  ```
+
+  Пример 2
+  ```input
+  01.06.2024 08:00 +7
+  9:15
+  +3
+  ```
+  ```output
+  Прилёт: 01.06.2024 13:15
+  Часы: -4 ч
+  ```
+starter: |
+  from datetime import datetime, timedelta, timezone
+
+  # План:
+  # 1. Разобрать вылет: дата и время — strptime, смещение — int
+  # 2. Сделать осведомлённое время вылета
+  # 3. Прибавить длительность и показать момент по часам пояса прилёта
+  # 4. Разница часов — разность смещений
+stdin: "17.05.2024 23:00 +3\n4:30\n+5\n"
+solution: |
+  from datetime import datetime, timedelta, timezone
+
+  date_text, time_text, dep_offset = input().split()
+  hours, minutes = input().split(":")
+  arr_offset = int(input())
+
+  t = datetime.strptime(date_text + " " + time_text, "%d.%m.%Y %H:%M")
+  departure = datetime(t.year, t.month, t.day, t.hour, t.minute,
+                       tzinfo=timezone(timedelta(hours=int(dep_offset))))
+  arrival = departure + timedelta(hours=int(hours), minutes=int(minutes))
+  local = arrival.astimezone(timezone(timedelta(hours=arr_offset)))
+  print("Прилёт:", local.strftime("%d.%m.%Y %H:%M"))
+  diff = arr_offset - int(dep_offset)
+  sign = "+" if diff >= 0 else ""
+  print(f"Часы: {sign}{diff} ч")
+tests:
+  io:
+    - name: Пример 1
+      stdin: "17.05.2024 23:00 +3\n4:30\n+5\n"
+      stdout: "Прилёт: 18.05.2024 05:30\nЧасы: +2 ч"
+    - name: Пример 2
+      stdin: "01.06.2024 08:00 +7\n9:15\n+3\n"
+      stdout: "Прилёт: 01.06.2024 13:15\nЧасы: -4 ч"
+    - name: Прилёт «раньше» вылета
+      stdin: "31.12.2024 01:00 +10\n2:00\n+3\n"
+      stdout: "Прилёт: 30.12.2024 20:00\nЧасы: -7 ч"
+      hidden: true
+    - name: Тот же пояс и западное полушарие
+      stdin: "28.02.2024 22:30 -5\n3:45\n-5\n"
+      stdout: "Прилёт: 29.02.2024 02:15\nЧасы: +0 ч"
+      hidden: true
+    - name: Смещение 0 и долгий полёт
+      stdin: "10.05.2024 12:00 +0\n13:05\n+9\n"
+      stdout: "Прилёт: 11.05.2024 10:05\nЧасы: +9 ч"
+      hidden: true
+hints:
+  - level: 1
+    text: '«23:00» без пояса — не момент времени. Сначала сделайте время вылета осведомлённым, тогда прибавление длительности и перевод на другие часы сделает `datetime`.'
+  - level: 2
+    text: '`int("+3")` и `int("-5")` работают: знак — часть числа. Длительность «4:30» — два числа для `timedelta(hours=..., minutes=...)`.'
+  - level: 3
+    text: 'Тот же момент на других часах показывает `astimezone`. Разница часов — разность смещений; знак «+» перед нулём и положительной разницей добавьте сами, у отрицательного числа минус уже есть.'
