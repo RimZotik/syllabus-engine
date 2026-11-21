@@ -40,8 +40,9 @@ function call<T>(req: Req, timeoutMs: number): Promise<T> {
 let booted = false;
 const budget = (ms: number) => (booted ? ms : ms + 30_000);
 
-export async function runPython(code: string, stdin: string, timeoutMs = 5000): Promise<RunResult> {
-  const r = await call<RunResult>({ kind: "run", code, stdin }, budget(timeoutMs));
+/** `files` — the task's files (name → text), put into a fresh working folder for this run. */
+export async function runPython(code: string, stdin: string, timeoutMs = 5000, files?: Record<string, string>): Promise<RunResult> {
+  const r = await call<RunResult>({ kind: "run", code, stdin, files }, budget(timeoutMs));
   booted = true;
   return r;
 }
@@ -52,8 +53,8 @@ export type TraceObj = { t: string; items: (TraceVal | [TraceVal, TraceVal])[]; 
 export type TraceStep = { line: number; event: "line" | "return"; frames: { name: string; vars: [string, TraceVal][] }[]; heap: Record<string, TraceObj | null>; out: string; ret?: TraceVal };
 export type TraceResult = { steps: TraceStep[]; stdout: string; error: PyError | null; truncated: boolean };
 
-export async function tracePython(code: string, stdin = "", timeoutMs = 8000): Promise<TraceResult> {
-  const r = await call<TraceResult>({ kind: "trace", code, stdin }, budget(timeoutMs));
+export async function tracePython(code: string, stdin = "", timeoutMs = 8000, files?: Record<string, string>): Promise<TraceResult> {
+  const r = await call<TraceResult>({ kind: "trace", code, stdin, files }, budget(timeoutMs));
   booted = true;
   return r;
 }

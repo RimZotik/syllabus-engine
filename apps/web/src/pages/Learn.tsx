@@ -92,7 +92,6 @@ export function Learn() {
           </>)}
           <div className="eyebrow">Разделы и темы</div>
           <ul className="sections">
-            <li><span className="topic-link na"><CircleDashed size={15} />0. Вводная лекция — появится вместе с темами дисциплины</span></li>
             {disc.sections.map((s, i) => (
               <li key={s.id}><b className={s.topics.some((t) => content.hasTopic(t.id)) ? undefined : "na-h"}>{i + 1}. {s.title}</b>
                 {s.topics.map((t) => !content.hasTopic(t.id)

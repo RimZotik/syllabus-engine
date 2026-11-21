@@ -27,7 +27,9 @@ export type Question = {
 };
 export type QuizData = { title?: string; pass?: number; minutes?: number; questions: Question[] };
 
-export type IoCase = { name?: string; stdin?: string; stdout: string; hidden?: boolean };
+/** `files` — this case's own files on top of the task's; `files_out` — files the program must leave (name → text). */
+export type IoCase = { name?: string; stdin?: string; stdout: string; hidden?: boolean; files?: Record<string, string>; files_out?: Record<string, string> };
+export type TaskTests = { io?: IoCase[]; asserts?: AssertCase[]; stdin?: string; forbid?: string[]; files?: Record<string, string> };
 export type AssertCase = { name?: string; code: string; message?: string };
 export type Task = {
   id: string; title: string; sandbox: "python-browser"; difficulty?: number; concepts?: string[];
@@ -35,7 +37,7 @@ export type Task = {
   /** default input for the «Запустить» button */
   stdin?: string;
   /** forbid — names the solution must not use (tasks «write your own max»), checked on the code's syntax tree */
-  tests: { io?: IoCase[]; asserts?: AssertCase[]; stdin?: string; forbid?: string[] };
+  tests: TaskTests;
   hints?: { level: number; text: string }[];
   timeout_ms?: number;
 };

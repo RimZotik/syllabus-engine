@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, CircleAlert, CircleX, ListChecks, LoaderCircle } from "lucide-react";
+import { CheckCircle2, CircleAlert, CircleX, FileCode2, FileText, ListChecks, LoaderCircle } from "lucide-react";
 import { EditorView, keymap } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
 import { editorExtensions } from "./editorSetup";
@@ -43,6 +43,7 @@ export function CodeRunner({ initial, tests, timeoutMs = 5000, results, stdout, 
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
+  const [fileTab, setFileTab] = useState<string | null>(null);
   const checkRef = useRef<() => void>(() => {});
   const onCodeRef = useRef(onCode);
   onCodeRef.current = onCode;
@@ -94,9 +95,23 @@ export function CodeRunner({ initial, tests, timeoutMs = 5000, results, stdout, 
   const okCount = results?.filter((r) => r.ok).length ?? 0;
   const all = !!results && okCount === results.length && results.length > 0;
 
+  // the task's files (a module to import, a table to read): tabs above the editor, read-only
+  const files = Object.entries(tests.files ?? {});
+  const shown = fileTab === null ? null : files.find(([n]) => n === fileTab);
+
   return (
     <div className="runner">
-      <div className={`sb-editor${tall ? " tall" : ""}`} ref={host} />
+      {files.length > 0 && (
+        <div className="file-tabs" role="tablist" aria-label="Файлы задачи">
+          <button role="tab" aria-selected={!shown} className={`ftab${!shown ? " on" : ""}`} onClick={() => setFileTab(null)}><FileCode2 size={14} />Ваш код</button>
+          {files.map(([name]) => (
+            <button key={name} role="tab" aria-selected={shown?.[0] === name} className={`ftab${shown?.[0] === name ? " on" : ""}`} onClick={() => setFileTab(name)} title="Файл задачи — только для чтения">
+              <FileText size={14} />{name}</button>
+          ))}
+        </div>
+      )}
+      {shown && <pre className={`file-view${tall ? " tall" : ""}`}>{shown[1]}</pre>}
+      <div className={`sb-editor${tall ? " tall" : ""}`} ref={host} hidden={!!shown} />
       <div className="sb-actions">
         {!readOnly && <button className="btn sm" onClick={check} disabled={busy} title="Ctrl+Enter">{busy ? <LoaderCircle size={16} className="spin" /> : <ListChecks size={16} />}Проверить</button>}
         {actions?.(code, busy)}

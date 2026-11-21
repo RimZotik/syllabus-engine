@@ -21,7 +21,8 @@ function Val({ v, heap }: { v: TraceVal; heap: TraceStep["heap"] }) {
  * and which values they point to. Names that point to the same list share its number and colour.
  * Used in topics as <Trace code={`...`} /> and in the sandbox («По шагам»).
  */
-export function TraceView({ code, stdin = "" }: { code: string; stdin?: string }) {
+export function TraceView({ code, stdin = "", files }: { code: string; stdin?: string; files?: Record<string, string> }) {
+  const filesKey = JSON.stringify(files ?? {});
   const [res, setRes] = useState<TraceResult | null>(null);
   const [fail, setFail] = useState<string | null>(null);
   const [i, setI] = useState(0);
@@ -30,9 +31,9 @@ export function TraceView({ code, stdin = "" }: { code: string; stdin?: string }
   useEffect(() => {
     let alive = true;
     setRes(null); setFail(null); setI(0);
-    tracePython(code, stdin).then((r) => alive && setRes(r)).catch((e) => alive && setFail(String(e)));
+    tracePython(code, stdin, 8000, JSON.parse(filesKey)).then((r) => alive && setRes(r)).catch((e) => alive && setFail(String(e)));
     return () => { alive = false; };
-  }, [code, stdin]);
+  }, [code, stdin, filesKey]);
 
   if (fail) return <div className="verdict error"><CircleAlert size={22} /><div>Не удалось выполнить по шагам: {fail}</div></div>;
   if (!res) return <div className="grading"><LoaderCircle size={18} className="spin" />Готовлю пошаговое выполнение… Первый раз загружается Python — несколько секунд.</div>;
@@ -134,9 +135,9 @@ function textOf(node: ReactNode): string {
  *   </Trace>
  * The older form <Trace code={"..."} stdin={"..."} /> still works.
  */
-export function Trace({ code, stdin, children }: { code?: string; stdin?: string; children?: ReactNode }) {
+export function Trace({ code, stdin, files, children }: { code?: string; stdin?: string; files?: Record<string, string>; children?: ReactNode }) {
   const blocks = fences(children);
   const src = code ?? blocks.find((b) => b.lang !== "input")?.text ?? "";
   const input = stdin ?? blocks.find((b) => b.lang === "input")?.text;
-  return <TraceView code={src.replace(/^\n/, "")} stdin={input} />;
+  return <TraceView code={src.replace(/^\n/, "")} stdin={input} files={files} />;
 }

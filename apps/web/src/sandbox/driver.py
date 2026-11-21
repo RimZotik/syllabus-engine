@@ -1,6 +1,51 @@
 """Runs learner code and task tests. Shared by the browser sandbox (Pyodide) and tools/program/build.py,
 so a reference solution is checked exactly the way the learner's code is."""
-import sys, io, json, traceback, builtins, contextlib
+import sys, io, os, json, traceback, builtins, contextlib, tempfile, shutil
+
+
+@contextlib.contextmanager
+def _workdir(files, code=None):
+    """A fresh folder for one run: the task's files (`tests.files`: name → text) are put there, it
+    becomes the current folder and the first place `import` looks, so `open("sales.csv")` and
+    `import shop` find the task's files. The learner's own code is there too as `main.py`
+    (a check may `import main` to see what happens on import). Afterwards everything is removed,
+    including modules imported from it, so the next run starts clean."""
+    d = tempfile.mkdtemp(prefix="task-")
+    for name, text in (files or {}).items():
+        path = os.path.join(d, name)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+    if code is not None and "main.py" not in (files or {}):
+        with open(os.path.join(d, "main.py"), "w", encoding="utf-8") as f:
+            f.write(code)
+    old_cwd, old_path, old_mods = os.getcwd(), list(sys.path), set(sys.modules)
+    os.chdir(d)
+    sys.path.insert(0, d)
+    import importlib
+    importlib.invalidate_caches()
+    try:
+        yield d
+    finally:
+        os.chdir(old_cwd)
+        sys.path[:] = old_path
+        for m in set(sys.modules) - old_mods:
+            f = getattr(sys.modules[m], "__file__", None) or ""
+            if f.startswith(d):
+                del sys.modules[m]
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def _read_files(d, names):
+    """Text of the files a test expects the program to leave behind (None — the file is missing)."""
+    got = {}
+    for name in names:
+        try:
+            with open(os.path.join(d, name), encoding="utf-8") as f:
+                got[name] = f.read()
+        except OSError:
+            got[name] = None
+    return got
 
 class _Stdin(io.StringIO):
     pass
@@ -37,8 +82,9 @@ def _exec(code, stdin, echo):
 def _norm(s):
     return "\n".join(line.rstrip() for line in s.replace("\r\n", "\n").strip("\n").split("\n"))
 
-def run(code, stdin):
-    out, err, _ = _exec(code, stdin, True)
+def run(code, stdin, files_json="{}"):
+    with _workdir(json.loads(files_json or "{}"), code):
+        out, err, _ = _exec(code, stdin, True)
     return json.dumps({"stdout": out, "error": err}, ensure_ascii=False)
 
 
@@ -51,7 +97,12 @@ class _TooLong(Exception):
     pass
 
 
-def trace(code, stdin):
+def trace(code, stdin, files_json="{}"):
+    with _workdir(json.loads(files_json or "{}"), code):
+        return _trace(code, stdin)
+
+
+def _trace(code, stdin):
     """Execute the code line by line and record, before every line, which names exist in each
     function call and which values they point to. Containers become numbered objects, so two
     names pointing at the same list visibly share one object."""
@@ -189,30 +240,42 @@ def check(code, tests_json):
                         "message": ("В этой задаче нельзя использовать: " + ", ".join(_FORBID_RU.get(b, b) for b in banned) + ".") if banned else ""})
         if banned:
             return json.dumps({"results": results}, ensure_ascii=False)  # no point running tests (and no risk of a timeout)
+    files = tests.get("files") or {}
     for i, case in enumerate(tests.get("io") or []):
-        out, err, _ = _exec(code, case.get("stdin", ""), False)
+        # a case may bring its own files (another sales.csv) on top of the task's ones
+        with _workdir({**files, **(case.get("files") or {})}, code) as d:
+            out, err, _ = _exec(code, case.get("stdin", ""), False)
+            want_files = case.get("files_out") or {}
+            got_files = _read_files(d, want_files)
         name = case.get("name") or f"Пример {i + 1}"
         if err:
             results.append({"name": name, "ok": False, "error": err, "stdin": case.get("stdin", ""), "hidden": case.get("hidden", False)})
         else:
             ok = _norm(out) == _norm(case.get("stdout", ""))
-            results.append({"name": name, "ok": ok, "stdin": case.get("stdin", ""), "expected": case.get("stdout", ""), "got": out, "hidden": case.get("hidden", False)})
+            bad_file = next((n for n, t in want_files.items() if got_files[n] is None or _norm(got_files[n]) != _norm(t)), None)
+            res = {"name": name, "ok": ok and bad_file is None, "stdin": case.get("stdin", ""), "expected": case.get("stdout", ""), "got": out, "hidden": case.get("hidden", False)}
+            if bad_file is not None:
+                res["message"] = (f"Файл {bad_file} не создан." if got_files[bad_file] is None else
+                                  f"В файле {bad_file} не то, что нужно." if case.get("hidden") else
+                                  f"В файле {bad_file} ожидалось:\n{want_files[bad_file]}\nа в нём:\n{got_files[bad_file]}")
+            results.append(res)
     asserts = tests.get("asserts") or []
     printed = None  # what the program itself printed while the asserts were prepared — shown for debugging
     if asserts:
-        out, err, ns = _exec(code, tests.get("stdin", ""), False)
-        printed = out
-        for i, t in enumerate(asserts):
-            name = t.get("name") or f"Проверка {i + 1}"
-            if err:
-                results.append({"name": name, "ok": False, "error": err})
-                continue
-            try:
-                with contextlib.redirect_stdout(io.StringIO()):
-                    exec(compile(t["code"], "<проверка>", "exec"), ns)
-                results.append({"name": name, "ok": True})
-            except AssertionError as e:
-                results.append({"name": name, "ok": False, "message": str(e) or t.get("message", "")})
-            except BaseException as e:
-                results.append({"name": name, "ok": False, "error": {"type": type(e).__name__, "line": None, "msg": str(e)}})
+        with _workdir(files, code):
+            out, err, ns = _exec(code, tests.get("stdin", ""), False)
+            printed = out
+            for i, t in enumerate(asserts):
+                name = t.get("name") or f"Проверка {i + 1}"
+                if err:
+                    results.append({"name": name, "ok": False, "error": err})
+                    continue
+                try:
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        exec(compile(t["code"], "<проверка>", "exec"), ns)
+                    results.append({"name": name, "ok": True})
+                except AssertionError as e:
+                    results.append({"name": name, "ok": False, "message": str(e) or t.get("message", "")})
+                except BaseException as e:
+                    results.append({"name": name, "ok": False, "error": {"type": type(e).__name__, "line": None, "msg": str(e)}})
     return json.dumps({"results": results, "stdout": printed}, ensure_ascii=False)
