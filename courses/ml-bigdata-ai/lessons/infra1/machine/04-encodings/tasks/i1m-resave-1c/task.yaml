@@ -1,0 +1,96 @@
+id: i1m-resave-1c
+title: Выгрузка из 1С — в UTF-8
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите `resave(src, dst)`: выгрузку из 1С `src` — в cp1251 с концами строк CRLF — записать в файл `dst` в UTF-8 без BOM с концами строк LF и вернуть число строк.**
+
+  Строки не меняются, меняются только кодировка и концы строк; в `dst` каждая строка, в том числе последняя, заканчивается на LF. Пустой файл остаётся пустым. Файлы для проверки создаёт сама проверка.
+
+  Пример 1
+  ```input
+  (export.csv — байты в cp1251)
+  d2 ee e2 e0 f0 3b d1 f3 ec ec e0 0d 0a d5 eb e5 e1 3b 34 35 0d 0a
+  (вызов)
+  resave("export.csv", "export_utf8.csv")
+  ```
+  ```output
+  2
+  (export_utf8.csv — байты в UTF-8)
+  d0 a2 d0 be d0 b2 d0 b0 d1 80 3b d0 a1 d1 83 d0 bc d0 bc d0 b0 0a d0 a5 d0 bb d0 b5 d0 b1 3b 34 35 0a
+  ```
+
+  Это строки «Товар;Сумма» и «Хлеб;45».
+starter: |
+  def resave(src, dst):
+      pass
+
+
+  # Для пробы: так проверка создаёт выгрузку
+  if __name__ == "__main__":
+      with open("export.csv", "wb") as f:
+          f.write("Товар;Сумма\r\nХлеб;45\r\n".encode("cp1251"))
+      print(resave("export.csv", "export_utf8.csv"))
+solution: |
+  def resave(src, dst):
+      with open(src, encoding="cp1251") as f:
+          lines = f.read().splitlines()
+      with open(dst, "w", encoding="utf-8", newline="") as f:
+          for line in lines:
+              f.write(line + "\n")
+      return len(lines)
+
+
+  # Для пробы: так проверка создаёт выгрузку
+  if __name__ == "__main__":
+      with open("export.csv", "wb") as f:
+          f.write("Товар;Сумма\r\nХлеб;45\r\n".encode("cp1251"))
+      print(resave("export.csv", "export_utf8.csv"))
+tests:
+  asserts:
+    - name: Пример из условия
+      code: |
+        with open("export.csv", "wb") as f:
+            f.write("Товар;Сумма\r\nХлеб;45\r\n".encode("cp1251"))
+        n = resave("export.csv", "export_utf8.csv")
+        with open("export_utf8.csv", "rb") as f:
+            got = f.read()
+        want = "Товар;Сумма\nХлеб;45\n".encode("utf-8")
+        assert got == want, f"В export_utf8.csv ожидались байты {want.hex(' ')}, а в нём {got.hex(' ')}"
+        assert n == 2, f"resave должна вернуть число строк 2, а вернула {n!r}"
+    - name: Ё, кавычки и пустая строка
+      code: |
+        text = "Покупатель;Сумма\r\nООО «Ёлка»;350\r\n\r\nИП Щукин;1200\r\n"
+        with open("sales.csv", "wb") as f:
+            f.write(text.encode("cp1251"))
+        n = resave("sales.csv", "sales_utf8.csv")
+        with open("sales_utf8.csv", "rb") as f:
+            got = f.read()
+        want = text.replace("\r\n", "\n").encode("utf-8")
+        assert not got.startswith(b"\xef\xbb\xbf"), "В начале sales_utf8.csv BOM, а нужен UTF-8 без BOM"
+        assert got == want, f"В sales_utf8.csv ожидались байты {want!r}, а в нём {got!r}"
+        assert n == 4, f"В выгрузке 4 строки (одна пустая), а resave вернула {n!r}"
+    - name: Последняя строка без перевода строки
+      code: |
+        with open("tail.csv", "wb") as f:
+            f.write("Итого;45".encode("cp1251"))
+        n = resave("tail.csv", "tail_utf8.csv")
+        with open("tail_utf8.csv", "rb") as f:
+            got = f.read()
+        assert got == "Итого;45\n".encode("utf-8"), f"Ожидались байты строки «Итого;45» с LF в конце, а в файле {got!r}"
+        assert n == 1, f"resave должна вернуть 1, а вернула {n!r}"
+    - name: Пустой файл
+      code: |
+        with open("empty.csv", "wb") as f:
+            pass
+        n = resave("empty.csv", "empty_utf8.csv")
+        with open("empty_utf8.csv", "rb") as f:
+            got = f.read()
+        assert got == b"" and n == 0, f"Для пустой выгрузки нужен пустой файл и 0 строк, а получились байты {got!r} и {n!r}"
+hints:
+  - level: 1
+    text: 'Две независимые части: прочитать текст правильной кодировкой и записать его другой. Кодировку файла `open` сам не узнает — её указывают в `encoding`.'
+  - level: 2
+    text: 'В текстовом режиме при чтении `\r\n` и так становится `\n`, а `splitlines()` даёт строки без концов — их удобно и считать. При записи текстовый режим на Windows снова превратит `\n` в `\r\n`.'
+  - level: 3
+    text: 'Чтобы записать именно LF на любой ОС, откройте файл для записи с `newline=""` — тогда Python ничего не меняет. Каждую строку пишите с `"\n"` на конце.'

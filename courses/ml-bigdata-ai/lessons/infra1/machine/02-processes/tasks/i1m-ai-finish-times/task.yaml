@@ -1,0 +1,91 @@
+id: i1m-ai-finish-times
+title: ИИ-ассистент считает, кто когда закончит
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Исправьте `finish_times(jobs, q)`: она возвращает словарь имя → номер шага, на котором процесс закончил работу.**
+
+  Одно ядро делится отрезками по `q` шагов. `jobs` — пары `(имя, шагов работы)` в порядке очереди, шагов не меньше 1. Процесс из начала очереди работает `q` шагов или меньше, если работы осталось меньше, — и сразу уступает ядро; недоработавший встаёт в конец очереди. Шаги нумеруются с 1. Код в редакторе написал ИИ-ассистент: на примере 1 у B выходит 4, а не 3.
+
+  Пример 1
+  ```input
+  finish_times([("A", 3), ("B", 1)], 2)
+  ```
+  ```output
+  {'B': 3, 'A': 4}
+  ```
+
+  Пример 2
+  ```input
+  finish_times([("A", 2), ("B", 4)], 2)
+  ```
+  ```output
+  {'A': 2, 'B': 6}
+  ```
+starter: |
+  # Решение от ИИ-ассистента
+  def finish_times(jobs, q):
+      queue = [[name, left] for name, left in jobs]
+      time = 0
+      done = {}
+      while queue:
+          name, left = queue.pop(0)
+          time += q
+          left -= q
+          if left <= 0:
+              done[name] = time
+          else:
+              queue.append([name, left])
+      return done
+
+
+  print(finish_times([("A", 3), ("B", 1)], 2))
+solution: |
+  def finish_times(jobs, q):
+      queue = [[name, left] for name, left in jobs]
+      time = 0
+      done = {}
+      while queue:
+          name, left = queue.pop(0)
+          work = min(q, left)
+          time += work
+          left -= work
+          if left == 0:
+              done[name] = time
+          else:
+              queue.append([name, left])
+      return done
+
+
+  print(finish_times([("A", 3), ("B", 1)], 2))
+tests:
+  asserts:
+    - name: Пример 1
+      code: |
+        got = finish_times([("A", 3), ("B", 1)], 2)
+        assert got == {"A": 4, "B": 3}, f"Ожидалось {{'B': 3, 'A': 4}}, а вернулось {got!r}"
+    - name: Пример 2
+      code: |
+        got = finish_times([("A", 2), ("B", 4)], 2)
+        assert got == {"A": 2, "B": 6}, f"Ожидалось {{'A': 2, 'B': 6}}, а вернулось {got!r}"
+    - name: Короткие процессы в середине очереди
+      code: |
+        got = finish_times([("A", 5), ("B", 1), ("C", 3)], 2)
+        want = {"B": 3, "C": 8, "A": 9}
+        assert got == want, f"finish_times([('A', 5), ('B', 1), ('C', 3)], 2): ожидалось {want}, а вернулось {got!r}"
+    - name: Отрезок больше любой работы
+      code: |
+        got = finish_times([("x", 3), ("y", 1), ("z", 2)], 10)
+        want = {"x": 3, "y": 4, "z": 6}
+        assert got == want, f"finish_times([('x', 3), ('y', 1), ('z', 2)], 10): ожидалось {want}, а вернулось {got!r}"
+    - name: Один процесс
+      code: |
+        got = finish_times([("solo", 7)], 3)
+        assert got == {"solo": 7}, f"finish_times([('solo', 7)], 3): ожидалось {{'solo': 7}}, а вернулось {got!r}"
+hints:
+  - level: 1
+    text: 'Пройдите пример 1 по шагам на бумаге: сколько шагов на самом деле работает B? А на сколько программа сдвигает время?'
+  - level: 2
+    text: 'Время идёт ровно столько, сколько процесс проработал. Когда работы осталось меньше `q`, процесс доделывает её и уступает ядро раньше — остаток отрезка не пропадает впустую.'
+  - level: 3
+    text: 'Сначала посчитайте, сколько процесс проработает в этом отрезке: `work = min(q, left)`, и именно на `work` сдвигайте время и уменьшайте остаток.'

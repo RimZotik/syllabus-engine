@@ -1224,3 +1224,163 @@
     разных окружений не мешают друг другу, поэтому у каждого проекта могут быть свои версии. Папку окружения другим не передают.
   example: python -m venv .venv создаёт окружение в папке .venv.
   introduced_in: prog1.modules.3
+
+# ── infra1.machine
+
+- id: cpu
+  term: процессор (CPU)
+  en: central processing unit, CPU
+  decode: CPU — central processing unit, «центральное обрабатывающее устройство»
+  short: Устройство, которое выполняет программы машинными инструкциями — по циклу «взять инструкцию из памяти, выполнить,
+    перейти к следующей».
+  introduced_in: infra1.machine.1
+
+- id: cpu-core
+  term: ядро процессора
+  en: CPU core
+  short: Самостоятельный исполнитель инструкций внутри процессора, со своими регистрами. Восемь ядер могут одновременно выполнять
+    восемь последовательностей инструкций.
+  introduced_in: infra1.machine.1
+
+- id: ram
+  term: оперативная память (ОЗУ, RAM)
+  en: random access memory, RAM; main memory
+  decode: ОЗУ — оперативное запоминающее устройство; RAM — random access memory, «память с произвольным доступом»
+  short: Память, где находятся выполняемые программы и их данные. Быстрая, но стирается при выключении; место на диске её
+    не увеличивает.
+  example: Таблица на 20 ГБ не загрузится целиком в 16 ГБ памяти, сколько бы ни было места на диске.
+  introduced_in: infra1.machine.1
+
+- id: storage
+  term: диск (накопитель)
+  en: storage, disk (SSD, HDD)
+  short: Устройство, которое хранит файлы, в том числе после выключения. Медленнее памяти — при одном обращении в тысячи раз
+    и больше, при чтении подряд в разы.
+  introduced_in: infra1.machine.1
+
+- id: cache
+  term: кэш
+  en: cache
+  short: Маленькая быстрая память в процессоре с копиями недавно использованных данных. В широком смысле — любая копия данных,
+    сохранённая там, откуда их быстрее взять.
+  introduced_in: infra1.machine.1
+
+- id: operating-system
+  term: операционная система (ОС)
+  en: operating system, OS
+  short: Программа, которая распоряжается процессором, памятью, файлами и устройствами и служит посредником между ними и остальными
+    программами.
+  example: Windows, Linux, macOS, Android; open и os.environ в Python работают через ОС.
+  introduced_in: infra1.machine.1
+
+- id: process
+  term: процесс
+  en: process
+  short: Запущенная программа со своей памятью, открытыми файлами, окружением и номером PID. Одну программу можно запустить
+    несколькими процессами.
+  example: os.getpid() — номер своего процесса.
+  introduced_in: infra1.machine.2
+
+- id: thread
+  term: поток
+  en: thread
+  short: Последовательность выполнения внутри процесса. Потоки одного процесса работают с общей памятью.
+  introduced_in: infra1.machine.2
+
+- id: context-switch
+  term: переключение контекста
+  en: context switch
+  short: Замена потока на ядре — ОС сохраняет регистры остановленного потока и восстанавливает регистры следующего.
+  introduced_in: infra1.machine.2
+
+- id: scheduler
+  term: планировщик
+  en: scheduler
+  short: Часть ОС, которая решает, какой поток получит ядро процессора следующим и на какой отрезок времени.
+  introduced_in: infra1.machine.2
+
+- id: bit
+  term: бит
+  en: bit
+  decode: от binary digit — «двоичная цифра»
+  short: Наименьшая единица информации — одно из двух значений, 0 или 1. n битов дают 2ⁿ значений.
+  introduced_in: infra1.machine.3
+
+- id: byte
+  term: байт
+  en: byte
+  short: 8 битов — наименьшая порция данных со своим номером (адресом) в памяти; 256 значений, от 0 до 255.
+  introduced_in: infra1.machine.3
+
+- id: binary
+  term: двоичная система
+  en: binary
+  short: Позиционная запись чисел с основанием 2 и цифрами 0 и 1; веса мест — 1, 2, 4, 8…
+  example: 0b1011 == 11; bin(11) — строка '0b1011'
+  introduced_in: infra1.machine.3
+
+- id: hexadecimal
+  term: шестнадцатеричная система (hex)
+  en: hexadecimal, hex
+  short: Запись чисел с основанием 16 и цифрами 0–9, A–F. Одна hex-цифра — 4 бита, байт — две hex-цифры.
+  example: 0xC8 == 200; цвет
+  introduced_in: infra1.machine.3
+
+- id: bytes
+  term: bytes
+  en: bytes
+  short: Тип Python — неизменяемая последовательность байтов, чисел от 0 до 255. Элемент bytes — число, а не символ.
+  example: b"Hi"[0] — 72
+  introduced_in: infra1.machine.3
+
+- id: kibibyte
+  term: кибибайт (КиБ)
+  en: kibibyte, KiB
+  short: 1024 байта. Килобайт по стандарту — 1000 байт; Windows пишет «ГБ», а считает гибибайты.
+  example: Диск 1 ТБ = 10¹² байт ≈ 931 ГиБ.
+  introduced_in: infra1.machine.3
+
+- id: ascii
+  term: ASCII
+  en: ASCII
+  decode: American Standard Code for Information Interchange — «американский стандартный код для обмена информацией»
+  short: Таблица 1960-х на 128 символов (7 битов) — латиница, цифры, знаки и управляющие символы. Первая половина почти всех
+    кодировок.
+  introduced_in: infra1.machine.4
+
+- id: code-page
+  term: кодовая страница
+  en: code page
+  short: Однобайтовая кодировка — ASCII плюс свой алфавит в номерах 128–255. Один и тот же байт в разных страницах — разные
+    буквы.
+  example: cp1251, cp866, KOI8-R
+  introduced_in: infra1.machine.4
+
+- id: unicode
+  term: Юникод
+  en: Unicode
+  short: Набор символов всех письменностей, где у каждого символа свой номер — кодовая точка U+…. Байты задаёт кодировка Юникода,
+    например UTF-8.
+  example: «я» — U+044F
+  introduced_in: infra1.machine.4
+
+- id: mojibake
+  term: кракозябры
+  en: mojibake
+  short: Текст, прочитанный не той кодировкой, в которой записан. Байты целы, поэтому текст можно вернуть обратным путём.
+  example: '"РїСЂРёРІРµС‚".encode("cp1251").decode("utf-8") — «привет»'
+  introduced_in: infra1.machine.4
+
+- id: bom
+  term: BOM
+  en: byte order mark, BOM
+  decode: byte order mark — «метка порядка байтов»
+  short: Символ U+FEFF в начале файла; в UTF-8 — байты EF BB BF. Его ставит, например, Excel; читают с encoding="utf-8-sig".
+  introduced_in: infra1.machine.4
+
+- id: line-ending
+  term: конец строки (CRLF, LF)
+  en: line ending, newline (CRLF, LF)
+  short: Как в файле отмечен конец строки текста. Программы Windows обычно пишут два байта \r\n (CRLF), Linux и macOS — один
+    \n (LF).
+  introduced_in: infra1.machine.4

@@ -1,0 +1,68 @@
+id: i1m-batch-requests
+title: Отправка пачками
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите `total_ms(n, batch, latency_ms, item_ms)`: сколько миллисекунд займёт отправить на сервер `n` записей запросами по `batch` записей.**
+
+  Записи идут пачками по `batch` штук, последняя пачка может быть меньше. Каждый запрос стоит `latency_ms` — дорога по сети туда и обратно — плюс `item_ms` на каждую запись в нём. `n` — целое, не меньше 0; `batch` — целое, не меньше 1.
+
+  Пример 1
+  ```input
+  total_ms(10000, 1, 150, 0.01)
+  total_ms(10000, 500, 150, 0.01)
+  ```
+  ```output
+  1500100.0
+  3100.0
+  ```
+
+  Пример 2
+  ```input
+  total_ms(1001, 500, 150, 0.01)
+  ```
+  ```output
+  460.01
+  ```
+starter: |
+  def total_ms(n, batch, latency_ms, item_ms):
+      pass
+
+
+  print(total_ms(10000, 1, 150, 0.01))
+  print(total_ms(10000, 500, 150, 0.01))
+solution: |
+  def total_ms(n, batch, latency_ms, item_ms):
+      requests = (n + batch - 1) // batch
+      return requests * latency_ms + n * item_ms
+
+
+  print(total_ms(10000, 1, 150, 0.01))
+  print(total_ms(10000, 500, 150, 0.01))
+tests:
+  asserts:
+    - name: Примеры из условия
+      code: |
+        for args, want in [((10000, 1, 150, 0.01), 1500100.0), ((10000, 500, 150, 0.01), 3100.0), ((1001, 500, 150, 0.01), 460.01)]:
+            got = total_ms(*args)
+            assert got is not None and abs(got - want) < 1e-6, f"total_ms{args} должна вернуть {want}, а вернула {got!r}"
+    - name: Неполная последняя пачка
+      code: |
+        for args, want in [((7, 3, 100, 1), 307), ((1, 1000, 150, 0.5), 150.5), ((999, 1000, 10, 0), 10)]:
+            got = total_ms(*args)
+            assert got is not None and abs(got - want) < 1e-6, f"total_ms{args} должна вернуть {want}, а вернула {got!r}"
+    - name: Нет записей — нет запросов
+      code: |
+        got = total_ms(0, 100, 150, 1)
+        assert got is not None and abs(got - 0) < 1e-6, f"total_ms(0, 100, 150, 1) должна вернуть 0, а вернула {got!r}"
+    - name: Пачка ровно делится
+      code: |
+        got = total_ms(600, 200, 50, 0.1)
+        assert got is not None and abs(got - 210) < 1e-6, f"total_ms(600, 200, 50, 0.1) должна вернуть 210.0, а вернула {got!r}"
+hints:
+  - level: 1
+    text: 'Время складывается из двух частей: задержки за каждый запрос и времени на каждую запись. Вторая часть от размера пачки не зависит.'
+  - level: 2
+    text: 'Главное — число запросов. Это `n / batch`, округлённое вверх: 1001 запись по 500 — три запроса, а не два. Проверьте на краях: 0 записей и `n`, которое делится на `batch` нацело.'
+  - level: 3
+    text: 'Округление вверх целыми числами: `(n + batch - 1) // batch`. Можно и через `math.ceil(n / batch)`.'

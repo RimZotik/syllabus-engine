@@ -1,0 +1,248 @@
+title: Проверка темы
+pass: 0.85
+minutes: 20
+questions:
+- id: int-base-and-bin
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    print(int("101", 2) + int("101", 16), bin(5) + bin(5))
+    ```
+  options:
+  - '`262 0b1010b101`'
+  - '`262 0b1010`'
+  - '`202 0b1010b101`'
+  - '`10 0b1010`'
+  answer: 0
+  explain: '`int("101", 2)` — 5, `int("101", 16)` — 1·256 + 0·16 + 1 = 257, вместе 262. `bin` возвращает строку, и `+` склеивает две строки `0b101`, а не складывает числа: `0b1010` получилось бы при сложении чисел (10). 202 — если прочитать обе записи как десятичные.'
+- id: fromhex-predict
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    data = bytes.fromhex("41 42 0a")
+    print(data[2], data[:2], len(data))
+    ```
+  options:
+  - "`10 b'AB' 3`"
+  - "`0a b'AB' 3`"
+  - "`10 b'4142' 3`"
+  - "`10 b'AB' 8`"
+  answer: 0
+  explain: 'Элемент `bytes` — число: байт `0a` — это 10, и печатается он десятичным числом. Срез `bytes` — снова `bytes`, а печатные байты 0x41 и 0x42 Python показывает буквами A и B. `len` считает байты, а не hex-цифры и не символы строки «41 42 0a».'
+- id: gib-server
+  type: single
+  q: 'У сервера 64 ГиБ оперативной памяти. Таблица в памяти займёт 65 миллиардов байтов. Хватит ли памяти, если больше ничего не загружать?'
+  options:
+  - 'Да: 64 ГиБ — это примерно 68,7 миллиарда байтов'
+  - 'Нет: 65 миллиардов байтов больше, чем 64 ГиБ'
+  - 'Нет: в ГиБ байтов меньше, чем в ГБ, — 64 ГиБ меньше 64 миллиардов байтов'
+  - 'Да, но только если считать по 1000, как производители дисков'
+  answer: 0
+  explain: '1 ГиБ = 1024³ = 1 073 741 824 байта, 64 ГиБ ≈ 68,7 миллиарда — больше 65 миллиардов. Гибибайт больше гигабайта, а не меньше. Способ счёта не меняет число байтов: если считать по 1000, получится «68,7 ГБ» — тот же объём под другим названием.'
+- id: code-fix-rgb-to-hex
+  type: code
+  q: |
+    **Исправьте `rgb_to_hex(r, g, b)`: вернуть цвет в записи `#RRGGBB` — по две hex-цифры на составляющую, буквы заглавные.** Составляющие — целые от 0 до 255.
+    ```input
+    rgb_to_hex(255, 136, 0)
+    rgb_to_hex(1, 2, 3)
+    ```
+    ```output
+    #FF8800
+    #010203
+    ```
+  starter: |
+    def rgb_to_hex(r, g, b):
+        return "#" + hex(r)[2:] + hex(g)[2:] + hex(b)[2:]
+
+
+    print(rgb_to_hex(255, 136, 0))
+  solution: |
+    def rgb_to_hex(r, g, b):
+        return f"#{r:02X}{g:02X}{b:02X}"
+
+
+    print(rgb_to_hex(255, 136, 0))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for args, want in [((255, 136, 0), "#FF8800"), ((1, 2, 3), "#010203")]:
+            got = rgb_to_hex(*args)
+            assert got == want, f"rgb_to_hex{args} должна вернуть {want!r}, а вернула {got!r}"
+    - name: Чёрный, белый и буквы
+      code: |
+        for args, want in [((0, 0, 0), "#000000"), ((255, 255, 255), "#FFFFFF"), ((32, 128, 192), "#2080C0"), ((10, 11, 12), "#0A0B0C")]:
+            got = rgb_to_hex(*args)
+            assert got == want, f"rgb_to_hex{args} должна вернуть {want!r}, а вернула {got!r}"
+  explain: '`hex` не дописывает ведущий ноль: `hex(0)` — `0x0`, и из `#FF8800` выпадает цифра — получается `#FF880`, другой цвет. Формат `02X` даёт ровно две hex-цифры с нулём впереди, `X` — заглавными буквами.'
+- id: code-change-bits-view
+  type: code
+  q: |
+    **Измените `show(data)`: сейчас она возвращает байты в hex через пробел, а нужно — двоичную запись каждого байта ровно восемью цифрами через пробел.**
+    ```input
+    show(b"Hi")
+    show(bytes([5, 255]))
+    ```
+    ```output
+    01001000 01101001
+    00000101 11111111
+    ```
+  starter: |
+    def show(data):
+        return data.hex(" ")
+
+
+    print(show(b"Hi"))
+  solution: |
+    def show(data):
+        return " ".join(f"{b:08b}" for b in data)
+
+
+    print(show(b"Hi"))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for data, want in [(b"Hi", "01001000 01101001"), (bytes([5, 255]), "00000101 11111111")]:
+            got = show(data)
+            assert got == want, f"show({data!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Нули и один байт
+      code: |
+        for data, want in [(bytes([0]), "00000000"), (bytes([128, 1, 16]), "10000000 00000001 00010000")]:
+            got = show(data)
+            assert got == want, f"show({data!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Пустые байты
+      code: |
+        got = show(b"")
+        assert got == "", f"show(b'') должна вернуть пустую строку, а вернула {got!r}"
+  explain: 'Элементы `bytes` — числа 0…255, и каждое можно записать по-своему. Формат `08b` — двоичная запись не короче восьми цифр с нулями впереди: без нулей у байта 5 вышло бы `101`, и границы байтов потерялись бы. Склеить записи через пробел — `" ".join(...)`.'
+- id: code-complete-windows-size
+  type: code
+  q: |
+    **Допишите `windows_size(n_bytes)`: вернуть строку, которую показывает Windows для диска в `n_bytes` байтов, — размер в ГиБ с одним знаком после точки и подпись `ГБ`.**
+    ```input
+    windows_size(10 ** 12)
+    windows_size(500 * 10 ** 9)
+    ```
+    ```output
+    931.3 ГБ
+    465.7 ГБ
+    ```
+  starter: |
+    def windows_size(n_bytes):
+        gib = ...  # допишите
+        return f"{gib:.1f} ГБ"
+
+
+    print(windows_size(10 ** 12))
+  solution: |
+    def windows_size(n_bytes):
+        gib = n_bytes / 1024 ** 3
+        return f"{gib:.1f} ГБ"
+
+
+    print(windows_size(10 ** 12))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for n, want in [(10 ** 12, "931.3 ГБ"), (500 * 10 ** 9, "465.7 ГБ")]:
+            got = windows_size(n)
+            assert got == want, f"windows_size({n}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Ровно в гибибайтах и флешка
+      code: |
+        for n, want in [(16 * 2 ** 30, "16.0 ГБ"), (32 * 10 ** 9, "29.8 ГБ"), (0, "0.0 ГБ")]:
+            got = windows_size(n)
+            assert got == want, f"windows_size({n}) должна вернуть {want!r}, а вернула {got!r}"
+  explain: 'Windows делит на 1024³ — это гибибайты, хотя подпись у неё «ГБ». Производитель диска считал по 1000³, поэтому 10¹² байтов у него — 1 ТБ, а у Windows — 931,3 «ГБ». Байтов при этом столько же.'
+- id: code-write-table-fits
+  type: code
+  q: |
+    **Напишите программу: по размеру таблицы посчитать её объём в памяти в ГиБ и сказать, влезет ли она в память компьютера.**
+    Ввод — одна строка: `строк столбцов байтов_на_число память_ГиБ`, все числа целые. Таблица — числа фиксированного размера, по одному в каждой клетке. Вывод — `V ГиБ: влезет` или `V ГиБ: не влезет`; V — с двумя знаками после точки. Влезет, если объём не больше памяти; округление — только для вывода.
+    ```input
+    10000000 100 8 16
+    ```
+    ```output
+    7.45 ГиБ: влезет
+    ```
+  starter: |
+    rows, cols, size, ram_gib = input().split()
+  solution: |
+    rows, cols, size, ram_gib = [int(x) for x in input().split()]
+    gib = rows * cols * size / 1024 ** 3
+    verdict = "влезет" if gib <= ram_gib else "не влезет"
+    print(f"{gib:.2f} ГиБ: {verdict}")
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "10000000 100 8 16\n"
+      stdout: "7.45 ГиБ: влезет"
+    - name: Не влезет
+      stdin: "2000000000 3 8 32\n"
+      stdout: "44.70 ГиБ: не влезет"
+      hidden: true
+    - name: Ровно столько, сколько памяти
+      stdin: "134217728 8 8 8\n"
+      stdout: "8.00 ГиБ: влезет"
+      hidden: true
+    - name: На одну строку больше, чем памяти
+      stdin: "134217729 8 8 8\n"
+      stdout: "8.00 ГиБ: не влезет"
+      hidden: true
+    - name: Маленькие числа
+      stdin: "1000 10 1 1\n"
+      stdout: "0.00 ГиБ: влезет"
+      hidden: true
+  explain: 'Объём — строки × столбцы × байты на число, в ГиБ — делить на 1024³. Сравнивают точный объём: таблица на 64 байта больше 8 ГиБ при выводе тоже даёт «8.00», но не влезает. Память компьютеров принято считать в степенях двойки, поэтому сравнение идёт в ГиБ.'
+- id: code-write-be-number
+  type: code
+  q: |
+    **Напишите `be_number(data)`: число, записанное байтами `data` старшим байтом первым, — как `int.from_bytes(data, "big")`, но без `int`.**
+    Пустые байты — число 0.
+    ```input
+    be_number(b"Hi")
+    be_number(bytes([1, 0, 0]))
+    ```
+    ```output
+    18537
+    65536
+    ```
+    Ограничения: нельзя `int` и `from_bytes`.
+  starter: |
+    def be_number(data):
+        pass
+
+
+    print(be_number(b"Hi"))
+  solution: |
+    def be_number(data):
+        number = 0
+        for b in data:
+            number = number * 256 + b
+        return number
+
+
+    print(be_number(b"Hi"))
+  tests:
+    forbid: [int, from_bytes]
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for data, want in [(b"Hi", 18537), (bytes([1, 0, 0]), 65536)]:
+            got = be_number(data)
+            assert got == want, f"be_number({data!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Младший байт последний
+      code: |
+        for data, want in [(bytes([0, 1]), 1), (bytes([1, 2]), 258), (bytes([2, 1]), 513)]:
+            got = be_number(data)
+            assert got == want, f"be_number({data!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Крайние случаи
+      code: |
+        for data, want in [(b"", 0), (bytes([255]), 255), (bytes([255] * 4), 4294967295), (bytes([0, 0, 0, 7]), 7)]:
+            got = be_number(data)
+            assert got == want, f"be_number({data!r}) должна вернуть {want}, а вернула {got!r}"
+  explain: 'Это позиционная запись с основанием 256: каждый байт — «цифра», и каждый шаг влево умножает её вес на 256. Удобно копить число слева направо: `number = number * 256 + b` — так же, как по цифрам строки «375» собирают 375: 3, потом 37, потом 375.'

@@ -1,0 +1,77 @@
+id: i1m-utf8-encode
+title: UTF-8 своими руками
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Напишите `utf8_encode(cp)`: вернуть список байтов (чисел 0…255), которыми UTF-8 записывает кодовую точку `cp`, — по схеме, без `encode`.**
+
+  `cp` — целое от 0 до 0xFFFF, то есть символу нужно 1, 2 или 3 байта. Схема: до U+007F — `0xxxxxxx`; до U+07FF — `110xxxxx 10xxxxxx`; до U+FFFF — `1110xxxx 10xxxxxx 10xxxxxx`. Биты номера заполняют позиции `x` слева направо, недостающие старшие биты — нули.
+
+  Пример 1
+  ```input
+  utf8_encode(1103)
+  utf8_encode(0x20BD)
+  ```
+  ```output
+  [209, 143]
+  [226, 130, 189]
+  ```
+
+  Пример 2
+  ```input
+  utf8_encode(65)
+  ```
+  ```output
+  [65]
+  ```
+
+  Ограничения: нельзя `encode`, `bytes`, `bytearray`, `to_bytes` и модуль `codecs`.
+starter: |
+  def utf8_encode(cp):
+      pass
+
+
+  print(utf8_encode(1103))
+solution: |
+  def utf8_encode(cp):
+      if cp <= 0x7F:
+          return [cp]
+      if cp <= 0x7FF:
+          return [0b11000000 + cp // 64, 0b10000000 + cp % 64]
+      return [0b11100000 + cp // 4096, 0b10000000 + cp // 64 % 64, 0b10000000 + cp % 64]
+
+
+  print(utf8_encode(1103))
+tests:
+  forbid: [encode, bytes, bytearray, to_bytes, codecs]
+  asserts:
+    - name: Примеры из условия
+      code: |
+        for cp, want in [(1103, [209, 143]), (0x20BD, [226, 130, 189]), (65, [65])]:
+            got = utf8_encode(cp)
+            assert got == want, f"utf8_encode({cp}) должна вернуть {want}, а вернула {got!r}"
+    - name: Границы числа байтов
+      code: |
+        for cp in [0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF]:
+            want = list(chr(cp).encode("utf-8"))
+            got = utf8_encode(cp)
+            assert got == want, f"utf8_encode(0x{cp:X}) должна вернуть {want}, а вернула {got!r}"
+    - name: Русский алфавит
+      code: |
+        for ch in "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАЁЯ":
+            want = list(ch.encode("utf-8"))
+            got = utf8_encode(ord(ch))
+            assert got == want, f"Для «{ch}» (U+{ord(ch):04X}) нужны байты {want}, а вернулось {got!r}"
+    - name: Разные символы до U+FFFF
+      code: |
+        for cp in list(range(0, 0xD800, 97)) + list(range(0xE000, 0x10000, 89)):
+            want = list(chr(cp).encode("utf-8"))
+            got = utf8_encode(cp)
+            assert got == want, f"utf8_encode(0x{cp:X}) должна вернуть {want}, а вернула {got!r}"
+hints:
+  - level: 1
+    text: 'Сначала выберите число байтов по диапазону номера. Потом разрежьте номер на куски по 6 битов справа — каждый продолжающий байт несёт ровно 6 битов.'
+  - level: 2
+    text: 'Последние 6 битов числа — это остаток от деления на 2⁶ = 64, а частное — все биты левее. Для трёх байтов режут дважды: остаток от деления на 64, потом от частного — снова остаток от деления на 64, и что осталось.'
+  - level: 3
+    text: 'Служебные биты прибавляют к куску: `110` в начале байта — это 0b11000000 (192), `1110` — 0b11100000 (224), `10` — 0b10000000 (128). Например, для «я»: 1103 = 17 · 64 + 15, байты 192 + 17 и 128 + 15.'

@@ -1,0 +1,70 @@
+id: i1m-ai-orders-crlf
+title: ИИ-ассистент считает заказы по городам
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Исправьте программу: она читает `orders.csv` и выводит, сколько заказов из каждого города.**
+
+  Файл в UTF-8, первая строка — заголовок `номер;город`, дальше по заказу в строке; пустые строки пропускаются. Вывод — `город: N` по алфавиту, как сортирует `sorted`. Файл выгружен в Windows — с концами строк CRLF; он на вкладке над редактором. Код в редакторе написал ИИ-ассистент: на примере 1 Казань попадает в отчёт дважды.
+
+  Пример 1
+  ```input
+  (orders.csv, концы строк CRLF, после последней строки перевода строки нет)
+  номер;город
+  1;Казань
+  2;Омск
+  3;Казань
+  ```
+  ```output
+  Казань: 2
+  Омск: 1
+  ```
+starter: |
+  # Решение от ИИ-ассистента
+  with open("orders.csv", "rb") as f:
+      text = f.read().decode("utf-8")
+  counts = {}
+  for line in text.split("\n")[1:]:
+      if line:
+          number, city = line.split(";")
+          counts[city] = counts.get(city, 0) + 1
+  for city in sorted(counts):
+      print(f"{city}: {counts[city]}")
+solution: |
+  with open("orders.csv", "rb") as f:
+      text = f.read().decode("utf-8")
+  counts = {}
+  for line in text.splitlines()[1:]:
+      if line:
+          number, city = line.split(";")
+          counts[city] = counts.get(city, 0) + 1
+  for city in sorted(counts):
+      print(f"{city}: {counts[city]}")
+tests:
+  files:
+    orders.csv: "номер;город\r\n1;Казань\r\n2;Омск\r\n3;Казань"
+  io:
+    - name: Пример 1
+      stdout: "Казань: 2\nОмск: 1"
+    - name: Файл из Linux тоже работает
+      files:
+        orders.csv: "номер;город\n1;Тверь\n2;Тверь\n3;Пермь\n"
+      stdout: "Пермь: 1\nТверь: 2"
+      hidden: true
+    - name: CRLF и пустые строки
+      files:
+        orders.csv: "номер;город\r\n10;Уфа\r\n\r\n11;Сочи\r\n12;Уфа\r\n\r\n"
+      stdout: "Сочи: 1\nУфа: 2"
+      hidden: true
+    - name: Только заголовок
+      files:
+        orders.csv: "номер;город\r\n"
+      stdout: ""
+      hidden: true
+hints:
+  - level: 1
+    text: 'Посмотрите на байты: в каком месте строки файла из Windows стоит `\r` и что от него остаётся после `split("\n")`? Помогает `print(repr(city))`.'
+  - level: 2
+    text: 'После `split("\n")` у каждой строки, кроме последней, на конце остаётся `\r`, и он прилипает к названию города: «Казань» и «Казань\r» — разные ключи словаря. А пустая строка Windows становится строкой `"\r"` — она не пустая.'
+  - level: 3
+    text: 'Делить текст на строки нужно методом, который понимает и `\n`, и `\r\n`, — `splitlines()`. Пустые строки он даёт пустыми, и `if line` их пропустит.'

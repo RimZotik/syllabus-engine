@@ -1,0 +1,88 @@
+id: i1m-file-kind
+title: Формат файла по первым байтам
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите `file_kind(path)`: прочитать начало файла и по сигнатуре вернуть его формат — `"PNG"`, `"PDF"`, `"ZIP"` или `"неизвестно"`.**
+
+  Сигнатуры: PNG начинается с байтов `89 50 4E 47`, PDF — с `25 50 44 46` (`%PDF`), ZIP (а с ним `.xlsx` и `.docx`) — с `50 4B` (`PK`). Расширение имени файла не учитывается. Файл открывайте в двоичном режиме — `open(path, "rb")`: тогда `f.read(n)` возвращает первые `n` байтов как `bytes`, ничего не декодируя. Файлы для проверки создаёт сама проверка; пустой файл — `"неизвестно"`.
+
+  Пример 1
+  ```input
+  (photo.txt — байты 89 50 4E 47 0D 0A 1A 0A …)
+  file_kind("photo.txt")
+  ```
+  ```output
+  PNG
+  ```
+
+  Пример 2
+  ```input
+  (sales.csv — текст «город,сумма»)
+  file_kind("sales.csv")
+  ```
+  ```output
+  неизвестно
+  ```
+starter: |
+  SIGNATURES = [
+      (bytes.fromhex("89 50 4E 47"), "PNG"),
+      (b"%PDF", "PDF"),
+      (b"PK", "ZIP"),
+  ]
+
+
+  def file_kind(path):
+      pass
+solution: |
+  SIGNATURES = [
+      (bytes.fromhex("89 50 4E 47"), "PNG"),
+      (b"%PDF", "PDF"),
+      (b"PK", "ZIP"),
+  ]
+
+
+  def file_kind(path):
+      with open(path, "rb") as f:
+          head = f.read(8)
+      for signature, kind in SIGNATURES:
+          if head.startswith(signature):
+              return kind
+      return "неизвестно"
+tests:
+  asserts:
+    - name: Картинка под чужим расширением
+      code: |
+        with open("photo.txt", "wb") as f:
+            f.write(bytes.fromhex("89 50 4E 47 0D 0A 1A 0A 00 00 00 0D 49 48 44 52"))
+        got = file_kind("photo.txt")
+        assert got == "PNG", f"Файл начинается с 89 50 4E 47 — это PNG, а file_kind вернула {got!r}"
+    - name: PDF и ZIP
+      code: |
+        cases = [("report.pdf", b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n", "PDF"), ("table.xlsx", b"PK\x03\x04\x14\x00\x06\x00", "ZIP"), ("archive.bin", b"PK\x05\x06" + bytes(18), "ZIP")]
+        for name, data, want in cases:
+            with open(name, "wb") as f:
+                f.write(data)
+            got = file_kind(name)
+            assert got == want, f"Файл {name} начинается с {data[:4].hex(' ')} — это {want}, а file_kind вернула {got!r}"
+    - name: Текст и почти-сигнатуры
+      code: |
+        cases = [("sales.csv", "город,сумма\nКазань,120\n".encode("utf-8")), ("note.png", b"PNG is a format\n"), ("x.pdf", b"PDF%"), ("p.txt", b"P"), ("cp.txt", "Привет".encode("cp1251"))]
+        for name, data in cases:
+            with open(name, "wb") as f:
+                f.write(data)
+            got = file_kind(name)
+            assert got == "неизвестно", f"Файл {name} с байтами {data[:4].hex(' ')} — не PNG, не PDF и не ZIP, нужно 'неизвестно', а file_kind вернула {got!r}"
+    - name: Пустой файл
+      code: |
+        with open("empty.dat", "wb") as f:
+            pass
+        got = file_kind("empty.dat")
+        assert got == "неизвестно", f"Для пустого файла нужно 'неизвестно', а file_kind вернула {got!r}"
+hints:
+  - level: 1
+    text: 'Формат определяют байты, а не текст и не имя файла: `photo.txt` может оказаться картинкой. Сравнивать нужно начало файла с каждой сигнатурой.'
+  - level: 2
+    text: 'Откройте файл с `"rb"` и прочитайте первые несколько байтов: `f.read(8)`. Сигнатуры уже собраны в `SIGNATURES` — осталось сравнить с ними начало.'
+  - level: 3
+    text: 'У `bytes` есть `startswith`, как у строк, только аргумент — тоже `bytes`. Пройдите по парам `(сигнатура, формат)` и верните формат первой подошедшей; если ни одна — `"неизвестно"`.'

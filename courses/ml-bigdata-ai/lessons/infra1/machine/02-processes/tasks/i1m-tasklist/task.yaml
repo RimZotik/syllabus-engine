@@ -1,0 +1,90 @@
+id: i1m-tasklist
+title: Кто занял память
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **По выводу `tasklist` из файла `tasklist.csv` выведите для каждой программы, сколько у неё процессов и сколько памяти они занимают вместе.**
+
+  Файл — вывод команды `tasklist /fo csv` (английская Windows): заголовок и по строке на процесс; программа — столбец `Image Name`, память — `Mem Usage` вида `10,696 K` (запятая отделяет тысячи). Вывод — `программа: процессов N, память M K`, где в M тысячи отделены пробелом; по убыванию памяти, при равной памяти — по имени программы, как сортирует `sorted`.
+
+  Пример 1
+  ```input
+  (tasklist.csv)
+  "Image Name","PID","Session Name","Session#","Mem Usage"
+  "System Idle Process","0","Services","0","8 K"
+  "chrome.exe","812","Console","3","245,120 K"
+  "python.exe","36412","Console","3","10,696 K"
+  "chrome.exe","9044","Console","3","98,304 K"
+  "chrome.exe","1210","Console","3","40,960 K"
+  "python.exe","33648","Console","3","10,692 K"
+  "Telegram.exe","5120","Console","3","180,224 K"
+  ```
+  ```output
+  chrome.exe: процессов 3, память 384 384 K
+  Telegram.exe: процессов 1, память 180 224 K
+  python.exe: процессов 2, память 21 388 K
+  System Idle Process: процессов 1, память 8 K
+  ```
+starter: |
+  import csv
+
+  # План:
+  # 1. Прочитать tasklist.csv через csv.DictReader
+  # 2. Для каждой программы накопить число процессов и память
+  # 3. Отсортировать и вывести
+solution: |
+  import csv
+
+  count = {}
+  memory = {}
+  with open("tasklist.csv", encoding="utf-8", newline="") as f:
+      for row in csv.DictReader(f):
+          name = row["Image Name"]
+          kb = int(row["Mem Usage"].replace(",", "").replace(" K", ""))
+          count[name] = count.get(name, 0) + 1
+          memory[name] = memory.get(name, 0) + kb
+
+  for name in sorted(memory, key=lambda n: (-memory[n], n)):
+      mem = f"{memory[name]:,}".replace(",", " ")
+      print(f"{name}: процессов {count[name]}, память {mem} K")
+tests:
+  files:
+    tasklist.csv: |
+      "Image Name","PID","Session Name","Session#","Mem Usage"
+      "System Idle Process","0","Services","0","8 K"
+      "chrome.exe","812","Console","3","245,120 K"
+      "python.exe","36412","Console","3","10,696 K"
+      "chrome.exe","9044","Console","3","98,304 K"
+      "chrome.exe","1210","Console","3","40,960 K"
+      "python.exe","33648","Console","3","10,692 K"
+      "Telegram.exe","5120","Console","3","180,224 K"
+  io:
+    - name: Пример 1
+      stdout: "chrome.exe: процессов 3, память 384 384 K\nTelegram.exe: процессов 1, память 180 224 K\npython.exe: процессов 2, память 21 388 K\nSystem Idle Process: процессов 1, память 8 K"
+    - name: Файл из Windows с CRLF и миллион килобайт
+      files:
+        tasklist.csv: "\"Image Name\",\"PID\",\"Session Name\",\"Session#\",\"Mem Usage\"\r\n\"Code.exe\",\"100\",\"Console\",\"1\",\"612,000 K\"\r\n\"Code.exe\",\"104\",\"Console\",\"1\",\"500,500 K\"\r\n\"explorer.exe\",\"7\",\"Console\",\"1\",\"96,512 K\"\r\n"
+      stdout: "Code.exe: процессов 2, память 1 112 500 K\nexplorer.exe: процессов 1, память 96 512 K"
+      hidden: true
+    - name: Равная память — по имени
+      files:
+        tasklist.csv: |
+          "Image Name","PID","Session Name","Session#","Mem Usage"
+          "b.exe","2","Console","1","1,000 K"
+          "a.exe","3","Console","1","600 K"
+          "c.exe","4","Console","1","1,000 K"
+          "a.exe","5","Console","1","400 K"
+      stdout: "a.exe: процессов 2, память 1 000 K\nb.exe: процессов 1, память 1 000 K\nc.exe: процессов 1, память 1 000 K"
+      hidden: true
+    - name: Только заголовок
+      files:
+        tasklist.csv: "\"Image Name\",\"PID\",\"Session Name\",\"Session#\",\"Mem Usage\"\n"
+      stdout: ""
+      hidden: true
+hints:
+  - level: 1
+    text: 'Одна программа — сколько угодно процессов: каждая строка файла — процесс, а итог нужен по программам. Значит, два словаря-накопителя (или один со списками) по имени программы.'
+  - level: 2
+    text: 'Память из `"10,696 K"` в число: уберите запятую и хвост `" K"` и передайте остаток в `int`. Столбцы удобнее брать по имени через `csv.DictReader`.'
+  - level: 3
+    text: 'Сортировка по убыванию памяти, а при равенстве по имени — ключ-кортеж `(-память, имя)`. Пробел между тысячами: `f"{m:,}".replace(",", " ")`.'

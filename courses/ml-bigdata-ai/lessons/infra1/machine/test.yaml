@@ -1,0 +1,458 @@
+title: Контрольная раздела «Как устроен компьютер»
+pass: 0.85
+minutes: 40
+questions:
+- id: s-error-or-garbage
+  type: multi
+  q: 'Текст записали в одной кодировке, а читают через `decode` в другой. В каких случаях будет `UnicodeDecodeError`?'
+  options:
+  - '«привет» записали в cp1251, читают как UTF-8'
+  - '«привет» записали в UTF-8, читают как cp1251'
+  - '«Hello» записали в cp1251, читают как UTF-8'
+  - '«привет» записали в cp866, читают как UTF-8'
+  - '«Игра» записали в UTF-8, читают как cp1251'
+  - '«Привет» записали в KOI8-R, читают как cp866'
+  answer: [0, 3, 4]
+  explain: 'UTF-8 строгий: байты кириллицы из cp1251 и cp866 (все больше 127) не складываются в правильные последовательности со служебными битами — ошибка. Латиница во всех этих кодировках — ASCII, а ASCII — уже правильный UTF-8, поэтому «Hello» читается без ошибки. В cp866 у каждого байта есть символ, и KOI8-R в ней даёт тихий мусор. В cp1251 символ есть у всех байтов, кроме 0x98, — а «И» в UTF-8 как раз `d0 98`: поэтому «Игра» падает, а «привет» превращается в мусор без ошибки.'
+- id: s-two-bytes-meanings
+  type: multi
+  q: 'В файле два байта: `d0 96`. Какие утверждения о них верны?'
+  options:
+  - 'Прочитанные как UTF-8, они дают одну букву «Ж»'
+  - 'Прочитанные как cp1251, они дают два символа'
+  - 'Как одно число со старшим байтом первым это 53398'
+  - 'Текстом они быть не могут: байт 0x96 больше 127'
+  - '`len` этих байтов в Python — 1, если это буква «Ж»'
+  answer: [0, 1, 2]
+  explain: 'У байтов нет своего смысла — его задаёт тот, кто читает. Как UTF-8: `110 10000` и `10 010110` — продолжающий байт после первого, номер 10000010110₂ = 0x416 — «Ж». В cp1251 каждый байт — символ, здесь «Р» и «–». Как число: 0xD0 · 256 + 0x96 = 53398. Байты больше 127 — обычное дело для кириллицы. `len` у `bytes` считает байты, а не буквы: 2.'
+- id: s-same-address
+  type: single
+  q: 'Программа печатает `hex(id(prices))` — адрес словаря `prices` в памяти процесса. Её запустили в двух окнах одновременно, и оба запуска напечатали одинаковый адрес. Что это значит?'
+  options:
+  - 'Это два разных словаря: каждый адрес отсчитан в памяти своего процесса'
+  - 'Это один и тот же словарь, и изменения из одного окна будут видны в другом'
+  - 'Второй запуск — это поток первого процесса, поэтому память у них общая'
+  - 'Так быть не может: два процесса не способны напечатать одинаковый адрес, программа ошиблась'
+  answer: 0
+  explain: 'Каждый запуск — отдельный процесс со своей памятью. Адрес — номер байта внутри памяти своего процесса, поэтому одно и то же число в двух процессах указывает на разные места. Совпадение возможно и ни о чём не говорит. Потоки появляются внутри одного процесса, а не при запуске программы в другом окне.'
+- id: s-gib-of-letters
+  type: single
+  q: 'Файл весит ровно 1 ГиБ и состоит только из русских букв в UTF-8 — без пробелов, цифр, переводов строк и BOM. Сколько символов вернёт `len` после чтения файла с `encoding="utf-8"`?'
+  options:
+  - '536 870 912'
+  - '500 000 000'
+  - '1 073 741 824'
+  - '268 435 456'
+  answer: 0
+  explain: '1 ГиБ — 2³⁰ = 1 073 741 824 байта, русская буква в UTF-8 — 2 байта, значит, букв 2²⁹ = 536 870 912. 500 миллионов — если перепутать ГиБ с миллиардом байтов; 1 073 741 824 — если считать байт за символ; 268 435 456 — если считать по 4 байта на букву.'
+- id: s-code-fix-hexdump
+  type: code
+  q: |
+    **Исправьте `dump(data)`: она возвращает строки шестнадцатеричного дампа, как у программ просмотра байтов, — но в двух местах ошибается.**
+    Строка дампа — 16 байтов: смещение (номер первого байта строки, 8 hex-цифр строчными), два пробела, байты в hex через пробел, дополненные пробелами до 47 символов, два пробела и те же байты как текст: байты 32…126 — символами ASCII, остальные — точкой.
+    ```input
+    dump(b"GET /index.html HTTP/1.1\r\nHost: forge\r\n")
+    ```
+    ```output
+    00000000  47 45 54 20 2f 69 6e 64 65 78 2e 68 74 6d 6c 20  GET /index.html
+    00000010  48 54 54 50 2f 31 2e 31 0d 0a 48 6f 73 74 3a 20  HTTP/1.1..Host:
+    00000020  66 6f 72 67 65 0d 0a                             forge..
+    ```
+  starter: |
+    def dump(data):
+        lines = []
+        for i in range(0, len(data), 16):
+            chunk = data[i:i + 16]
+            hex_part = chunk.hex(" ").ljust(47)
+            text = "".join(chr(b) if b < 128 else "." for b in chunk)
+            lines.append(f"{i:08}  {hex_part}  {text}")
+        return lines
+
+
+    for line in dump(b"GET /index.html HTTP/1.1\r\nHost: forge\r\n"):
+        print(line)
+  solution: |
+    def dump(data):
+        lines = []
+        for i in range(0, len(data), 16):
+            chunk = data[i:i + 16]
+            hex_part = chunk.hex(" ").ljust(47)
+            text = "".join(chr(b) if 32 <= b <= 126 else "." for b in chunk)
+            lines.append(f"{i:08x}  {hex_part}  {text}")
+        return lines
+
+
+    for line in dump(b"GET /index.html HTTP/1.1\r\nHost: forge\r\n"):
+        print(line)
+  tests:
+    asserts:
+    - name: Пример из условия
+      code: |
+        got = dump(b"GET /index.html HTTP/1.1\r\nHost: forge\r\n")
+        want = [
+            "00000000  47 45 54 20 2f 69 6e 64 65 78 2e 68 74 6d 6c 20  GET /index.html ",
+            "00000010  48 54 54 50 2f 31 2e 31 0d 0a 48 6f 73 74 3a 20  HTTP/1.1..Host: ",
+            "00000020  66 6f 72 67 65 0d 0a                             forge..",
+        ]
+        assert got == want, f"Ожидались строки {want}, а вернулись {got}"
+    - name: Смещение после 160 байтов
+      code: |
+        got = dump(bytes(range(65, 91)) * 7)
+        assert len(got) == 12, f"182 байта — это 12 строк по 16, а вернулось {len(got)} строк"
+        assert got[10].startswith("000000a0  "), f"Строка 11 начинается с байта 160 = 0xa0, нужно смещение '000000a0', а строка начинается с {got[10][:10]!r}"
+    - name: Не-ASCII и управляющие байты — точки
+      code: |
+        got = dump("Цена: 5₽\n".encode("utf-8") + bytes([0, 31, 32, 126, 127]))
+        want = ["00000000  d0 a6 d0 b5 d0 bd d0 b0 3a 20 35 e2 82 bd 0a 00  ........: 5.....", "00000010  1f 20 7e 7f                                      . ~."]
+        assert got == want, f"Ожидались строки {want}, а вернулись {got}"
+    - name: Пустые данные
+      code: |
+        got = dump(b"")
+        assert got == [], f"Для пустых данных нужен пустой список, а вернулось {got!r}"
+  explain: 'Первая ошибка — смещение: формат `08` пишет десятичное число, и вторая строка получает `00000016` вместо `00000010`; нужен `08x`. Вторая — текстовая часть: байты 0…31 и 127 — управляющие символы ASCII, а не печатные, и `\r\n` ломал строку дампа. Печатные — с 32 по 126.'
+- id: s-code-write-chunks
+  type: code
+  q: |
+    **Напишите программу: таблица не помещается в память целиком, и её обрабатывают частями. Посчитать объём таблицы в ГиБ, сколько частей понадобится и сколько секунд займёт прочитать её с диска.**
+    Ввод — одна строка: `строк столбцов байтов_на_число часть_ГиБ скорость_МБ/с`, все числа целые. Часть — не больше `часть_ГиБ` гибибайтов; частей — наименьшее число, которое вместит весь объём. Скорость — в мегабайтах производителя: 1 МБ = 1 000 000 байтов. Вывод — три строки: `Объём: V ГиБ` (два знака после точки), `Частей: K`, `Чтение: T с` (один знак).
+    ```input
+    30000000 20 8 1 500
+    ```
+    ```output
+    Объём: 4.47 ГиБ
+    Частей: 5
+    Чтение: 9.6 с
+    ```
+  starter: |
+    rows, cols, size, part_gib, speed = [int(x) for x in input().split()]
+  solution: |
+    rows, cols, size, part_gib, speed = [int(x) for x in input().split()]
+    total = rows * cols * size
+    part = part_gib * 1024 ** 3
+    parts = (total + part - 1) // part
+    print(f"Объём: {total / 1024 ** 3:.2f} ГиБ")
+    print(f"Частей: {parts}")
+    print(f"Чтение: {total / (speed * 1_000_000):.1f} с")
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "30000000 20 8 1 500\n"
+      stdout: "Объём: 4.47 ГиБ\nЧастей: 5\nЧтение: 9.6 с"
+    - name: Делится нацело
+      stdin: "402653184 1 8 1 2000\n"
+      stdout: "Объём: 3.00 ГиБ\nЧастей: 3\nЧтение: 1.6 с"
+      hidden: true
+    - name: На строку больше — ещё одна часть
+      stdin: "402653185 1 8 1 2000\n"
+      stdout: "Объём: 3.00 ГиБ\nЧастей: 4\nЧтение: 1.6 с"
+      hidden: true
+    - name: Помещается в одну часть
+      stdin: "1000 50 4 1 150\n"
+      stdout: "Объём: 0.00 ГиБ\nЧастей: 1\nЧтение: 0.0 с"
+      hidden: true
+    - name: Большая таблица и медленный диск
+      stdin: "1000000000 5 4 16 150\n"
+      stdout: "Объём: 18.63 ГиБ\nЧастей: 2\nЧтение: 133.3 с"
+      hidden: true
+  explain: 'Объём — строки × столбцы × байты; ГиБ — деление на 1024³, как считают память. Частей — объём, делённый на размер части, с округлением вверх, и считать его надёжнее в байтах целыми числами: `(total + part - 1) // part`. Скорость диска производитель указывает в миллионах байтов в секунду — тут уже делят на 10⁶, а не на 1024².'
+- id: s-code-fix-jobs-from-windows
+  type: code
+  q: |
+    **Исправьте программу: она читает процессы из `jobs.txt` — строки `имя;шагов` — и выводит, какой процесс работал на каждом шаге, если ядро делится отрезками по `q` шагов (`q` — во вводе).**
+    Правила очереди — как раньше: процесс из начала очереди работает `q` шагов или меньше, недоработавший встаёт в конец; пустые строки файла пропускаются. Вывод — имена через пробел. Файл на вкладке сохранён в Блокноте Windows: в UTF-8 с BOM и концами строк CRLF; программа должна работать и с ним, и с обычным файлом из Linux.
+    ```input
+    2
+    (jobs.txt — с BOM и CRLF)
+    A;3
+    B;1
+    ```
+    ```output
+    A A B A
+    ```
+  starter: |
+    with open("jobs.txt", "rb") as f:
+        lines = f.read().decode("utf-8").split("\n")
+    queue = []
+    for line in lines:
+        if line:
+            name, steps = line.split(";")
+            queue.append([name, int(steps)])
+    q = int(input())
+    timeline = []
+    while queue:
+        name, left = queue.pop(0)
+        work = min(q, left)
+        timeline += [name] * work
+        left -= work
+        if left > 0:
+            queue.append([name, left])
+    print(" ".join(timeline))
+  solution: |
+    with open("jobs.txt", "rb") as f:
+        lines = f.read().decode("utf-8-sig").splitlines()
+    queue = []
+    for line in lines:
+        if line:
+            name, steps = line.split(";")
+            queue.append([name, int(steps)])
+    q = int(input())
+    timeline = []
+    while queue:
+        name, left = queue.pop(0)
+        work = min(q, left)
+        timeline += [name] * work
+        left -= work
+        if left > 0:
+            queue.append([name, left])
+    print(" ".join(timeline))
+  tests:
+    files:
+      jobs.txt: "\ufeffA;3\r\nB;1\r\n"
+    io:
+    - name: Пример из условия
+      stdin: "2\n"
+      stdout: "A A B A"
+    - name: Файл из Linux с пустой строкой
+      stdin: "1\n"
+      files:
+        jobs.txt: "x;2\n\ny;2\n"
+      stdout: "x y x y"
+      hidden: true
+    - name: CRLF и пустая строка, без BOM
+      stdin: "2\n"
+      files:
+        jobs.txt: "report;3\r\n\r\nbackup;2\r\n"
+      stdout: "report report backup backup report"
+      hidden: true
+    - name: BOM без CRLF
+      stdin: "5\n"
+      files:
+        jobs.txt: "\ufeffsolo;3\n"
+      stdout: "solo solo solo"
+      hidden: true
+  explain: 'Файл из Блокнота приносит две беды. BOM после `decode("utf-8")` становится символом `\ufeff` и прилипает к первому имени — «A» печатается с невидимым знаком впереди; `utf-8-sig` его убирает. CRLF после `split("\n")` оставляет `\r`: в числе `int` его стерпит, но пустая строка Windows превращается в `"\r"` — она не пустая, и `split(";")` на ней падает. `splitlines()` понимает оба конца строки.'
+- id: s-code-write-count-chars
+  type: code
+  q: |
+    **Напишите `count_chars(path)`: сколько символов в файле в UTF-8 — не декодируя его, по байтам.**
+    Откройте файл функцией `open` в двоичном режиме. Символ начинается с каждого байта, кроме продолжающих (`10xxxxxx`); результат — как `len` строки, которую дали бы байты файла после `decode("utf-8")`: BOM — символ, `\r\n` — два символа. Файлы `a.txt` и `b.txt` — на вкладках над редактором.
+    ```input
+    (a.txt)
+    привет
+    (вызов)
+    count_chars("a.txt")
+    ```
+    ```output
+    7
+    ```
+    Ограничения: нельзя `decode`, `str`, `read_text` и модуль `codecs`.
+  starter: |
+    def count_chars(path):
+        pass
+
+
+    print(count_chars("a.txt"))
+  solution: |
+    def count_chars(path):
+        with open(path, "rb") as f:
+            data = f.read()
+        count = 0
+        for b in data:
+            if not 0b10000000 <= b <= 0b10111111:
+                count += 1
+        return count
+
+
+    print(count_chars("a.txt"))
+  tests:
+    forbid: [decode, str, read_text, codecs]
+    files:
+      a.txt: "привет\n"
+      b.txt: "Aя₽𝄞\r\nЁлка\r\n"
+    asserts:
+    - name: Файлы с вкладок
+      code: |
+        for name, want in [("a.txt", 7), ("b.txt", 12)]:
+            got = count_chars(name)
+            assert got == want, f"count_chars({name!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Файл открыт в двоичном режиме
+      code: |
+        import builtins
+        real_open = builtins.open
+        modes = []
+        def spy_open(file, mode="r", *args, **kwargs):
+            modes.append(mode)
+            return real_open(file, mode, *args, **kwargs)
+        builtins.open = spy_open
+        try:
+            count_chars("a.txt")
+        finally:
+            builtins.open = real_open
+        assert modes and all("b" in m for m in modes), f"Файл нужно открыть в двоичном режиме, а режимы открытия: {modes}"
+    - name: Длинный текст и BOM
+      code: |
+        text = "\ufeff" + "Съешь же ещё этих мягких французских булок, да выпей чаю. " * 50 + "€ и ₽"
+        with open("long.txt", "wb") as f:
+            f.write(text.encode("utf-8"))
+        got = count_chars("long.txt")
+        assert got == len(text), f"В long.txt {len(text)} символов (с BOM), а count_chars вернула {got!r}"
+    - name: Пустой файл
+      code: |
+        with open("empty.txt", "wb") as f:
+            pass
+        got = count_chars("empty.txt")
+        assert got == 0, f"Для пустого файла нужно 0, а вернулось {got!r}"
+  explain: 'В UTF-8 у каждого символа ровно один начальный байт, а продолжающие узнаются по первым битам `10` — это числа от 128 до 191. Поэтому символы считают, пропуская продолжающие байты; декодировать ничего не нужно. Так же Python находит границы символов, а битый UTF-8 видит по тем же служебным битам.'
+- id: s-code-write-guess-encoding
+  type: code
+  q: |
+    **Напишите `guess_encoding(path)`: по байтам файла угадать кодировку из трёх — `"utf-8-sig"`, `"utf-8"` или `"cp1251"`; и `read_any(path)`: вернуть текст файла, прочитанный угаданной кодировкой.**
+    Правила по порядку: файл начинается с BOM `ef bb bf` — `"utf-8-sig"`; иначе байты целиком читаются как UTF-8 без ошибки — `"utf-8"` (в том числе пустой файл и чистый ASCII); иначе — `"cp1251"`. Файлы `notepad.txt` (UTF-8 с BOM) и `plain.txt` — на вкладках; файлы в cp1251 создаёт проверка.
+    ```input
+    guess_encoding("notepad.txt")
+    guess_encoding("plain.txt")
+    read_any("notepad.txt")
+    ```
+    ```output
+    utf-8-sig
+    utf-8
+    Отчёт
+    ```
+  starter: |
+    def guess_encoding(path):
+        pass
+
+
+    def read_any(path):
+        pass
+  solution: |
+    def guess_encoding(path):
+        with open(path, "rb") as f:
+            data = f.read()
+        if data.startswith(b"\xef\xbb\xbf"):
+            return "utf-8-sig"
+        try:
+            data.decode("utf-8")
+        except UnicodeDecodeError:
+            return "cp1251"
+        return "utf-8"
+
+
+    def read_any(path):
+        with open(path, encoding=guess_encoding(path)) as f:
+            return f.read()
+  tests:
+    files:
+      notepad.txt: "\ufeffОтчёт"
+      plain.txt: "Сумма;45\n"
+    asserts:
+    - name: Файлы с вкладок
+      code: |
+        for name, want in [("notepad.txt", "utf-8-sig"), ("plain.txt", "utf-8")]:
+            got = guess_encoding(name)
+            assert got == want, f"guess_encoding({name!r}) должна вернуть {want!r}, а вернула {got!r}"
+        got = read_any("notepad.txt")
+        assert got == "Отчёт", f"read_any('notepad.txt') должна вернуть 'Отчёт' без BOM, а вернула {got!r}"
+    - name: Выгрузка в cp1251
+      code: |
+        with open("export.csv", "wb") as f:
+            f.write("Игра;Цена\nШахматы;1500\n".encode("cp1251"))
+        got = guess_encoding("export.csv")
+        assert got == "cp1251", f"Для файла в cp1251 нужно 'cp1251', а вернулось {got!r}"
+        got = read_any("export.csv")
+        assert got == "Игра;Цена\nШахматы;1500\n", f"read_any должна вернуть текст выгрузки, а вернула {got!r}"
+    - name: ASCII, пустой файл и BOM не в начале
+      code: |
+        cases = [("ascii.txt", b"id,amount\n1,10\n", "utf-8"), ("empty.txt", b"", "utf-8"), ("mid.txt", "a".encode() + b"\xef\xbb\xbf" + "б".encode("utf-8"), "utf-8"), ("short.txt", "Да".encode("cp1251"), "cp1251")]
+        for name, data, want in cases:
+            with open(name, "wb") as f:
+                f.write(data)
+            got = guess_encoding(name)
+            assert got == want, f"Для байтов {data!r} нужно {want!r}, а guess_encoding вернула {got!r}"
+  explain: 'BOM проверяют первым: такой файл тоже правильный UTF-8, но читать его нужно с `utf-8-sig`, иначе в начале текста останется `\ufeff`. Дальше помогает строгость UTF-8: чужие байты почти никогда не складываются в правильные последовательности, и `UnicodeDecodeError` — надёжный признак другой кодировки. В обратную сторону так не выйдет: cp1251 читает почти любые байты без ошибки. Поэтому её и оставляют последней.'
+- id: s-code-write-utf8-decode
+  type: code
+  q: |
+    **Напишите `utf8_decode(data)`: прочитать байты UTF-8 в строку по схеме, без `decode`; на неправильных байтах выбросить `ValueError`.**
+    Первый байт символа: `0xxxxxxx` — символ из 1 байта, `110xxxxx` — из 2, `1110xxxx` — из 3, `11110xxx` — из 4; за ним нужное число продолжающих байтов `10xxxxxx`. Биты `x` по порядку образуют номер символа. Неправильно: продолжающий байт на месте первого, первый байт `11111xxx`, не продолжающий байт или конец данных там, где нужен продолжающий. Проверять, что номер записан кратчайшим способом, не нужно.
+    ```input
+    utf8_decode(b"\xd1\x8f\xe2\x82\xbd!")
+    utf8_decode("привет".encode("cp1251"))
+    ```
+    ```output
+    я₽!
+    ValueError
+    ```
+    Ограничения: нельзя `decode`, `str`, `codecs`.
+  starter: |
+    def utf8_decode(data):
+        pass
+
+
+    print(utf8_decode(b"\xd1\x8f\xe2\x82\xbd!"))
+  solution: |
+    def utf8_decode(data):
+        chars = []
+        i = 0
+        while i < len(data):
+            first = data[i]
+            if first < 0b10000000:
+                length, number = 1, first
+            elif 0b11000000 <= first < 0b11100000:
+                length, number = 2, first - 0b11000000
+            elif 0b11100000 <= first < 0b11110000:
+                length, number = 3, first - 0b11100000
+            elif 0b11110000 <= first < 0b11111000:
+                length, number = 4, first - 0b11110000
+            else:
+                raise ValueError(f"байт 0x{first:02x} не может начинать символ")
+            if i + length > len(data):
+                raise ValueError("данные оборвались посреди символа")
+            for b in data[i + 1:i + length]:
+                if not 0b10000000 <= b < 0b11000000:
+                    raise ValueError(f"байт 0x{b:02x} — не продолжающий")
+                number = number * 64 + (b - 0b10000000)
+            chars.append(chr(number))
+            i += length
+        return "".join(chars)
+
+
+    print(utf8_decode(b"\xd1\x8f\xe2\x82\xbd!"))
+  tests:
+    forbid: [decode, str, codecs]
+    asserts:
+    - name: Пример из условия
+      code: |
+        got = utf8_decode(b"\xd1\x8f\xe2\x82\xbd!")
+        assert got == "я₽!", f"utf8_decode(b'\\xd1\\x8f\\xe2\\x82\\xbd!') должна вернуть 'я₽!', а вернула {got!r}"
+    - name: Символы от 1 до 4 байтов
+      code: |
+        for text in ["", "Hello", "привет", "Ёлка, ёж и щука", "A ₽ € 𝄞", "\x00\x7f\x80\u07ff\u0800\uffff\U00010000\U0010ffff"]:
+            got = utf8_decode(text.encode("utf-8"))
+            assert got == text, f"Для байтов {text.encode('utf-8')!r} нужно {text!r}, а вернулось {got!r}"
+    - name: Неправильные байты — ValueError
+      code: |
+        cases = [b"\x80", b"abc\xbf", "привет".encode("cp1251"), b"\xff", b"\xf8\x80\x80\x80\x80", b"\xd0", b"\xe2\x82", "я".encode("utf-8") + b"\xf0\x9d\x84", b"\xd0A", b"\xe2\x82A"]
+        for data in cases:
+            what = None
+            try:
+                what = "вернула " + repr(utf8_decode(data))
+            except ValueError:
+                what = "ValueError"
+            except Exception as e:
+                what = f"выбросила {type(e).__name__}"
+            assert what == "ValueError", f"Для байтов {data!r} нужен ValueError, а функция {what}"
+  explain: 'Первые биты первого байта задают длину символа, и их проверяют по диапазонам: 0…127, 192…223, 224…239, 240…247. Остаток первого байта — старшие биты номера; каждый продолжающий байт добавляет 6 битов: `number = number * 64 + (b - 128)` — та же позиционная запись, что у `be_number`, только с основанием 64. Обрыв данных проверяют до чтения продолжающих байтов, иначе вместо `ValueError` вылетит `IndexError` или символ молча обрежется.'
+- id: s-open-why-utf8-strict
+  type: open
+  q: 'Почему файл в cp1251, прочитанный как UTF-8, обычно сразу даёт ошибку, а файл в UTF-8, прочитанный как cp1251, — почти всегда тихий мусор без ошибки? Объясните через устройство обеих кодировок.'
+  rubric:
+  - 'В cp1251 почти каждому из 256 значений байта соответствует символ (кроме 0x98), поэтому почти любые байты читаются без ошибки — получаются не те символы'
+  - 'В UTF-8 у байтов есть служебные биты: первый байт символа говорит, сколько байтов у символа, продолжающие начинаются с 10'
+  - 'Кириллица в cp1251 — байты больше 127; как UTF-8 они нарушают эти правила (например, первый байт обещает продолжение, а следующий не продолжающий), и декодер обнаруживает ошибку'
+  wrong_answers:
+  - UTF-8 — более новая кодировка, поэтому Python лучше её проверяет
+  - cp1251 не поддерживает кириллицу, поэтому получается мусор
+  - Ошибка возникает потому, что файл в cp1251 испорчен
+  followups:
+  - Почему ASCII-текст, записанный в cp1251, читается как UTF-8 без ошибки и без мусора?

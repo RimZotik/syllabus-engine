@@ -1,0 +1,89 @@
+id: i1m-mojibake-detective
+title: Детектив кракозябр
+sandbox: python-browser
+difficulty: 3
+statement: |
+  **Напишите `detect(s)`: `s` — русский текст, записанный в одной кодировке и прочитанный в другой; найти пару и вернуть тройку `(исходный текст, в какой записали, какой прочитали)`.**
+
+  Кодировки — из списка `ENCODINGS`. Исходный текст содержит хотя бы одну русскую букву, а все его символы — из строки `ALLOWED`: русские и латинские буквы, цифры, пробел и знаки `.,:;!?-«»()`. Перебирайте пары разных кодировок; пара не подходит, если обратный путь даёт ошибку (`UnicodeEncodeError` или `UnicodeDecodeError`) или текст не такой. В проверках подходит ровно одна пара. Если не подходит ни одна, вернуть `None`.
+
+  Пример 1
+  ```input
+  detect("РџСЂРёРІРµС‚, РјРёСЂ!")
+  ```
+  ```output
+  ('Привет, мир!', 'utf-8', 'cp1251')
+  ```
+
+  Пример 2
+  ```input
+  detect("нРВ╦Р ГЮ ЛЮИ")
+  ```
+  ```output
+  ('Отчёт за май', 'cp1251', 'koi8_r')
+  ```
+starter: |
+  ENCODINGS = ["utf-8", "cp1251", "cp866", "koi8_r"]
+  RUSSIAN = "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+  LATIN = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  ALLOWED = RUSSIAN + LATIN + "0123456789" + " .,:;!?-«»()"
+
+
+  def detect(s):
+      pass
+
+
+  print(detect("РџСЂРёРІРµС‚, РјРёСЂ!"))
+solution: |
+  ENCODINGS = ["utf-8", "cp1251", "cp866", "koi8_r"]
+  RUSSIAN = "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+  LATIN = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  ALLOWED = RUSSIAN + LATIN + "0123456789" + " .,:;!?-«»()"
+
+
+  def looks_right(text):
+      has_russian = any(ch in RUSSIAN for ch in text)
+      return has_russian and all(ch in ALLOWED for ch in text)
+
+
+  def detect(s):
+      for wrote in ENCODINGS:
+          for read in ENCODINGS:
+              if wrote == read:
+                  continue
+              try:
+                  text = s.encode(read).decode(wrote)
+              except UnicodeError:
+                  continue
+              if looks_right(text):
+                  return text, wrote, read
+      return None
+
+
+  print(detect("РџСЂРёРІРµС‚, РјРёСЂ!"))
+tests:
+  asserts:
+    - name: Примеры из условия
+      code: |
+        for s, want in [("РџСЂРёРІРµС‚, РјРёСЂ!", ("Привет, мир!", "utf-8", "cp1251")), ("нРВ╦Р ГЮ ЛЮИ", ("Отчёт за май", "cp1251", "koi8_r"))]:
+            got = detect(s)
+            assert got == want, f"detect({s!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Все виды поломок
+      code: |
+        cases = [("Счёт на оплату", "utf-8", "cp866"), ("Курс валют", "utf-8", "koi8_r"), ("Ёлка (2 шт.)", "koi8_r", "cp1251"), ("Доставка: 3 дня", "cp866", "cp1251"), ("Платёж принят", "cp866", "koi8_r")]
+        for text, wrote, read in cases:
+            broken = text.encode(wrote).decode(read)
+            got = detect(broken)
+            assert got == (text, wrote, read), f"Текст записали в {wrote}, прочитали как {read}: для {broken!r} нужно {(text, wrote, read)}, а вернулось {got!r}"
+    - name: Ни одна пара не подходит
+      code: |
+        for s in ["Hello", "2024-05-17"]:
+            got = detect(s)
+            assert got is None, f"В {s!r} нет кракозябр русского текста, нужно None, а вернулось {got!r}"
+hints:
+  - level: 1
+    text: 'Для одной пары путь назад вы знаете: получить байты той кодировкой, которой текст прочитали, и прочитать их той, в которой его записали. Осталось перебрать все пары разных кодировок — два вложенных цикла.'
+  - level: 2
+    text: 'Не каждая пара проходит без ошибки: `encode` падает, если символа нет в кодировке, `decode` — если байты для неё неправильные (это бывает у UTF-8). Обе ошибки — потомки `UnicodeError`; такую пару просто пропускайте.'
+  - level: 3
+    text: 'Проверку «похоже на исходный текст» вынесите в функцию: хотя бы одна русская буква (`any`) и все символы из `ALLOWED` (`all`). Подошла — сразу верните тройку; после всех циклов — `None`.'

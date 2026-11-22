@@ -1,0 +1,82 @@
+id: i1m-newlines-bom
+title: Файл из Windows — для Linux
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите `normalize(data)`: из байтов файла убрать BOM UTF-8 в начале и заменить каждый конец строки CRLF на LF; и `normalize_file(src, dst)`: записать в `dst` байты файла `src`, обработанные `normalize`.**
+
+  BOM — байты `ef bb bf`; убирается один BOM и только в самом начале. Каждая пара `\r\n` становится `\n`; одиночный `\r` остаётся как есть. Байты могут быть в любой кодировке, не только в UTF-8. Файл `win.csv` — на вкладке над редактором: он с BOM и CRLF.
+
+  Пример 1
+  ```input
+  normalize(b"\xef\xbb\xbfid;name\r\n1;Ann\r\n")
+  ```
+  ```output
+  b'id;name\n1;Ann\n'
+  ```
+
+  Пример 2
+  ```input
+  normalize(b"a\rb\r\r\n")
+  ```
+  ```output
+  b'a\rb\r\n'
+  ```
+starter: |
+  BOM = b"\xef\xbb\xbf"
+
+
+  def normalize(data):
+      pass
+
+
+  def normalize_file(src, dst):
+      pass
+solution: |
+  BOM = b"\xef\xbb\xbf"
+
+
+  def normalize(data):
+      if data.startswith(BOM):
+          data = data[len(BOM):]
+      return data.replace(b"\r\n", b"\n")
+
+
+  def normalize_file(src, dst):
+      with open(src, "rb") as f:
+          data = f.read()
+      with open(dst, "wb") as f:
+          f.write(normalize(data))
+tests:
+  files:
+    win.csv: "\ufeffдата;сумма\r\n2024-05-17;120\r\n2024-05-18;95\r\n"
+  asserts:
+    - name: Примеры из условия
+      code: |
+        for data, want in [(b"\xef\xbb\xbfid;name\r\n1;Ann\r\n", b"id;name\n1;Ann\n"), (b"a\rb\r\r\n", b"a\rb\r\n")]:
+            got = normalize(data)
+            assert got == want, f"normalize({data!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Без BOM и без CRLF ничего не меняется
+      code: |
+        for data in [b"", b"x\ny\n", "Привет\n".encode("utf-8"), b"\r"]:
+            got = normalize(data)
+            assert got == data, f"normalize({data!r}) должна вернуть байты без изменений, а вернула {got!r}"
+    - name: BOM не в начале и cp1251
+      code: |
+        for data, want in [(b"a\xef\xbb\xbfb\r\n", b"a\xef\xbb\xbfb\n"), ("Итог;5\r\n".encode("cp1251"), "Итог;5\n".encode("cp1251")), (b"\xef\xbb\xbf\xef\xbb\xbf", b"\xef\xbb\xbf")]:
+            got = normalize(data)
+            assert got == want, f"normalize({data!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Файл с вкладки
+      code: |
+        normalize_file("win.csv", "linux.csv")
+        with open("linux.csv", "rb") as f:
+            got = f.read()
+        want = "дата;сумма\n2024-05-17;120\n2024-05-18;95\n".encode("utf-8")
+        assert got == want, f"В linux.csv ожидались байты {want!r}, а в нём {got!r}"
+hints:
+  - level: 1
+    text: 'Работайте с байтами, не декодируя их: тогда кодировка файла не важна. У `bytes` есть те же `startswith`, срезы и `replace`, что у строк, только аргументы — тоже `bytes`.'
+  - level: 2
+    text: 'BOM убирают срезом, если байты с него начинаются. Концы строк — один вызов `replace`; подумайте, что он сделает с `\r\r\n` и почему одиночный `\r` останется сам.'
+  - level: 3
+    text: 'В `normalize_file` оба файла открывайте в двоичном режиме: `"rb"` для чтения и `"wb"` для записи. В текстовом режиме Python сам переделает концы строк — на Windows обратно в CRLF.'

@@ -1,0 +1,269 @@
+title: Проверка темы
+pass: 0.85
+minutes: 26
+questions:
+- id: three-lengths
+  type: single
+  q: |
+    Что выведет программа?
+    ```python
+    s = "Ёж 5€"
+    print(len(s), len(s.encode("utf-8")), len(s.encode("cp1251")))
+    ```
+  options:
+  - '`5 9 5`'
+  - '`5 10 5`'
+  - '`5 9 10`'
+  - '`9 9 5`'
+  answer: 0
+  explain: '`len` строки считает кодовые точки — их 5. В UTF-8 «Ё» и «ж» — по 2 байта, пробел и «5» — по одному, знак евро (U+20AC, больше 0x800) — 3: всего 9. В cp1251 любой её символ — один байт, а евро в ней есть: 5. «По 2 байта на всё» дало бы 10.'
+- id: bom-header
+  type: single
+  q: |
+    Файл `staff.csv` сохранён в Excel как «CSV UTF-8» — с BOM. Его первая строка — `имя,отдел`. Что выведет программа?
+    ```python
+    with open("staff.csv", encoding="utf-8") as f:
+        header = f.readline().strip().split(",")
+    print(header[0] == "имя", len(header[0]))
+    ```
+  options:
+  - '`False 4`'
+  - '`True 3`'
+  - '`False 6`'
+  - '`True 4`'
+  answer: 0
+  explain: 'При чтении как `utf-8` три байта BOM становятся одним символом U+FEFF в начале строки — `"\ufeffимя"`, 4 кодовые точки. `strip` убирает пробельные символы, а BOM к ним не относится, поэтому сравнение ложно. Шесть символов было бы, если бы BOM читали по байту, как в однобайтовой кодировке. Помогает `encoding="utf-8-sig"`.'
+- id: windows-text-bytes
+  type: single
+  q: |
+    Программа выполнилась на Windows. Сколько байтов в файле `list.txt`?
+    ```python
+    with open("list.txt", "w", encoding="utf-8") as f:
+        f.write("сыр\nхлеб\n")
+    ```
+  options:
+  - '18'
+  - '16'
+  - '9'
+  - '11'
+  answer: 0
+  explain: 'В текстовом режиме на Windows каждый `\n` при записи становится `\r\n` — двумя байтами. Семь кириллических букв в UTF-8 — 14 байтов, два конца строки — 4: всего 18. 16 — так было бы на Linux или с `newline=""`; 9 — символы строки, а не байты; 11 — символы плюс два `\r`.'
+- id: code-fix-read-export
+  type: code
+  q: |
+    **Исправьте `read_export(path)`: вернуть текст выгрузки из 1С — она записана в cp1251.** Файл для проверки создаёт сама проверка.
+    ```input
+    (export.csv — в cp1251)
+    товар;сумма
+    хлеб;45
+    (вызов)
+    read_export("export.csv")
+    ```
+    ```output
+    'товар;сумма\nхлеб;45\n'
+    ```
+  starter: |
+    def read_export(path):
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+  solution: |
+    def read_export(path):
+        with open(path, encoding="cp1251") as f:
+            return f.read()
+  tests:
+    asserts:
+    - name: Выгрузка из условия
+      code: |
+        with open("export.csv", "wb") as f:
+            f.write("товар;сумма\nхлеб;45\n".encode("cp1251"))
+        got = read_export("export.csv")
+        assert got == "товар;сумма\nхлеб;45\n", f"Ожидался текст 'товар;сумма\\nхлеб;45\\n', а вернулось {got!r}"
+    - name: Другая выгрузка
+      code: |
+        text = "Покупатель;Сумма, руб.\nИП Шишкин;1 200\nООО «Ёлка»;350\n"
+        with open("export2.csv", "wb") as f:
+            f.write(text.encode("cp1251"))
+        got = read_export("export2.csv")
+        assert got == text, f"Ожидался текст {text!r}, а вернулось {got!r}"
+  explain: 'Байты файла — это cp1251, и прочитать их можно только этой кодировкой: как UTF-8 они дают `UnicodeDecodeError` на первой же русской букве. Кодировку файла указывают в `encoding` — `open` сам её не узнает.'
+- id: code-fix-repair
+  type: code
+  q: |
+    **Исправьте `repair(s)`: `s` — текст в UTF-8, по ошибке прочитанный как cp1251; вернуть исходный текст.**
+    ```input
+    repair("РїСЂРёРІРµС‚")
+    repair("Hello, РјРёСЂ!")
+    ```
+    ```output
+    привет
+    Hello, мир!
+    ```
+  starter: |
+    def repair(s):
+        return s.encode("utf-8").decode("cp1251")
+
+
+    print(repair("РїСЂРёРІРµС‚"))
+  solution: |
+    def repair(s):
+        return s.encode("cp1251").decode("utf-8")
+
+
+    print(repair("РїСЂРёРІРµС‚"))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for s, want in [("РїСЂРёРІРµС‚", "привет"), ("Hello, РјРёСЂ!", "Hello, мир!")]:
+            got = repair(s)
+            assert got == want, f"repair({s!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Другие строки
+      code: |
+        for want in ["Оплата", "Ёлка, ёж и щука", "Сумма: 1 200", ""]:
+            s = want.encode("utf-8").decode("cp1251")
+            got = repair(s)
+            assert got == want, f"repair({s!r}) должна вернуть {want!r}, а вернула {got!r}"
+  explain: 'Путь назад — в обратном порядке: сначала получить байты той же кодировкой, которой текст по ошибке прочитали (cp1251), потом прочитать их правильной (UTF-8). Байты при поломке не пострадали, поэтому текст возвращается целиком.'
+- id: code-fix-count-letter
+  type: code
+  q: |
+    **Исправьте `count_letter(text, letter)`: вернуть, сколько раз буква `letter` встречается в тексте `text`.**
+    Буквы с надстрочным знаком (й, ё) в `text` и в `letter` могут быть записаны одной кодовой точкой или двумя — буквой и отдельным знаком. Одна и та же буква считается одинаково в любой записи.
+    ```input
+    count_letter("чай и май", "й")
+    count_letter(unicodedata.normalize("NFD", "чай и май"), "й")
+    ```
+    ```output
+    2
+    2
+    ```
+  starter: |
+    def count_letter(text, letter):
+        return text.count(letter)
+
+
+    print(count_letter("чай и май", "й"))
+  solution: |
+    import unicodedata
+
+
+    def count_letter(text, letter):
+        text = unicodedata.normalize("NFC", text)
+        letter = unicodedata.normalize("NFC", letter)
+        return text.count(letter)
+
+
+    print(count_letter("чай и май", "й"))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        import unicodedata
+        for text, want in [("чай и май", 2), (unicodedata.normalize("NFD", "чай и май"), 2)]:
+            got = count_letter(text, "й")
+            assert got == want, f"count_letter({text!r}, 'й') должна вернуть {want}, а вернула {got!r}"
+    - name: Буква «и» не считается внутри «й»
+      code: |
+        import unicodedata
+        text = unicodedata.normalize("NFD", "чай и май")
+        got = count_letter(text, "и")
+        assert got == 1, f"В «чай и май» одна буква «и» (в записи из двух кодовых точек), а count_letter вернула {got!r}"
+        text = unicodedata.normalize("NFD", "ёлка у ели")
+        got = count_letter(text, "е")
+        assert got == 1, f"В «ёлка у ели» одна буква «е», «ё» не в счёт, а count_letter вернула {got!r}"
+    - name: Буква записана двумя кодовыми точками
+      code: |
+        import unicodedata
+        for text, letter, want in [("ёж, ёлка, ещё", unicodedata.normalize("NFD", "ё"), 3), ("йод", unicodedata.normalize("NFD", "й"), 1), ("", "й", 0)]:
+            got = count_letter(text, letter)
+            assert got == want, f"count_letter({text!r}, {letter!r}) должна вернуть {want}, а вернула {got!r}"
+  explain: '«й» из двух кодовых точек — это «и» и кратка U+0306, и для `count` такая строка не содержит «й», зато содержит лишнее «и». Текст и букву приводят к одному виду: `unicodedata.normalize("NFC", ...)` собирает такие пары в одну кодовую точку. Нормализовать нужно обе строки, иначе не совпадёт та, что осталась в другой форме.'
+- id: code-write-describe
+  type: code
+  q: |
+    **Напишите программу: для каждого символа введённой строки вывести сам символ, его кодовую точку в записи `U+…` и байты в UTF-8 в hex через пробел.**
+    Ввод — одна строка без пробелов. Кодовая точка — заглавными hex-цифрами, не меньше четырёх, с нулями впереди; байты — строчными, как у `bytes.hex`.
+    ```input
+    Aя₽
+    ```
+    ```output
+    A U+0041 41
+    я U+044F d1 8f
+    ₽ U+20BD e2 82 bd
+    ```
+  starter: |
+    text = input()
+  solution: |
+    text = input()
+    for ch in text:
+        print(f"{ch} U+{ord(ch):04X} {ch.encode('utf-8').hex(' ')}")
+  tests:
+    io:
+    - name: Пример из условия
+      stdin: "Aя₽\n"
+      stdout: "A U+0041 41\nя U+044F d1 8f\n₽ U+20BD e2 82 bd"
+    - name: Ё, цифра и знак
+      stdin: "Ё7!\n"
+      stdout: "Ё U+0401 d0 81\n7 U+0037 37\n! U+0021 21"
+      hidden: true
+    - name: Пять hex-цифр
+      stdin: "𝄞ж\n"
+      stdout: "𝄞 U+1D11E f0 9d 84 9e\nж U+0436 d0 b6"
+      hidden: true
+  explain: '`ord` даёт номер символа, формат `04X` — его hex-запись заглавными, не короче четырёх цифр: у «я» — 044F, у скрипичного ключа — пять цифр 1D11E, формат их не обрезает. Байты — `encode("utf-8")`, а `hex(" ")` записывает каждый байт двумя цифрами через пробел.'
+- id: code-write-utf8-len
+  type: code
+  q: |
+    **Напишите `utf8_len(s)`: сколько байтов займёт строка `s` в UTF-8 — не кодируя её.**
+    Размер символа определяется его кодовой точкой: до U+007F — 1 байт, до U+07FF — 2, до U+FFFF — 3, дальше — 4.
+    ```input
+    utf8_len("привет")
+    utf8_len("Итого: 5₽")
+    ```
+    ```output
+    12
+    16
+    ```
+    Ограничения: нельзя `encode`, `bytes`, `bytearray` и модуль `codecs`.
+  starter: |
+    def utf8_len(s):
+        pass
+
+
+    print(utf8_len("привет"))
+  solution: |
+    def utf8_len(s):
+        total = 0
+        for ch in s:
+            cp = ord(ch)
+            if cp <= 0x7F:
+                total += 1
+            elif cp <= 0x7FF:
+                total += 2
+            elif cp <= 0xFFFF:
+                total += 3
+            else:
+                total += 4
+        return total
+
+
+    print(utf8_len("привет"))
+  tests:
+    forbid: [encode, bytes, bytearray, codecs]
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for s, want in [("привет", 12), ("Итого: 5₽", 16)]:
+            got = utf8_len(s)
+            assert got == want, f"utf8_len({s!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Каждый размер отдельно
+      code: |
+        for s, want in [("", 0), ("hello", 5), ("ё", 2), ("€", 3), ("𝄞", 4), ("A я ₽ 𝄞", 13)]:
+            got = utf8_len(s)
+            assert got == want, f"utf8_len({s!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Границы диапазонов
+      code: |
+        for cp, want in [(0x7F, 1), (0x80, 2), (0x7FF, 2), (0x800, 3), (0xFFFF, 3), (0x10000, 4), (0x10FFFF, 4)]:
+            got = utf8_len(chr(cp))
+            assert got == want, f"Символ U+{cp:04X} в UTF-8 занимает {want} байт(а), а utf8_len вернула {got!r}"
+  explain: 'UTF-8 тратит на символ столько байтов, сколько нужно его номеру: 7 битов помещаются в один байт, 11 — в два, 16 — в три, 21 — в четыре. Поэтому размер зависит только от `ord(ch)`, и сумма по символам даёт длину без кодирования. Первый пример: 6 букв по 2 байта; во втором — 5 русских букв по 2, двоеточие, пробел и цифра по 1 и знак рубля — 3.'

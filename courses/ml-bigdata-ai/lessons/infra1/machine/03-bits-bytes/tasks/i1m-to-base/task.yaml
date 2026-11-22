@@ -1,0 +1,82 @@
+id: i1m-to-base
+title: Из десятичной — в любую
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите `to_base(n, b)`: вернуть запись целого числа `n` в системе с основанием `b` — строкой, без префикса.**
+
+  `n` — целое, не меньше 0; `b` — от 2 до 16. Цифры больше 9 — заглавные буквы `A`–`F`. Ноль записывается как `"0"`.
+
+  Пример 1
+  ```input
+  to_base(200, 16)
+  to_base(13, 2)
+  ```
+  ```output
+  C8
+  1101
+  ```
+
+  Пример 2
+  ```input
+  to_base(0, 2)
+  ```
+  ```output
+  0
+  ```
+
+  Ограничения: нельзя `bin`, `hex`, `oct`, `format` и f-строки — переводите сами.
+starter: |
+  DIGITS = "0123456789ABCDEF"
+
+
+  def to_base(n, b):
+      pass
+
+
+  print(to_base(200, 16))
+solution: |
+  DIGITS = "0123456789ABCDEF"
+
+
+  def to_base(n, b):
+      if n == 0:
+          return "0"
+      digits = ""
+      while n > 0:
+          digits = DIGITS[n % b] + digits
+          n //= b
+      return digits
+
+
+  print(to_base(200, 16))
+tests:
+  forbid: [bin, hex, oct, format, f-string]
+  asserts:
+    - name: Примеры из условия
+      code: |
+        for args, want in [((200, 16), "C8"), ((13, 2), "1101"), ((0, 2), "0")]:
+            got = to_base(*args)
+            assert got == want, f"to_base{args} должна вернуть {want!r}, а вернула {got!r}"
+    - name: Байт и его края
+      code: |
+        for args, want in [((1, 2), "1"), ((255, 2), "11111111"), ((255, 16), "FF"), ((256, 16), "100"), ((256, 2), "100000000"), ((15, 16), "F")]:
+            got = to_base(*args)
+            assert got == want, f"to_base{args} должна вернуть {want!r}, а вернула {got!r}"
+    - name: Другие основания
+      code: |
+        for args, want in [((493, 8), "755"), ((35, 3), "1022"), ((10, 10), "10"), ((1000, 10), "1000")]:
+            got = to_base(*args)
+            assert got == want, f"to_base{args} должна вернуть {want!r}, а вернула {got!r}"
+    - name: Большие числа
+      code: |
+        for args, want in [((2 ** 64, 16), "1" + "0" * 16), ((2 ** 64 - 1, 16), "F" * 16), ((3 ** 40, 3), "1" + "0" * 40)]:
+            got = to_base(*args)
+            assert got == want, f"to_base{args} должна вернуть {want!r}, а вернула {got!r}"
+hints:
+  - level: 1
+    text: 'Переводят делением с остатком: остаток от деления на основание — последняя цифра записи, частное делят дальше, пока не станет нулём.'
+  - level: 2
+    text: 'Остатки получаются от последней цифры к первой. Приписывайте каждую новую цифру слева или соберите список и разверните его в конце. Цифру по остатку даст строка `DIGITS`: `DIGITS[остаток]`.'
+  - level: 3
+    text: 'Цикл `while n > 0:` с `n % b` и `n //= b`. При `n == 0` цикл не выполнится ни разу — этот случай обработайте отдельно.'

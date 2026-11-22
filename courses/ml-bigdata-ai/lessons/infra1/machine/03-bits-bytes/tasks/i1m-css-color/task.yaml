@@ -1,0 +1,79 @@
+id: i1m-css-color
+title: Цвет из CSS
+sandbox: python-browser
+difficulty: 2
+statement: |
+  **Напишите `parse_color(s)`: разобрать цвет из CSS в тройку чисел `(красный, зелёный, синий)` от 0 до 255.**
+
+  Принимаются две записи: `#RRGGBB` — по две hex-цифры на составляющую, и короткая `#RGB` — по одной, которая удваивается: `#F80` — то же, что `#FF8800`. Буквы — в любом регистре. Всё остальное — нет `#`, другая длина, символ не из `0`–`9`, `A`–`F` — `ValueError`.
+
+  Пример 1
+  ```input
+  parse_color("#FF8800")
+  parse_color("#2080c0")
+  parse_color("#F80")
+  ```
+  ```output
+  (255, 136, 0)
+  (32, 128, 192)
+  (255, 136, 0)
+  ```
+
+  Пример 2
+  ```input
+  parse_color("FF8800")
+  ```
+  ```output
+  ValueError
+  ```
+starter: |
+  def parse_color(s):
+      pass
+
+
+  print(parse_color("#FF8800"))
+solution: |
+  HEX_DIGITS = "0123456789abcdefABCDEF"
+
+
+  def parse_color(s):
+      if not s.startswith("#") or len(s) not in (4, 7):
+          raise ValueError(f"не цвет: {s!r}")
+      digits = s[1:]
+      for ch in digits:
+          if ch not in HEX_DIGITS:
+              raise ValueError(f"не hex-цифра: {ch!r}")
+      if len(digits) == 3:
+          digits = "".join(ch * 2 for ch in digits)
+      return tuple(int(digits[i:i + 2], 16) for i in (0, 2, 4))
+
+
+  print(parse_color("#FF8800"))
+tests:
+  asserts:
+    - name: Примеры из условия
+      code: |
+        for s, want in [("#FF8800", (255, 136, 0)), ("#2080c0", (32, 128, 192)), ("#F80", (255, 136, 0))]:
+            got = parse_color(s)
+            assert got == want, f"parse_color({s!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Чёрный, белый и короткие записи
+      code: |
+        for s, want in [("#000000", (0, 0, 0)), ("#ffffff", (255, 255, 255)), ("#000", (0, 0, 0)), ("#abc", (170, 187, 204)), ("#0A0b0C", (10, 11, 12))]:
+            got = parse_color(s)
+            assert got == want, f"parse_color({s!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: Не цвет — ValueError
+      code: |
+        for s in ["FF8800", "#FF880", "#FFFF", "#GG8800", "#F8G", "", "#", "##F800", "#+1+2+3", "# 1 2 3", "#-1-2-3"]:
+            what = None
+            try:
+                what = "вернула " + repr(parse_color(s))
+            except ValueError:
+                what = "ValueError"
+            assert what == "ValueError", f"parse_color({s!r}) должна выбросить ValueError, а {what}"
+hints:
+  - level: 1
+    text: 'Сначала проверьте форму: `#` в начале и после него 3 или 6 символов. Потом разберите цифры: у длинной записи составляющие — пары символов, у короткой — по одному.'
+  - level: 2
+    text: 'Короткую запись удобно превратить в длинную, удвоив каждый символ: `"F80"` → `"FF8800"`. Пару hex-цифр в число переводит `int(пара, 16)`.'
+  - level: 3
+    text: 'Каждый символ после `#` проверьте на вхождение в строку допустимых hex-цифр — так `ValueError` будет и для символов, которые `int` вдруг примет. Пары — срезы `[0:2]`, `[2:4]`, `[4:6]`.'
