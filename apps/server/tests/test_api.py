@@ -135,6 +135,21 @@ def test_rate_limit_event_is_remembered():
     assert lim["seven_day"]["used"] == 0.26
 
 
+def test_limits_are_reread_after_the_window_resets(monkeypatch):
+    import time
+    from syllabus_server import claude
+    calls = []
+    monkeypatch.setattr(claude, "run_stream", lambda *a, **k: calls.append(1) or {})
+    now = time.time()
+    fresh = {"used": 0.9, "resets_at": now + 3600, "status": "allowed"}
+    claude._limits["value"] = {"five_hour": fresh, "seven_day": None, "updated_at": now}
+    claude.refresh_limits()
+    assert calls == []  # read a moment ago, window still running — no probe
+    claude._limits["value"] = {"five_hour": fresh | {"resets_at": now - 60}, "seven_day": None, "updated_at": now}
+    claude.refresh_limits()
+    assert calls == [1]  # the window has reset since the last read — probe again
+
+
 def test_parallel_requests_do_not_break_the_database(tmp_path, monkeypatch):
     from concurrent.futures import ThreadPoolExecutor
     c = make_client(tmp_path, monkeypatch)

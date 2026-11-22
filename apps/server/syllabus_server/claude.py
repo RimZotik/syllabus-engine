@@ -86,10 +86,20 @@ def run_stream(args: list[str], prompt: str, timeout: int) -> dict:
     return result
 
 
+def _window_reset(cur: dict) -> bool:
+    """A remembered window whose reset time has passed is stale even if it was read a minute ago."""
+    now = time.time()
+    for w in (cur.get("five_hour"), cur.get("seven_day")):
+        r = (w or {}).get("resets_at")
+        if isinstance(r, (int, float)) and r <= now:
+            return True
+    return False
+
+
 def refresh_limits(max_age: float = 300.0) -> dict | None:
     """Tiny haiku call just to read the limits; skipped while they are fresh. Costs a negligible share of the quota."""
     cur = _limits["value"]
-    if cur and time.time() - cur["updated_at"] < max_age:
+    if cur and time.time() - cur["updated_at"] < max_age and not _window_reset(cur):
         return cur
     if not _probe_lock.acquire(blocking=False):
         return cur
