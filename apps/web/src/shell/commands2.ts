@@ -236,13 +236,16 @@ export function makeCommands2(s: ShellSession): Command[] {
   const fmtCpuTime = (sec: number, long: boolean) => long ? `${pad2(Math.floor(sec / 3600))}:${pad2(Math.floor(sec / 60) % 60)}:${pad2(sec % 60)}` : `${Math.floor(sec / 60)}:${pad2(sec % 60)}`;
   const startStr = (p: Proc) => { const d = new Date(p.start); return Date.now() - p.start < 86400_000 ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}` : `${MONTHS[d.getMonth()]}${pad2(d.getDate())}`; };
   const statStr = (p: Proc, self = false) => self ? "R+" : p.stat + (p.pid === 1 || p.pid === s.procs.shellPid ? "s" : "") + (p.tty === "pts/0" && s.procs.fg === p ? "+" : "");
-  const vsz = (p: Proc) => 4000 + ((p.pid * 7919) % 300000);
   const rss = (p: Proc) => Math.round(p.mem * 39000) + 1200;
+  // virtual size is always at least the resident one
+  const vsz = (p: Proc) => rss(p) * 4 + ((p.pid * 7919) % 300000);
 
+  /** The table with ps itself and the other commands of its pipeline (`ps aux | grep hog` lists the grep too). */
   function table(withSelf: string): Proc[] {
-    const self: Proc = { pid: 0, ppid: s.procs.shellPid, user: s.euid, name: withSelf.split(" ")[0], cmd: withSelf, tty: "pts/0", stat: "R", cpu: 0, mem: 0.1, start: Date.now(), behavior: "idle", lastTick: Date.now(), pending: [] };
-    self.pid = Math.max(...s.procs.procs.map((p) => p.pid), 4099) + 1;
-    return [...s.procs.procs, self];
+    const mk = (cmd: string): Proc => ({ pid: s.procs.newPid(), ppid: s.procs.shellPid, user: s.euid, name: cmd.split(" ")[0].replace(/^.*\//, ""), cmd, tty: "pts/0", stat: "R", cpu: 0, mem: 0.1, start: Date.now(), behavior: "idle", lastTick: Date.now(), pending: [] });
+    const others = s.pipelineCmds.filter((c) => !/^ps( |$)/.test(c)).map((c) => ({ ...mk(c), stat: "S" as const }));
+    const self = mk(withSelf);
+    return [...s.procs.procs, self, ...others];
   }
   const sortBy = (xs: Proc[], key: string | undefined) => {
     xs.sort((a, b) => a.pid - b.pid);
@@ -267,7 +270,7 @@ export function makeCommands2(s: ShellSession): Command[] {
     const onlyPid = pIdx >= 0 ? Number(args[pIdx + 1]) : undefined;
     const cmdline = `ps${args.length ? " " + args.join(" ") : ""}`;
     let xs = table(cmdline);
-    const self = xs[xs.length - 1];
+    const self = xs.find((p) => p.cmd === cmdline)!;
     if (onlyPid !== undefined) xs = xs.filter((p) => p.pid === onlyPid);
     else if (onlyUser) xs = xs.filter((p) => p.user === onlyUser);
     else if (!all) xs = xs.filter((p) => p.tty === "pts/0" && p.user === s.euid);
@@ -440,6 +443,14 @@ export function makeCommands2(s: ShellSession): Command[] {
     if (!(await s.fs.can(p, 1))) { io.err(`bash: ${shown}: Permission denied\n`); return 126; }
     let text: string;
     try { text = await s.fs.readFile(p); } catch { io.err(`bash: ${shown}: Permission denied\n`); return 126; }
+    // a command of the system (/usr/bin/ls): run it by its path — it must work even when PATH is broken
+    if (/^#!\/bin\/bash\n# Built-in command: /.test(text)) {
+      const mark = s.segments.length;
+      const r = await io.ctx.exec!([p, ...rest].map(sq).join(" "), { cwd: io.ctx.cwd, stdin: io.ctx.stdinProvided ? io.stdinText() : undefined });
+      s.segments.length = mark;
+      io.out(r.stdout); io.err(r.stderr);
+      return r.exitCode;
+    }
     const first = text.split("\n")[0];
     const m = /^#!\s*(\S+)(?:[ \t]+(\S+))?/.exec(first);
     if (m) {
@@ -553,6 +564,20 @@ export function makeCommands2(s: ShellSession): Command[] {
 }
 
 // ---------------------------------------------------------------------------------------------- top
+const TOP_HEAD = "    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND";
+/** A row of top under its header: numbers end where their heading ends, USER, S and COMMAND start where theirs start. */
+function topRow(v: string[]): string {
+  const heads = ["PID", "USER", "PR", "NI", "VIRT", "RES", "SHR", "S", "%CPU", "%MEM", "TIME+", "COMMAND"];
+  const left = new Set(["USER", "S", "COMMAND"]);
+  let out = "", from = 0;
+  heads.forEach((h, i) => {
+    const at = TOP_HEAD.indexOf(h, from);
+    from = at + h.length;
+    if (left.has(h)) out = out.padEnd(at) + v[i];
+    else out = out.padEnd(Math.max(out.length + 1, at + h.length - v[i].length)) + v[i];
+  });
+  return out;
+}
 
 function topText(s: ShellSession, cols: number, rows: number, sortKey: "P" | "M"): string[] {
   const now = new Date();
@@ -570,13 +595,14 @@ function topText(s: ShellSession, cols: number, rows: number, sortKey: "P" | "M"
     `MiB Mem :   3911.2 total, ${(2600 - mem).toFixed(1).padStart(8)} free, ${(900 + mem).toFixed(1).padStart(8)} used,    410.9 buff/cache`,
     "MiB Swap:   1024.0 total,   1024.0 free,      0.0 used.   2998.9 avail Mem",
     "",
-    "\x1b[7m" + "    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND".padEnd(cols).slice(0, cols) + "\x1b[0m",
+    "\x1b[7m" + TOP_HEAD.padEnd(cols).slice(0, cols) + "\x1b[0m",
   ];
   procs.sort((a, b) => (sortKey === "M" ? b.mem - a.mem : b.cpu - a.cpu) || a.pid - b.pid);
   for (const p of procs.slice(0, Math.max(0, rows - lines.length))) {
     const t = s.procs.cpuTime(p);
     const shown = p.stat === "T" ? 0 : p.cpu;
-    lines.push(`${String(p.pid).padStart(7)} ${p.user.padEnd(9).slice(0, 9)} ${"20".padStart(3)} ${"0".padStart(3)} ${String(4000 + ((p.pid * 7919) % 300000)).padStart(7)} ${String(Math.round(p.mem * 39000) + 1200).padStart(7)} ${String(900 + (p.pid % 500)).padStart(6)} ${p.stat} ${shown.toFixed(1).padStart(5)} ${p.mem.toFixed(1).padStart(5)} ${`${Math.floor(t / 60)}:${pad2(t % 60)}.00`.padStart(9)} ${p.name}`.slice(0, cols));
+    const res = Math.round(p.mem * 39000) + 1200;
+    lines.push(topRow([String(p.pid), p.user.slice(0, 8), "20", "0", String(res * 4 + ((p.pid * 7919) % 300000)), String(res), String(900 + (p.pid % 500)), p.stat, shown.toFixed(1), p.mem.toFixed(1), `${Math.floor(t / 60)}:${pad2(t % 60)}.00`, p.name]).slice(0, cols));
   }
   // like the real top: a line wider than the terminal is cut, not wrapped
   return lines.map((l) => (l.startsWith("\x1b") ? l : l.slice(0, cols)));
@@ -585,7 +611,8 @@ function topText(s: ShellSession, cols: number, rows: number, sortKey: "P" | "M"
 /** top: refreshes every second; q quits, P / M sort by CPU / memory, k kills (asks PID, then the signal). */
 class Top implements ScreenApp {
   done = false;
-  interval = 1000;
+  // procps-ng top: a new screen every 3 seconds
+  interval = 3000;
   private sortKey: "P" | "M" = "P";
   private prompt: { stage: "pid" | "sig"; input: string; pid?: number } | null = null;
   private msg = "";

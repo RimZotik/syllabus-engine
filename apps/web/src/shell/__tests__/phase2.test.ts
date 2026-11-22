@@ -196,7 +196,7 @@ describe("processes and signals", () => {
     expect(r.stdout).toBe("\n[1]+  Stopped                 sleep 5\n");
     expect(r.exitCode).toBe(148);
     expect((await run(s, "jobs")).out).toBe("[1]+  Stopped                 sleep 5\n");
-    expect((await run(s, "ps aux | grep -c 'T .*sleep 5'")).out).toBe("1\n");
+    expect((await run(s, "ps aux | grep 'sleep 5' | grep -c ' T '")).out).toBe("1\n");
     expect((await run(s, "bg")).out).toBe("[1]+ sleep 5 &\n");
     const f = s.run("fg %1", { terminal: false });
     await new Promise((res) => setTimeout(res, 50));
@@ -249,8 +249,10 @@ describe("environment", () => {
   });
   it("a line added to ~/.bashrc works in a new window", async () => {
     const s = await sh();
+    // Ubuntu 24.04 sets no EDITOR; a line in ~/.bashrc takes effect in the next window
+    expect((await run(s, "echo [$EDITOR]")).out).toBe("[]\n");
     await run(s, "echo 'export EDITOR=vim' >> ~/.bashrc");
-    expect((await run(s, "echo $EDITOR")).out).toBe("nano\n");
+    expect((await run(s, "echo [$EDITOR]")).out).toBe("[]\n");
     await s.newWindow();
     expect((await run(s, "printenv EDITOR")).out).toBe("vim\n");
   });

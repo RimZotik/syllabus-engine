@@ -22,7 +22,8 @@ const fit = (s: string, w: number) => (s.length > w ? s.slice(0, w) : s + " ".re
 /** Shortcut rows at the bottom of nano: «^G» in inverse, then the label, items in equal columns. */
 function shortcutRows(rows: [string, string][][], cols: number): string[] {
   return rows.map((items) => {
-    const n = Math.max(1, Math.min(items.length, Math.floor(cols / 16)));
+    // nano 7.2: six shortcuts a row on an 80-column terminal
+    const n = Math.max(1, Math.min(items.length, Math.floor(cols / 13)));
     const w = Math.floor(cols / n);
     let line = "";
     for (const [k, label] of items.slice(0, n)) line += INV + k + OFF + " " + fit(label, Math.max(0, w - k.length - 1));
@@ -47,8 +48,9 @@ const NANO_HELP = `Main nano help text
  ^X  F2      выйти; если файл изменён — спросит, сохранить ли (Y / N / ^C)
  ^O  F3      записать файл (спросит имя — Enter, чтобы оставить прежнее)
  ^S          сохранить сразу, без вопросов
- ^W  F6      искать текст; M-W — следующее совпадение
-             (Ctrl+W браузер не отдаёт странице — в тренажёре ищите по F6 или ^F)
+ ^W  F6      искать текст; M-W — следующее, M-Q — предыдущее совпадение
+             (Ctrl+W браузер не отдаёт странице — в тренажёре ищите по F6)
+ ^F / ^B     курсор на символ вперёд / назад (как стрелки)
  ^K          вырезать строку (несколько ^K подряд — несколько строк)
  ^U          вставить вырезанное
  ^C          где курсор: номер строки и столбца
@@ -80,14 +82,18 @@ export class Nano implements ScreenApp {
   private save: SaveFn;
   private height = 20;
 
+  /** the file had Windows line ends: nano converts them on reading and writes them back (M-D toggles at the name prompt) */
+  dos = false;
+
   constructor(text: string, file: string, notice: string, save: SaveFn) {
+    if (text.includes("\r\n")) { this.dos = true; text = text.replace(/\r\n/g, "\n"); }
     this.lines = text.replace(/\n$/, "").split("\n");
     this.file = file;
     this.status = notice;
     this.save = save;
   }
 
-  get text() { const t = this.lines.join("\n"); return t ? t + "\n" : ""; }
+  get text() { const t = this.lines.join(this.dos ? "\r\n" : "\n"); return t ? t + (this.dos ? "\r\n" : "\n") : ""; }
 
   render(cols: number, rows: number) {
     this.height = Math.max(1, rows - 4);
@@ -128,7 +134,7 @@ export class Nano implements ScreenApp {
     // the status / prompt line
     const prompts: Record<string, string> = {
       "save?": "Save modified buffer? ",
-      name: "File Name to Write: ",
+      name: this.dos ? "File Name to Write [DOS Format]: " : "File Name to Write: ",
       search: this.lastSearch ? `Search [${this.lastSearch}]: ` : "Search: ",
       goto: "Enter line number, column number: ",
     };
@@ -162,6 +168,7 @@ export class Nano implements ScreenApp {
     if (this.mode === "name" || this.mode === "search" || this.mode === "goto") {
       if (k === "C-c") { this.mode = "edit"; this.status = "Cancelled"; this.exitAfterWrite = false; return; }
       if (k === "Backspace") { this.input = [...this.input].slice(0, -1).join(""); return; }
+      if (k === "M-d" && this.mode === "name") { this.dos = !this.dos; return; }
       if (k === "Enter") { const m = this.mode; this.mode = "edit"; await this.submit(m); return; }
       if ([...k].length === 1 && k >= " ") this.input += k;
       return;
@@ -173,8 +180,8 @@ export class Nano implements ScreenApp {
     switch (k) {
       case "Up": if (this.row > 0) { this.row--; this.clampCol(); } break;
       case "Down": if (this.row < this.lines.length - 1) { this.row++; this.clampCol(); } break;
-      case "Left": if (this.col > 0) this.col--; else if (this.row > 0) { this.row--; this.col = this.lines[this.row].length; } break;
-      case "Right": if (this.col < line.length) this.col++; else if (this.row < this.lines.length - 1) { this.row++; this.col = 0; } break;
+      case "Left": case "C-b": if (this.col > 0) this.col--; else if (this.row > 0) { this.row--; this.col = this.lines[this.row].length; } break;
+      case "Right": case "C-f": if (this.col < line.length) this.col++; else if (this.row < this.lines.length - 1) { this.row++; this.col = 0; } break;
       case "Home": case "C-a": this.col = 0; break;
       case "End": case "C-e": this.col = line.length; break;
       case "PageUp": case "C-y": this.row = Math.max(0, this.row - this.height); this.top = Math.max(0, this.top - this.height); this.clampCol(); break;
@@ -198,8 +205,9 @@ export class Nano implements ScreenApp {
       case "C-x": case "F2":
         if (this.modified) this.mode = "save?"; else this.done = true;
         break;
-      case "C-w": case "C-f": case "F6": this.mode = "search"; this.input = ""; break;
+      case "C-w": case "F6": this.mode = "search"; this.input = ""; break;
       case "M-w": case "F16": this.find(this.lastSearch); break;
+      case "M-q": this.find(this.lastSearch, true); break;
       case "M-g": case "C-_": this.mode = "goto"; this.input = ""; break;
       case "C-g": case "F1": this.mode = "help"; this.helpTop = 0; break;
       case "C-k": {
@@ -260,9 +268,19 @@ export class Nano implements ScreenApp {
     if (exit) this.done = true;
   }
 
-  private find(what: string) {
+  private find(what: string, back = false) {
     if (!what) { this.status = "No current search pattern"; return; }
     const n = this.lines.length;
+    if (back) {
+      for (let i = 0; i <= n; i++) {
+        const r = (this.row - i + n) % n;
+        const upto = i === 0 ? this.col - 1 : this.lines[r].length;
+        const at = upto < 0 ? -1 : this.lines[r].lastIndexOf(what, upto);
+        if (at >= 0) { if (i > 0 && r > this.row) this.status = "Search Wrapped"; this.row = r; this.col = at; return; }
+      }
+      this.status = `"${what}" not found`;
+      return;
+    }
     for (let i = 0; i <= n; i++) {
       const r = (this.row + i) % n;
       const from = i === 0 ? this.col + 1 : 0;

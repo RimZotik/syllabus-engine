@@ -103,7 +103,13 @@ export function makeCommands(s: ShellSession): Command[] {
     def("uniq", uniq),
     wrap("sort", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^sort: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return c === "EISDIR" ? `sort: read failed: ${m[1]}: Is a directory` : `sort: cannot read: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) })),
     wrap("cut", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^cut: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `cut: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) })),
-    wrap("find", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^find: (.+): No such file or directory$/, async (m) => `find: ${qc(m[1].replace(/^[‘']|[’']$/g, ""))}: No such file or directory`) })),
+    wrap("find", async (_io, a, r) => {
+      let stderr = await rewriteLines(r.stderr, /^find: (.+): No such file or directory$/, async (m) => `find: ${qc(m[1].replace(/^[‘']|[’']$/g, ""))}: No such file or directory`);
+      // an unquoted -name pattern that the shell expanded into several names: findutils 4.9 adds a hint
+      const i = a.findIndex((x) => x === "-name" || x === "-iname");
+      if (/paths must precede expression/.test(stderr) && i >= 0 && a[i + 2] && !a[i + 2].startsWith("-")) stderr = stderr.replace(/\n?$/, `\nfind: possible unquoted pattern after predicate \`${a[i]}'?\n`);
+      return { ...r, stderr };
+    }),
     wrap("file", async (_io, _a, r) => ({ ...r, stdout: r.stdout.replace(/^(.+): cannot open \(No such file or directory\)$/gm, "$1: cannot open `$1' (No such file or directory)") })),
     wrap("tree", async (_io, _a, r) => ({ ...r, stdout: r.stdout.replace(/^((?:\|   |    )*)(\|--|`--) /gm, (_m, pre: string, b: string) => pre.replace(/\|   /g, "│   ") + (b === "|--" ? "├── " : "└── ")) })),
     wrap("grep", async (_io, a, r0) => {
@@ -114,7 +120,9 @@ export function makeCommands(s: ShellSession): Command[] {
         if (ops.length === 1 && ops[0] === "." && !a.some((x) => /^-[a-zA-Z]*[hc]/.test(x) && x.includes("h"))) return { ...r, stdout: r.stdout.replace(/^(?=.)/gm, "./") };
       }
       return r;
-    }, async (_io, a) => {
+    }, async (_io, a0) => {
+      // --color=auto (Ubuntu's alias) colours only a terminal; the interpreter's grep does not know the option
+      const a = a0.filter((x) => !/^--colou?r(=.*)?$/.test(x));
       // `grep -r pattern` without a folder searches the current one
       const rec = a.some((x) => /^-[a-zA-Z]*[rR]/.test(x) || x === "--recursive");
       return rec && grepOperands(a).length === 0 ? [...a, "."] : a;
@@ -163,7 +171,8 @@ export function makeCommands(s: ShellSession): Command[] {
       else if (code === "ok") {
         text = await s.fs.readFile(p);
         const n = text ? text.split("\n").length - (text.endsWith("\n") ? 1 : 0) : 0;
-        notice = (await s.fs.can(p, 2)) ? `Read ${n} line${n === 1 ? "" : "s"}` : `File '${name}' is unwritable`;
+        const dos = text.includes("\r\n") ? " (Converted from DOS format)" : "";
+        notice = (await s.fs.can(p, 2)) ? `Read ${n} line${n === 1 ? "" : "s"}${dos}` : `File '${name}' is unwritable`;
       } else notice = "New File";
       const nano = new Nano(text, name, notice, async (file, body) => {
         const target = io.path(file);
@@ -234,7 +243,8 @@ function parse(a: string[], flags: string, withVal = "", long: Record<string, st
     if (x.startsWith("--")) {
       const [k, v] = x.split("=", 2);
       const m = long[k];
-      if (!m) { r.bad ??= `unrecognized option '${x}'`; continue; }
+      if (m === undefined) { r.bad ??= `unrecognized option '${x}'`; continue; }
+      if (m === "") continue; // accepted and ignored (--color=auto: colours depend on the terminal anyway)
       if (withVal.includes(m)) r.vals.set(m, v ?? a[++i] ?? ""); else r.flags.add(m);
       continue;
     }
@@ -276,10 +286,23 @@ export function human(n: number) {
   if (v < 10) { const r = Math.ceil(v * 10) / 10; return r >= 10 ? `10${units[u]}` : `${r.toFixed(1)}${units[u]}`; }
   return `${Math.ceil(v)}${units[u]}`;
 }
-/** How ls shows a name on a terminal: quoted if it has spaces or special characters. */
-function ttyName(n: string) {
-  if (/^[\w.,+@%:=^~/-]+$/u.test(n)) return n;
-  return n.includes("'") ? `"${n}"` : `'${n}'`;
+/**
+ * How GNU ls shows a name on a terminal (quoting style shell-escape): letters of any alphabet as they are;
+ * quotes around a name with a space or a character special to the shell; control characters as $'\r'.
+ */
+export function ttyName(n: string) {
+  const special = /[\s!"$&'()*;<>?[\\\]^`{|}]/.test(n) || /^[#~]/.test(n);
+  const control = /[\x00-\x1f\x7f]/.test(n);
+  if (!special && !control) return n;
+  if (control) {
+    // 'a'$'\r' — printable runs in quotes, control characters in $'…'
+    const esc: Record<string, string> = { "\r": "\\r", "\n": "\\n", "\t": "\\t" };
+    return n.split(/([\x00-\x1f\x7f]+)/).filter(Boolean).map((part) => /^[\x00-\x1f\x7f]/.test(part)
+      ? "$'" + [...part].map((c) => esc[c] ?? "\\" + c.charCodeAt(0).toString(8).padStart(3, "0")).join("") + "'"
+      : "'" + part.replace(/'/g, "'\\''") + "'").join("");
+  }
+  if (n.includes("'") && !/["$`\\!]/.test(n)) return `"${n}"`;
+  return "'" + n.replace(/'/g, "'\\''") + "'";
 }
 
 type Ent = { name: string; path: string; kind: "d" | "-" | "l"; mode: number; size: number; mtime: Date; target?: string; links: number; unknown?: boolean };
@@ -315,9 +338,13 @@ async function ls(s: ShellSession, io: IO, args: string[]): Promise<number> {
     return c ? `\x1b[${c}m${shown}\x1b[0m` : shown;
   };
   const suffix = (e: Ent) => (!f.has("F") ? "" : e.kind === "d" ? "/" : e.kind === "l" ? "@" : e.mode & 0o111 ? "*" : "");
-  const label = (e: Ent) => color(e, tty ? ttyName(e.name) : e.name) + suffix(e);
+  // when some names on the screen are quoted, GNU ls puts a space before the others to keep them aligned
+  let pad = "";
+  const label = (e: Ent) => { const q = tty ? ttyName(e.name) : e.name; return (q === e.name ? pad : "") + color(e, q) + suffix(e); };
+  const shownWidth = (e: Ent) => { const q = tty ? ttyName(e.name) : e.name; return [...((q === e.name ? pad : "") + q + suffix(e))].length; };
 
   const render = (xs: Ent[], withTotal: boolean): string => {
+    pad = tty && xs.some((e) => ttyName(e.name) !== e.name) ? " " : "";
     if (f.has("l")) {
       const sizes = xs.map((e) => (f.has("h") ? human(e.size) : String(e.size)));
       const w = { links: Math.max(1, ...xs.map((e) => String(e.links).length)), own: Math.max(1, ...xs.map((e) => s.ownerOf(e.path).length)), grp: Math.max(1, ...xs.map((e) => s.groupOf(e.path).length)), size: Math.max(1, ...sizes.map((x) => x.length)) };
@@ -327,19 +354,19 @@ async function ls(s: ShellSession, io: IO, args: string[]): Promise<number> {
         out += `total ${f.has("h") ? (blocks ? human(blocks * 1024) : "0") : blocks}\n`;
       }
       xs.forEach((e, i) => {
-        if (e.unknown) { out += `-????????? ? ${"?".padStart(w.links)} ${"?".padEnd(w.own)} ${"?".padEnd(w.grp)} ${"?".padStart(w.size)}            ? ${e.name}
-`; return; }
+        if (e.unknown) { out += `-????????? ${"?".padStart(w.links)} ${"?".padEnd(w.own)} ${"?".padEnd(w.grp)} ${"?".padStart(w.size)} ${"?".padStart(12)} ${e.name}\n`; return; }
         out += `${e.kind}${rwx(e.kind === "l" ? 0o777 : e.mode)} ${String(e.links).padStart(w.links)} ${s.ownerOf(e.path).padEnd(w.own)} ${s.groupOf(e.path).padEnd(w.grp)} ${sizes[i].padStart(w.size)} ${lsDate(e.mtime)} ${label(e)}${e.target ? ` -> ${e.target}` : ""}\n`;
       });
       return out;
     }
     if (!tty) return xs.map((e) => label(e) + "\n").join("");
-    return columns(xs.map((e) => ({ text: label(e), width: [...(ttyName(e.name) + suffix(e))].length })), s.ui.cols);
+    return columns(xs.map((e) => ({ text: label(e), width: shownWidth(e) })), s.ui.cols);
   };
 
   const listDir = async (path: string, shownDir = "."): Promise<Ent[] | null> => {
-    const names = await s.fs.readdir(path).catch((e) => { lastErr = errCode(e); return null; });
-    if (!names) return null;
+    const all = await s.fs.readdir(path).catch((e) => { lastErr = errCode(e); return null; });
+    if (!all) return null;
+    const names = path === "/bin" || path === "/usr/bin" ? all.filter((n) => !n.startsWith("__")) : all;
     const shown = names.filter((n) => f.has("a") || f.has("A") || !n.startsWith("."));
     // entries of a folder you may read but not enter: names only; `ls -l` cannot stat them
     const xs = (await Promise.all(shown.map(async (n) => (await ent(joinPath(path, n), n)) ?? ({ name: n, path: joinPath(path, n), kind: "-", mode: 0, size: 0, mtime: new Date(0), links: 0, unknown: true } as Ent)))).filter((x): x is Ent => !!x);
@@ -541,6 +568,16 @@ async function cpMv(s: ShellSession, name: "cp" | "mv", io: IO, args: string[]) 
   const dest = io.path(destOp);
   const srcs = o.ops.slice(0, -1);
   const destIsDir = (await fs.exists(dest)) && (await fs.stat(dest)).isDirectory;
+  if (destOp.endsWith("/") && !destIsDir) {
+    // a trailing slash says «a folder»: coreutils refuses to make a file of that name
+    const exists = await fs.exists(dest);
+    for (const op of o.ops.slice(0, -1)) {
+      if (!(await fs.exists(io.path(op)))) { io.err(`${name}: cannot stat ${q(op)}: No such file or directory\n`); continue; }
+      if (name === "cp") io.err(exists ? `cp: failed to access ${q(destOp)}: Not a directory\n` : `cp: cannot create regular file ${q(destOp)}: Not a directory\n`);
+      else io.err(`mv: cannot move ${q(op)} to ${q(destOp)}: Not a directory\n`);
+    }
+    return 1;
+  }
   if (srcs.length > 1 && !destIsDir) {
     io.err((await fs.exists(dest)) ? `${name}: target ${q(destOp)} is not a directory\n` : `${name}: target ${q(destOp)}: No such file or directory\n`);
     return 1;

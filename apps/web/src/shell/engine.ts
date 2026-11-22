@@ -237,7 +237,9 @@ function strictFs(lib: Lib, s: ShellSession): StrictFs {
 }
 
 /** An Ubuntu-like skeleton: homes, /tmp (sticky), /etc with the user database, /root closed. */
-const LAYOUT_DIRS: [string, number][] = [["/etc", 0o755], ["/tmp", 0o1777], ["/var", 0o755], ["/var/log", 0o755], ["/usr/share", 0o755], ["/usr/local/bin", 0o755], ["/root", 0o700], ["/home", 0o755], ["/opt", 0o755], ["/srv", 0o755]];
+const LAYOUT_DIRS: [string, number][] = [["/etc", 0o755], ["/tmp", 0o1777], ["/var", 0o755], ["/var/log", 0o755], ["/usr/share", 0o755], ["/usr/local/bin", 0o755], ["/usr/local/sbin", 0o755], ["/usr/local/games", 0o755], ["/usr/sbin", 0o755], ["/usr/games", 0o755], ["/sbin", 0o755], ["/snap/bin", 0o755], ["/root", 0o700], ["/home", 0o755], ["/opt", 0o755], ["/srv", 0o755]];
+/** PATH of a fresh Ubuntu 24.04 session (/etc/environment) */
+export const UBUNTU_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin";
 const LAYOUT_FILES: Record<string, string> = {
   "/etc/hostname": "forge\n",
   "/etc/os-release": 'PRETTY_NAME="Ubuntu 24.04.1 LTS"\nNAME="Ubuntu"\nVERSION_ID="24.04"\nVERSION="24.04.1 LTS (Noble Numbat)"\nID=ubuntu\n',
@@ -250,10 +252,35 @@ const BASHRC = `# ~/.bashrc: executed by bash(1) for non-login shells.
 # don't put duplicate lines or lines starting with space in the history.
 HISTCONTROL=ignoreboth
 
+# enable color support of ls and also add handy aliases
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+
 # some more ls aliases
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
+`;
+
+const PROFILE = `# ~/.profile: executed by the command interpreter for login shells.
+
+# if running bash
+if [ -n "$BASH_VERSION" ]; then
+    # include .bashrc if it exists
+    if [ -f "$HOME/.bashrc" ]; then
+        . "$HOME/.bashrc"
+    fi
+fi
+
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/bin" ] ; then
+    PATH="$HOME/bin:$PATH"
+fi
+
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/.local/bin" ] ; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
 `;
 
 const SPECIAL_VARS = new Set(["IFS", "OPTIND", "SHELLOPTS", "BASHOPTS", "PPID", "HOSTTYPE", "MACHTYPE", "OSTYPE", "BASH_VERSION", "BASH_VERSINFO", "SHLVL", "_", "RANDOM", "SECONDS", "LINENO", "UID", "EUID"]);
@@ -301,6 +328,7 @@ export class ShellSession {
   /** a command (sudo -i, su) changed the shell itself: the pipeline's environment must not overwrite it */
   frameChanged = false;
   private nextAst: unknown = null;
+  pipelineLength = 1;
   private lastCode = 0;
   private loginEnv: Record<string, string> = {};
   private loginExported = new Set<string>();
@@ -358,6 +386,8 @@ export class ShellSession {
       fs: this.fs,
       cwd: "/",
       customCommands: [...makeCommands(this), ...makeCommands2(this)],
+      // no Python here: as on a system without python3 installed — type, which, command -v and /usr/bin agree
+      commands: this.lib.getCommandNames().filter((n) => n !== "python3" && n !== "python") as never,
       executionLimits: { maxOutputSize: 2_000_000, maxCommandCount: 200_000, maxLoopIterations: 100_000 },
     });
     this.bash.registerTransformPlugin({
@@ -385,11 +415,15 @@ export class ShellSession {
       await this.fs.writeFile("/etc/sudoers", "Defaults\tenv_reset\nroot\tALL=(ALL:ALL) ALL\n%sudo\tALL=(ALL:ALL) ALL\n");
       await this.fs.chmod("/etc/sudoers", 0o440);
       await this.fs.writeFile(`${this.home}/.bashrc`, BASHRC);
+      await this.fs.writeFile(`${this.home}/.profile`, PROFILE);
+      await this.fs.writeFile(`${this.home}/.bash_logout`, "# ~/.bash_logout: executed by bash(1) when login shell exits.\n");
       for (const p of this.fs.getAllPaths()) if (!isSystem(p)) await this.fs.utimes(p, fixed, fixed);
+      // the commands in /bin and /usr/bin are programs: rwxr-xr-x, so /usr/bin/ls runs by its full path
+      for (const p of this.fs.getAllPaths()) if (/^\/(usr\/)?bin\/[^/]+$/.test(p)) await this.fs.chmod(p, 0o755);
     });
     this.env = {
       HOME: this.home, USER: this.user, LOGNAME: this.user, SHELL: "/bin/bash", LANG: "C.UTF-8", TERM: "xterm-256color",
-      PATH: "/usr/local/bin:/usr/bin:/bin", EDITOR: "nano", PWD: this.cwd, OLDPWD: this.cwd,
+      PATH: UBUNTU_PATH, PWD: this.cwd, OLDPWD: this.cwd,
     };
     this.exported = new Set(Object.keys(this.env));
   }
@@ -485,7 +519,11 @@ export class ShellSession {
     const chunks: Chunk[] = [];
     this.cancelLine = false;
     // an interrupted line: bash just stops, without the interpreter's own note
-    const emit = (fd: 1 | 2, text: string) => { text = text.replace(/^bash: execution aborted\n?/m, ""); if (!text) return; chunks.push({ fd, text }); opts.onChunk?.({ fd, text }); };
+    const emit = (fd: 1 | 2, text: string) => {
+      text = text.replace(/^bash: execution aborted\n?/m, "");
+      // the interpreter's own words for a missing Python → bash's (python3) and Ubuntu's hint (python)
+      text = text.replace(/^bash: python3: command not available in browser environments\.[^\n]*\n/gm, "bash: python3: command not found\n")
+        .replace(/^bash: python: command not available in browser environments\.[^\n]*\n/gm, "Command 'python' not found, did you mean:\n  command 'python3' from deb python3\n  command 'python' from deb python-is-python3\n"); if (!text) return; chunks.push({ fd, text }); opts.onChunk?.({ fd, text }); };
     if (record && line.trim() && !/^\s/.test(line) && this.history[this.history.length - 1] !== line) this.history.push(line);
     await this.procs.tick();
     const src = line;
@@ -511,7 +549,7 @@ export class ShellSession {
           this.segments = [];
           await this.procs.tick();
           const r = await this.exec(":", pl, opts.signal, st.sourceText);
-          for (const c of order(r, this.segments)) emit(c.fd, c.text);
+          for (const c of order(r, this.segments, this.pipelineLength)) emit(c.fd, c.text);
           code = r.exitCode;
         }
       }
@@ -585,7 +623,7 @@ export class ShellSession {
     const u = this.users.get(user)!;
     this.euid = user;
     const keep = login ? {} : Object.fromEntries([...this.exported].map((k) => [k, this.env[k]]));
-    this.env = { ...keep, HOME: u.home, USER: user, LOGNAME: user, SHELL: "/bin/bash", LANG: "C.UTF-8", TERM: "xterm-256color", PATH: user === "root" ? "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" : "/usr/local/bin:/usr/bin:/bin" };
+    this.env = { ...keep, HOME: u.home, USER: user, LOGNAME: user, SHELL: "/bin/bash", LANG: "C.UTF-8", TERM: "xterm-256color", PATH: UBUNTU_PATH };
     if (login) this.cwd = u.home;
     this.env.PWD = this.cwd;
     this.exported = new Set(Object.keys(this.env));
@@ -651,6 +689,12 @@ export class ShellSession {
   /** One pipeline (or a whole line when `pipeline` is null) with the session's variables, folder, aliases and `$?`. */
   private async exec(script: string, pipeline: unknown, signal?: AbortSignal, sourceText?: string) {
     if (pipeline) {
+      this.pipelineCmds = ((pipeline as { commands?: AnyNode[] }).commands ?? []).filter((c) => c.type === "SimpleCommand" && c.name).map((c) => {
+        const words = [c.name, ...((c.args as unknown[]) ?? [])].map((w) => wordText(w) ?? "?");
+        const alias = this.aliases[words[0]];
+        return (alias ? [alias, ...words.slice(1)] : words).join(" ");
+      });
+      this.pipelineLength = ((pipeline as { commands?: unknown[] }).commands ?? []).length;
       await this.rewrite(pipeline);
       this.nextAst = { type: "Script", statements: [...this.prelude(), { type: "Statement", pipelines: [pipeline], operators: [], background: false }] };
     }
@@ -723,9 +767,11 @@ export class ShellSession {
     for (const c of ((pipeline as { commands?: AnyNode[] }).commands ?? [])) {
       if (c.type !== "SimpleCommand" || !c.name) continue;
       const name = wordText(c.name);
-      if (name && name.includes("/") && !name.startsWith("__")) {
+      // `*/` matches folders only (the interpreter's glob would match files too): expanded here
+      c.args = await expandDirGlobs(this, (c.args as unknown[]) ?? []);
+      if (name && name.includes("/") && !name.startsWith("/usr/bin/__")) {
         (c.args as unknown[]).unshift(c.name);
-        c.name = literalWord("__exec");
+        c.name = literalWord("/usr/bin/__exec");
       } else if (name === "cd") {
         const args = ((c.args as unknown[]) ?? []).map((a) => wordText(a));
         const target = args[0] === undefined ? this.env.HOME ?? this.home : args[0] === "-" ? this.env.OLDPWD : args[0];
@@ -733,12 +779,15 @@ export class ShellSession {
         const p = joinPath(this.cwd, target.replace(/^~(?=\/|$)/, this.env.HOME ?? this.home));
         const st = await this.fs.stat(p).catch(() => null);
         if (st?.isDirectory && !(await this.fs.can(p, 1))) {
-          c.name = literalWord("__deny");
+          c.name = literalWord("/usr/bin/__deny");
           c.args = [literalWord(`cd: ${target}: Permission denied`)];
         }
       }
     }
   }
+
+  /** The other commands of the pipeline that runs now («grep hog» next to «ps aux»), for ps. */
+  pipelineCmds: string[] = [];
 
   /** The prompt: who and where (~ for the effective user's home). */
   promptUser() { return this.euid; }
@@ -909,12 +958,65 @@ function terminalNames(ast: unknown): Set<string> {
 }
 
 /** Interleaves stdout and stderr: in the order one of our commands produced them if it alone printed everything. */
-function order(r: { stdout: string; stderr: string }, segs: { id: number; fd: 1 | 2; text: string }[]): Chunk[] {
+function order(r: { stdout: string; stderr: string }, segs: { id: number; fd: 1 | 2; text: string }[], stages = 1): Chunk[] {
   const ids = new Set(segs.map((s) => s.id));
   if (ids.size === 1) {
     const out = segs.filter((s) => s.fd === 1).map((s) => s.text).join("");
     const err = segs.filter((s) => s.fd === 2).map((s) => s.text).join("");
     if (out === r.stdout && err === r.stderr) return segs.map((s) => ({ fd: s.fd, text: s.text }));
   }
-  return [{ fd: 1, text: r.stdout }, { fd: 2, text: r.stderr }].filter((c) => c.text) as Chunk[];
+  // a pipeline: the errors of the first stages come while the last one is still reading — before its output
+  const parts = stages > 1 ? [{ fd: 2, text: r.stderr }, { fd: 1, text: r.stdout }] : [{ fd: 1, text: r.stdout }, { fd: 2, text: r.stderr }];
+  return parts.filter((c) => c.text) as Chunk[];
+}
+
+/** A glob segment → RegExp (* ? [abc] [!abc]); dot files only when the pattern starts with a dot. */
+function segRegex(seg: string): RegExp {
+  let re = "";
+  for (let i = 0; i < seg.length; i++) {
+    const ch = seg[i];
+    if (ch === "*") re += "[^/]*";
+    else if (ch === "?") re += "[^/]";
+    else if (ch === "[") {
+      const end = seg.indexOf("]", i + 2);
+      if (end < 0) { re += "\\["; continue; }
+      let cls = seg.slice(i + 1, end);
+      if (cls[0] === "!" || cls[0] === "^") cls = "^" + cls.slice(1);
+      re += "[" + cls.replace(/\\/g, "\\\\") + "]";
+      i = end;
+    } else re += ch.replace(/[.+^$(){}|\\]/g, "\\$&");
+  }
+  return new RegExp("^" + re + "$");
+}
+
+/** Words like `*\/`, `p*\/`, `data/*\/`: replaced by the matching folders (with the slash), as bash does. */
+async function expandDirGlobs(s: ShellSession, args: unknown[]): Promise<unknown[]> {
+  const out: unknown[] = [];
+  for (const w of args) {
+    const parts = (w as { parts?: { type: string; value?: string; pattern?: string }[] }).parts ?? [];
+    const hasGlob = parts.some((p) => p.type === "Glob");
+    const ok = parts.every((p) => p.type === "Glob" || p.type === "Literal" || p.type === "SingleQuoted");
+    if (!hasGlob || !ok) { out.push(w); continue; }
+    const pat = parts.map((p) => (p.type === "Glob" ? p.pattern : p.type === "SingleQuoted" ? (p.value ?? "").replace(/[*?[\]]/g, "\\$&") : p.value ?? "")).join("");
+    if (!pat.endsWith("/")) { out.push(w); continue; }
+    const segs = pat.replace(/\/+$/, "").split("/");
+    let bases = [pat.startsWith("/") ? "/" : ""];
+    if (pat.startsWith("/")) segs.shift();
+    for (const seg of segs) {
+      const next: string[] = [];
+      for (const b of bases) {
+        const dir = joinPath(s.cwd, b || ".");
+        if (!/[*?[]/.test(seg)) { next.push(b + seg + "/"); continue; }
+        const re = segRegex(seg);
+        const names = await s.fs.readdir(dir).catch(() => [] as string[]);
+        for (const n of names.sort()) if (re.test(n) && (seg.startsWith(".") || !n.startsWith("."))) next.push(b + n + "/");
+      }
+      bases = next;
+    }
+    const dirs: string[] = [];
+    for (const b of bases) if ((await s.fs.stat(joinPath(s.cwd, b)).catch(() => null))?.isDirectory) dirs.push(b);
+    if (!dirs.length) { out.push(w); continue; }
+    for (const d of dirs) out.push(literalWord(d));
+  }
+  return out;
 }

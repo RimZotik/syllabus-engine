@@ -69,6 +69,8 @@ export class Procs {
 
   private add(p: Proc) { this.procs.push(p); return p; }
   find(pid: number) { return this.procs.find((p) => p.pid === pid); }
+  /** A PID for a short-lived process (ps itself, the grep next to it): every new process gets the next number. */
+  newPid() { return this.nextPid++; }
   byName(name: string) { return this.procs.filter((p) => p.name === name || p.cmd.split(/\s+/)[0].replace(/^.*\//, "") === name); }
 
   /** A new process of the learner (a foreground sleep, a background job). */

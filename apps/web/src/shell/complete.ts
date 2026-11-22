@@ -25,7 +25,7 @@ export async function complete(s: ShellSession, line: string, cursor: number): P
   let dirPart = "";
   if (isCommand && !w.includes("/")) {
     const bin = await s.fs.readdir("/bin").catch(() => [] as string[]);
-    options = [...new Set([...bin, ...BUILTINS, ...OWN])].filter((n) => n.startsWith(w) && !n.startsWith("html-") && n !== "js-exec").sort();
+    options = [...new Set([...bin, ...BUILTINS, ...OWN])].filter((n) => n.startsWith(w) && !n.startsWith("html-") && !n.startsWith("__") && n !== "js-exec").sort();
     options = options.map((n) => n + " ");
   } else {
     dirPart = w.includes("/") ? w.slice(0, w.lastIndexOf("/") + 1) : "";
