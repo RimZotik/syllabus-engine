@@ -43,11 +43,12 @@ const look = EditorView.theme({
   // autocompletion list — follows the theme instead of staying white
   ".cm-tooltip": { backgroundColor: "var(--ed-popup)", color: "var(--ink)", border: "1px solid var(--line-2)", borderRadius: "8px", overflow: "hidden", boxShadow: "0 8px 24px -12px rgba(0,0,0,.45)" },
   ".cm-tooltip-autocomplete > ul": { fontFamily: "var(--f-mono)", fontSize: "14px", maxHeight: "14em" },
-  ".cm-tooltip-autocomplete > ul > li": { padding: "3px 10px !important", lineHeight: "1.5" },
+  ".cm-tooltip-autocomplete > ul > li": { padding: "3px 10px !important", lineHeight: "1.5", display: "flex", alignItems: "center" },
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "var(--ed-popup-sel)", color: "var(--ink)" },
   ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "700", color: "var(--tok-keyword)" },
   ".cm-completionIcon": { opacity: ".7" },
-  ".cm-completionDetail": { color: "var(--ink-3)", fontStyle: "normal", marginLeft: "0.75em" },
+  // the grey note (loop, definition, a signature) stands apart in its own column on the right
+  ".cm-completionDetail": { color: "var(--ink-3)", fontStyle: "normal", marginLeft: "auto", paddingLeft: "2em", whiteSpace: "nowrap" },
 });
 
 /** One indent level = 4 spaces, as in every example of the course and PEP 8 (Tab, Enter after «:»). */
