@@ -5,10 +5,12 @@
  *   lessons/<discipline>/<section>/<NN-slug>/quiz.yaml   → topic test
  *   lessons/<discipline>/<section>/test.yaml             → section test (контрольная)
  *   lessons/<discipline>/<section>/<NN-slug>/tasks/<id>/task.yaml → coding task, <Sandbox task="<id>" />
+ *     (sandbox: python-browser — Task below; sandbox: shell — a terminal task, ShellTaskDef in shell/checks.ts)
  */
 import type { ComponentType } from "react";
 import { packageOf, sectionIdOf, topicIdOf } from "./paths";
 import { currentPackage } from "../current";
+import type { ShellTaskDef } from "../shell/checks";
 
 export type TopicMeta = { minutes?: number; lead?: string };
 export type TopicModule = { default: ComponentType<{ components?: Record<string, unknown> }>; meta?: TopicMeta };
@@ -45,9 +47,10 @@ export type Task = {
 const topicFiles = import.meta.glob<TopicModule>("../../../../courses/*/lessons/*/*/*/topic.mdx");
 const quizFiles = import.meta.glob<{ default: QuizData }>("../../../../courses/*/lessons/*/*/*/quiz.yaml", { eager: true });
 const testFiles = import.meta.glob<{ default: QuizData }>("../../../../courses/*/lessons/*/*/test.yaml", { eager: true });
-const taskFiles = import.meta.glob<{ default: Task }>("../../../../courses/*/lessons/*/*/*/tasks/*/task.yaml", { eager: true });
+export type AnyTask = Task | ShellTaskDef;
+const taskFiles = import.meta.glob<{ default: AnyTask }>("../../../../courses/*/lessons/*/*/*/tasks/*/task.yaml", { eager: true });
 
-type Pkg = { topics: Map<string, () => Promise<TopicModule>>; quizzes: Map<string, QuizData>; tests: Map<string, QuizData>; tasks: Map<string, Task> };
+type Pkg = { topics: Map<string, () => Promise<TopicModule>>; quizzes: Map<string, QuizData>; tests: Map<string, QuizData>; tasks: Map<string, AnyTask> };
 const packages = new Map<string, Pkg>();
 const pkgOf = (path: string): Pkg => {
   const id = packageOf(path);

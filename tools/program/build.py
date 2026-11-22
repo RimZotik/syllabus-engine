@@ -464,11 +464,103 @@ def run_task(code: str, tests: dict) -> list[dict] | str:
     return json.loads(p.stdout.decode("utf-8"))["results"]
 
 
+# Shell tasks (sandbox: shell) — the format is in docs/content/authoring.md; the engine is apps/web/src/shell.
+SHELL_HEADLESS = ROOT / "apps" / "web" / "src" / "shell" / "headless.ts"
+# the platform's own sample shell task: checked once per run, so the whole validator path is always exercised
+SHELL_FIXTURES = ROOT / "apps" / "web" / "src" / "shell" / "__tests__" / "fixtures"
+_shell_fixtures_checked = False
+SHELL_KINDS = {
+    "fs_exists": {"type"}, "fs_absent": set(), "fs_content": set(), "fs_mode": set(), "last_output_contains": set(),
+    "run": {"stdin", "cwd", "stdout", "stdout_contains", "stderr", "stderr_contains", "exit_code"},
+    "command_used": set(), "forbid_commands": set(),
+}
+SHELL_SETUP_KEYS = {"cwd", "user", "env", "files", "dirs", "date"}
+
+
+def shell_task_errors(where: Path, t: dict) -> list[str]:
+    """Schema of a shell task (setup, solution, checks) — before anything is run."""
+    errors: list[str] = []
+    setup = t.get("setup") or {}
+    if not isinstance(setup, dict):
+        return [f"{where}: setup must be a mapping"]
+    if bad := set(setup) - SHELL_SETUP_KEYS:
+        errors.append(f"{where}: unknown setup keys {sorted(bad)} (allowed: {sorted(SHELL_SETUP_KEYS)})")
+    for path, f in (setup.get("files") or {}).items():
+        if not (isinstance(f, str) or (isinstance(f, dict) and set(f) <= {"content", "mode", "owner", "group"})):
+            errors.append(f"{where}: setup.files[{path}] must be text or {{content, mode, owner, group}}")
+        if isinstance(f, dict) and "mode" in f and not re.fullmatch(r"[0-7]{3,4}", str(f["mode"])):
+            errors.append(f"{where}: setup.files[{path}].mode must be octal like '644' (quoted)")
+    if not all(isinstance(d, str) for d in setup.get("dirs") or []):
+        errors.append(f"{where}: setup.dirs must be a list of paths")
+    sol = t.get("solution")
+    if not isinstance(sol, list) or not sol or not all(isinstance(x, str) or (isinstance(x, dict) and isinstance(x.get("cmd"), str)) for x in sol):
+        errors.append(f"{where}: shell solution must be a non-empty list of command lines (or {{cmd, input, keys}})")
+    checks = (t.get("tests") or {}).get("checks")
+    if not isinstance(checks, list) or not checks:
+        return errors + [f"{where}: tests.checks must be a non-empty list"]
+    for i, c in enumerate(checks, 1):
+        if not isinstance(c, dict):
+            errors.append(f"{where}: check {i} must be a mapping")
+            continue
+        kinds = [k for k in c if k in SHELL_KINDS]
+        if len(kinds) != 1:
+            errors.append(f"{where}: check {i} needs exactly one of {sorted(SHELL_KINDS)}, got {kinds or 'none'}")
+            continue
+        extra = set(c) - {kinds[0], "name", "hidden", "message"} - SHELL_KINDS[kinds[0]]
+        if extra:
+            errors.append(f"{where}: check {i} ({kinds[0]}): unknown keys {sorted(extra)}")
+        if kinds[0] in ("fs_content", "fs_mode") and not (isinstance(c[kinds[0]], dict) and "path" in c[kinds[0]]):
+            errors.append(f"{where}: check {i} ({kinds[0]}) needs {{path: …}}")
+        if kinds[0] == "fs_content" and isinstance(c[kinds[0]], dict) and not set(c[kinds[0]]) & {"equals", "contains", "not_contains", "regex"}:
+            errors.append(f"{where}: check {i} (fs_content) needs equals, contains, not_contains or regex")
+        if "name" in c and not isinstance(c["name"], str):
+            errors.append(f"{where}: check {i}: name must be text")
+    return errors
+
+
+def run_shell_tasks(tasks: list[tuple[Path, dict]]) -> list[str]:
+    """Runs every shell task's reference solution in the engine (Node, headless.ts): all checks must pass;
+    with no commands at all at least one must fail."""
+    if not tasks:
+        return []
+    payload = {"tasks": [{"id": t["id"], "setup": t.get("setup") or {}, "solution": t["solution"], "tests": t["tests"]} for _, t in tasks]}
+    try:
+        p = subprocess.run(["node", str(SHELL_HEADLESS)], input=json.dumps(payload, ensure_ascii=False).encode("utf-8"), capture_output=True, timeout=120)
+    except FileNotFoundError:
+        return ["shell tasks: Node.js (22.18+) is needed to run their reference solutions"]
+    except subprocess.TimeoutExpired:
+        return ["shell tasks: the engine timed out"]
+    if p.returncode:
+        return [f"shell tasks: the engine failed: {p.stderr.decode('utf-8', 'replace')[-800:]}"]
+    errors: list[str] = []
+    where = {t["id"]: w for w, t in tasks}
+    for r in json.loads(p.stdout.decode("utf-8"))["results"]:
+        w = where[r["id"]]
+        if r.get("error"):
+            errors.append(f"{w}: shell engine crashed: {r['error'][-500:]}")
+            continue
+        for c in r["solution"]:
+            if not c["ok"]:
+                errors.append(f"{w}: reference solution fails check '{c['name']}': {c.get('message')}" + (f" (got {c['got']!r})" if c.get("got") is not None else "") + "\n--- transcript ---\n" + r.get("transcript", "")[-1500:])
+        if r["starter"] and all(c["ok"] for c in r["starter"]):
+            errors.append(f"{w}: the task is solved before any command — every check already passes")
+    return errors
+
+
 def check_tasks() -> list[str]:
     """Coding tasks: required fields, unique ids, every <Sandbox task> exists, the reference solution
-    passes all tests and the starter code does not."""
+    passes all tests and the starter code does not. Shell tasks: their schema, and the reference solution
+    run in the shell engine passes every check."""
+    global _shell_fixtures_checked
     errors: list[str] = []
     ids: dict[str, Path] = {}
+    shell: list[tuple[Path, dict]] = []
+    if not _shell_fixtures_checked:
+        _shell_fixtures_checked = True
+        for tf in sorted(SHELL_FIXTURES.glob("*/task.yaml")):
+            t = yaml.safe_load(tf.read_text(encoding="utf-8")) or {}
+            errors += shell_task_errors(rel(tf), t)
+            shell.append((rel(tf), t))
     for tf in sorted(COURSES.glob("**/tasks/*/task.yaml")):
         where = rel(tf)
         try:
@@ -483,7 +575,14 @@ def check_tasks() -> list[str]:
         if t["id"] in ids:
             errors.append(f"{where}: duplicate task id {t['id']} (also {rel(ids[t['id']])})")
         ids[t["id"]] = tf
+        if t["sandbox"] == "shell":
+            errs = shell_task_errors(where, t)
+            errors += errs
+            if not errs:
+                shell.append((where, t))
+            continue
         if t["sandbox"] != "python-browser":
+            errors.append(f"{where}: unknown sandbox {t['sandbox']!r} (python-browser or shell)")
             continue
         tests = t["tests"]
         if not (tests.get("io") or tests.get("asserts")):
@@ -500,6 +599,7 @@ def check_tasks() -> list[str]:
             res = run_task(t["starter"], tests)
             if isinstance(res, list) and res and all(r["ok"] for r in res):
                 errors.append(f"{where}: starter code already passes all tests")
+    errors += run_shell_tasks(shell)
     for mdx in COURSES.glob("**/topic.mdx"):
         for tid in re.findall(r'<Sandbox task="([^"]+)"', mdx.read_text(encoding="utf-8")):
             if tid not in ids:

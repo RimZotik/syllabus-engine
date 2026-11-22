@@ -2,7 +2,7 @@
  * Components available inside topic.mdx. Rules for authors: docs/content/style-guide.md.
  * Adding a component here makes it available to every topic at once.
  */
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { AlertTriangle, BookMarked, Check as CheckIcon, History, Lightbulb } from "lucide-react";
 import { useApp } from "../state";
 import { currentPackage } from "../current";
@@ -10,6 +10,13 @@ import { term as lookup } from "./glossary";
 import { Sandbox } from "../components/Sandbox";
 import { RichText } from "../components/RichText";
 import { Trace } from "../components/TraceView";
+import type { ShellProps } from "../shell/Shell";
+
+const ShellLazy = lazy(() => import("../shell/Shell"));
+/** A live terminal on a prepared file system (not graded): <Shell files={{…}} cwd="…" /> or with script={[…]}. */
+export function Shell(props: ShellProps) {
+  return <Suspense fallback={<div className="faint">Загружаю терминал…</div>}><ShellLazy {...props} /></Suspense>;
+}
 
 /** One page of a topic. The reader shows pages one at a time. */
 export function Page({ children }: { title: string; minutes?: number; children: ReactNode }) {
@@ -111,4 +118,4 @@ const packageComponents = new Map<string, Record<string, unknown>>();
 for (const [path, mod] of Object.entries(componentFiles)) packageComponents.set(path.replace(/\\/g, "/").split("/").slice(-3)[0], mod);
 
 /** Components available in topics of the current package: the platform's plus the package's own. */
-export const mdxComponents = () => ({ Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, Sandbox, Trace, ...packageComponents.get(currentPackage()) });
+export const mdxComponents = () => ({ Page, Mark, Term, Callout, Theorem, Figure, Check, Summary, Wide, Sandbox, Trace, Shell, ...packageComponents.get(currentPackage()) });

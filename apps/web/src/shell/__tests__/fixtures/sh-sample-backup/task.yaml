@@ -1,0 +1,56 @@
+# Образец задачи тренажёра терминала (sandbox: shell) — формат описан в docs/content/authoring.md.
+# Не часть курса: на нём тесты платформы и валидатор (tools/program/build.py) проверяют весь путь.
+id: sh-sample-backup
+title: Разобрать папку с отчётами
+sandbox: shell
+difficulty: 2
+concepts: [mkdir, mv, cp, шаблоны, перенаправление]
+statement: |
+  В домашней папке лежат отчёты и черновики. Наведите порядок:
+
+  1. Создайте папку `archive/2026` (одной командой).
+  2. Перенесите туда все файлы `.csv` из папки `reports` — не копируйте, а именно перенесите.
+  3. Сохраните в файл `count.txt` число строк в `notes/todo.txt` — только число, как его печатает `wc -l < notes/todo.txt`.
+  4. Выведите на экран строки `notes/todo.txt`, в которых есть слово `срочно`, — это должна быть последняя команда.
+setup:
+  cwd: /home/student
+  files:
+    reports/jan.csv: "id,amount\n1,10\n2,15\n"
+    reports/feb.csv: "id,amount\n1,7\n"
+    reports/readme.md: "# Отчёты\n"
+    notes/todo.txt: "купить молоко\nсрочно: сдать отчёт\nпозвонить маме\nсрочно: оплатить счёт\n"
+  dirs: [drafts]
+solution:
+  - mkdir -p archive/2026
+  - mv reports/*.csv archive/2026/
+  - wc -l < notes/todo.txt > count.txt
+  - grep срочно notes/todo.txt
+tests:
+  checks:
+    - name: Папка archive/2026 создана
+      fs_exists: archive/2026
+      type: dir
+    - name: jan.csv в архиве и не изменился
+      fs_content: {path: archive/2026/jan.csv, equals: "id,amount\n1,10\n2,15\n"}
+    - name: feb.csv в архиве
+      fs_exists: archive/2026/feb.csv
+      type: file
+    - name: В reports не осталось .csv
+      fs_absent: reports/jan.csv
+    - name: readme.md остался на месте
+      fs_exists: reports/readme.md
+    - name: В count.txt — число строк
+      fs_content: {path: count.txt, equals: "4\n"}
+    - name: Последней выведены срочные дела
+      last_output_contains: ["срочно: сдать отчёт", "срочно: оплатить счёт"]
+    - name: Перенос, а не копирование
+      forbid_commands: [cp]
+      hidden: true
+    - name: ls видит обе таблицы
+      run: ls archive/2026
+      stdout: "feb.csv\njan.csv\n"
+hints:
+  - level: 1
+    text: "`mkdir -p` создаёт всю цепочку папок сразу."
+  - level: 2
+    text: "Шаблон `reports/*.csv` раскрывает bash — mv получает готовый список файлов."

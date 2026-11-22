@@ -633,3 +633,40 @@ svg [role=button]:focus-visible{outline:2px solid var(--lav);outline-offset:3px;
 .ftab:hover{background:var(--fill)} .ftab.on{background:var(--ed-bg);color:var(--ink)}
 .file-view{margin:0;padding:12px 16px;border-radius:var(--r-m);background:var(--ed-bg);color:var(--tok-variable);font:15px/1.5 var(--f-mono);overflow:auto;min-height:120px;max-height:55vh;white-space:pre}
 .file-view.tall{min-height:220px}
+
+/* Shell simulator (shell/): a terminal on xterm.js with the file tree beside it. Terminal colours — VS Code's terminal Light+ / Dark+ */
+:root{--term-bg:var(--paper);--term-fg:#27231d;--term-cursor:#27231d;--term-selection:#add6ff;--term-black:#27231d;--term-red:#cd3131;--term-green:#107c10;--term-yellow:#8a6d00;--term-blue:#0451a5;--term-magenta:#bc05bc;--term-cyan:#0598bc;--term-white:#555555;--term-bright-black:#686154}
+:root[data-theme="dark"]{--term-bg:#1e1e1e;--term-fg:#d4d4d4;--term-cursor:#aeafad;--term-selection:#264f78;--term-black:#000000;--term-red:#f14c4c;--term-green:#23d18b;--term-yellow:#e5e510;--term-blue:#3b8eea;--term-magenta:#d670d6;--term-cyan:#29b8db;--term-white:#e5e5e5;--term-bright-black:#8a8a8a}
+.shell{display:flex;flex-direction:column;border-radius:var(--r-m);background:var(--term-bg);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+.shell.full{border-radius:0;height:100vh}
+.shell-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 8px 6px 14px;background:var(--fill);min-height:48px;flex-wrap:wrap}
+.shell-title{font:600 13px/1 var(--f-text);color:var(--ink-2)}
+.shell-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.shell-actions svg{display:block;flex:none}
+.shell-actions .icon-btn{width:36px;height:36px}
+.shell-actions .icon-btn.on{color:var(--green-ink);background:var(--green-soft)}
+.shell-body{display:grid;grid-template-columns:minmax(0,1fr);min-height:0;flex:1}
+.shell-body.with-tree{grid-template-columns:minmax(0,1fr) 210px}
+.term-host{padding:8px 4px 8px 10px;min-width:0;min-height:0}
+.shell.full .term-host{height:100%}
+.term-host .xterm-viewport{background:var(--term-bg)!important;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.ft{border-left:1px solid var(--line);padding:8px 0;font:13px/1.2 var(--f-mono);overflow:auto;max-height:420px;color:var(--ink-2)}
+.shell.full .ft{max-height:none}
+.ft-head{padding:2px 10px 8px;font-weight:600;color:var(--ink)}
+.ft-head .faint{font-weight:400;font-size:12px}
+.ft-row{display:flex;align-items:center;gap:6px;padding:3px 8px;white-space:nowrap}
+.ft-row svg{display:block;flex:none;color:var(--ink-3)}
+.ft-name{line-height:1.2;overflow:hidden;text-overflow:ellipsis}
+.ft-row.hidden{opacity:.55}
+.ft-row.here{background:var(--lav-soft);color:var(--ink)}
+.ft-row.here svg{color:var(--lav)}
+.ft-here{margin-left:auto;font:600 10px/1 var(--f-text);color:var(--lav);text-transform:uppercase;letter-spacing:.04em}
+.ft-row.new{background:var(--green-soft);color:var(--green-ink)}
+.ft-row.new svg{color:var(--green-ink)}
+.ft-empty,.ft-out{padding:6px 10px;font:12px/1.4 var(--f-text)}
+.ft-out code{font-family:var(--f-mono)}
+.shell-ws .ws-right{display:flex;flex-direction:column;gap:0}
+.shell-ws .sb-actions{margin-top:14px}
+.shell-demo{margin:22px 0}
+.shell-demo .shell-actions .btn svg{display:block}
+@media (max-width:760px){.shell-body.with-tree{grid-template-columns:minmax(0,1fr)} .ft{border-left:0;border-top:1px solid var(--line);max-height:200px}}

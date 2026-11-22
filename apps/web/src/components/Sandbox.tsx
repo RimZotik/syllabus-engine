@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { CheckCircle2, Footprints, Lightbulb, RotateCcw } from "lucide-react";
 import { TraceView } from "./TraceView";
 import { RichText } from "./RichText";
@@ -7,17 +7,22 @@ import { api } from "../api";
 import { content, type Task } from "../content/registry";
 import type { TestResult } from "../sandbox/runner";
 
+// the terminal (xterm.js + the bash interpreter) loads only on pages with a shell task
+const ShellTaskView = lazy(() => import("../shell/ShellTask"));
+
 /** What is stored per task, so the code and the result are there when the learner comes back. */
 type Saved = { code: string; passed: boolean; hints: number; results: TestResult[] | null; checks: number; stdout?: string | null };
 
 /**
  * A coding task as a workspace, like a LeetCode problem page: on the left the statement, the text around it
  * (`intro`) and the hints; on the right the editor, «Проверить» and the tests as tabs. Python runs in the
- * browser (Pyodide). The reader gives every task a page of its own.
+ * browser (Pyodide). A `sandbox: shell` task gets the terminal instead (shell/ShellTask.tsx).
+ * The reader gives every task a page of its own.
  */
 export function Sandbox({ task: id, intro }: { task: string; intro?: ReactNode }) {
   const task = content.task(id);
   if (!task) return <div className="needs-claude">Задача «{id}» не найдена.</div>;
+  if (task.sandbox === "shell") return <Suspense fallback={<div className="faint">Загружаю терминал…</div>}><ShellTaskView key={id} task={task} intro={intro} /></Suspense>;
   return <TaskView key={id} task={task} intro={intro} />;
 }
 
