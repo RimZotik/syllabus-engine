@@ -7,20 +7,21 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { CircleAlert, LoaderCircle, RotateCcw, StepForward } from "lucide-react";
-import { ShellSession } from "./engine";
+import { ShellSession, type ShellSetup } from "./engine";
 import { ShellPanel, type ShellPanelHandle } from "./ShellPanel";
 
-export type ShellProps = { files?: Record<string, string>; dirs?: string[]; cwd?: string; script?: string[]; rows?: number; title?: string };
+/** `processes`, `users`, `env` — as in a task's setup (docs/content/authoring.md, 3.2), for demonstrations of kill, sudo, PATH. */
+export type ShellProps = { files?: ShellSetup["files"]; dirs?: ShellSetup["dirs"]; cwd?: string; script?: string[]; rows?: number; title?: string; processes?: ShellSetup["processes"]; users?: ShellSetup["users"]; env?: ShellSetup["env"] };
 
-export default function Shell({ files, dirs, cwd, script, rows = 14, title }: ShellProps) {
-  const key = JSON.stringify({ files, dirs, cwd });
+export default function Shell({ files, dirs, cwd, script, rows = 14, title, processes, users, env }: ShellProps) {
+  const key = JSON.stringify({ files, dirs, cwd, processes, users, env });
   const [session, setSession] = useState<ShellSession | null>(null);
   const [fail, setFail] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [running, setRunning] = useState(false);
   const panel = useRef<ShellPanelHandle>(null);
 
-  const start = () => ShellSession.create({ files, dirs, cwd }).then((s) => { setSession(s); setStep(0); }).catch((e) => setFail(String(e)));
+  const start = () => ShellSession.create({ files, dirs, cwd, processes, users, env }).then((s) => { setSession(s); setStep(0); }).catch((e) => setFail(String(e)));
   useEffect(() => { void start(); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function next() {

@@ -473,8 +473,10 @@ SHELL_KINDS = {
     "fs_exists": {"type"}, "fs_absent": set(), "fs_content": set(), "fs_mode": set(), "last_output_contains": set(),
     "run": {"stdin", "cwd", "stdout", "stdout_contains", "stderr", "stderr_contains", "exit_code"},
     "command_used": set(), "forbid_commands": set(),
+    "fs_owner": set(), "process_alive": set(), "process_absent": set(), "signal_sent": set(),
 }
-SHELL_SETUP_KEYS = {"cwd", "user", "env", "files", "dirs", "date"}
+SHELL_SETUP_KEYS = {"cwd", "user", "env", "files", "dirs", "date", "users", "sudo_password", "processes"}
+SHELL_BEHAVIORS = {"busy", "ignore_term", "logger", "cleanup", "sleep", "idle"}
 
 
 def shell_task_errors(where: Path, t: dict) -> list[str]:
@@ -490,8 +492,18 @@ def shell_task_errors(where: Path, t: dict) -> list[str]:
             errors.append(f"{where}: setup.files[{path}] must be text or {{content, mode, owner, group}}")
         if isinstance(f, dict) and "mode" in f and not re.fullmatch(r"[0-7]{3,4}", str(f["mode"])):
             errors.append(f"{where}: setup.files[{path}].mode must be octal like '644' (quoted)")
-    if not all(isinstance(d, str) for d in setup.get("dirs") or []):
-        errors.append(f"{where}: setup.dirs must be a list of paths")
+    if not all(isinstance(d, str) or (isinstance(d, dict) and isinstance(d.get("path"), str) and set(d) <= {"path", "mode", "owner", "group"}) for d in setup.get("dirs") or []):
+        errors.append(f"{where}: setup.dirs must be a list of paths or {{path, mode, owner, group}}")
+    for name, u in (setup.get("users") or {}).items():
+        if not isinstance(u, dict) or set(u) - {"uid", "groups", "password", "home"}:
+            errors.append(f"{where}: setup.users[{name}] must be {{groups, password, uid, home}}")
+    for i, p in enumerate(setup.get("processes") or [], 1):
+        if not isinstance(p, dict) or not isinstance(p.get("name"), str) or set(p) - {"name", "user", "cpu", "mem", "behavior", "file", "line", "pid", "cmd", "tty"}:
+            errors.append(f"{where}: setup.processes[{i}] must be {{name, user, behavior, file, cpu, mem, pid, cmd, line, tty}}")
+        elif p.get("behavior", "idle") not in SHELL_BEHAVIORS:
+            errors.append(f"{where}: setup.processes[{i}].behavior must be one of {sorted(SHELL_BEHAVIORS)}")
+        elif p.get("behavior") in ("logger", "cleanup") and not p.get("file"):
+            errors.append(f"{where}: setup.processes[{i}] ({p['behavior']}) needs file")
     sol = t.get("solution")
     if not isinstance(sol, list) or not sol or not all(isinstance(x, str) or (isinstance(x, dict) and isinstance(x.get("cmd"), str)) for x in sol):
         errors.append(f"{where}: shell solution must be a non-empty list of command lines (or {{cmd, input, keys}})")
@@ -509,7 +521,9 @@ def shell_task_errors(where: Path, t: dict) -> list[str]:
         extra = set(c) - {kinds[0], "name", "hidden", "message"} - SHELL_KINDS[kinds[0]]
         if extra:
             errors.append(f"{where}: check {i} ({kinds[0]}): unknown keys {sorted(extra)}")
-        if kinds[0] in ("fs_content", "fs_mode") and not (isinstance(c[kinds[0]], dict) and "path" in c[kinds[0]]):
+        if kinds[0] == "signal_sent" and not (isinstance(c[kinds[0]], dict) and {"to", "signal"} <= set(c[kinds[0]])):
+            errors.append(f"{where}: check {i} (signal_sent) needs {{to, signal}} (and optionally after)")
+        if kinds[0] in ("fs_content", "fs_mode", "fs_owner") and not (isinstance(c[kinds[0]], dict) and "path" in c[kinds[0]]):
             errors.append(f"{where}: check {i} ({kinds[0]}) needs {{path: …}}")
         if kinds[0] == "fs_content" and isinstance(c[kinds[0]], dict) and not set(c[kinds[0]]) & {"equals", "contains", "not_contains", "regex"}:
             errors.append(f"{where}: check {i} (fs_content) needs equals, contains, not_contains or regex")

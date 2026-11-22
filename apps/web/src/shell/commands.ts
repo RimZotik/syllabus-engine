@@ -6,20 +6,23 @@
  */
 import type { Command, ResolvedCommandContext } from "just-bash/browser";
 import type { ShellSession } from "./engine.ts";
-import { joinPath } from "./engine.ts";
+import { errCode, joinPath } from "./engine.ts";
+import { rwx } from "./users.ts";
 import { helpText, manPage, MAN_NAMES } from "./manpages.ts";
 import { Nano, Pager, Vim } from "./screens.ts";
 
 type Ctx = ResolvedCommandContext;
-type IO = {
+export type IO = {
   out(s: string): void;
   err(s: string): void;
   ctx: Ctx;
   path(p: string): string;
   stdinText(): string;
   ask(prompt: string): Promise<boolean>;
+  /** a line from the terminal (sudo's password: secret) */
+  askLine(prompt: string, secret?: boolean): Promise<string | null>;
 };
-type Impl = (io: IO, args: string[]) => Promise<number>;
+export type Impl = (io: IO, args: string[]) => Promise<number>;
 
 /** 'name' — coreutils' quoting of file names in messages (shell-escape style). */
 export const q = (s: string) => (s.includes("'") ? `"${s}"` : `'${s}'`);
@@ -27,7 +30,7 @@ export const q = (s: string) => (s.includes("'") ? `"${s}"` : `'${s}'`);
 export const qc = (s: string) => `‘${s}’`;
 
 const decoder = new TextDecoder();
-const bytesToText = (b: unknown): string => {
+export const bytesToText = (b: unknown): string => {
   if (typeof b !== "string") return "";
   const u = new Uint8Array(b.length);
   for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i) & 0xff;
@@ -37,7 +40,8 @@ const utf8Len = (s: string) => new TextEncoder().encode(s).length;
 
 let invocation = 0;
 
-export function makeCommands(s: ShellSession): Command[] {
+/** def — our own command (with the Russian --help); wrap — a bundled one with corrected output. */
+export function makeDef(s: ShellSession) {
   const def = (name: string, impl: Impl, exitOnHelp = 0): Command =>
     s.lib.defineCommand(name, async (args, ctx) => {
       const id = ++invocation;
@@ -59,6 +63,7 @@ export function makeCommands(s: ShellSession): Command[] {
           const a = await s.ui.ask(prompt);
           return /^[yY]/.test(a ?? "");
         },
+        askLine: (prompt, secret) => s.ui.ask(prompt, { secret }),
       };
       if (args.includes("--help") && helpText(name)) { io.out(helpText(name)!); return { stdout, stderr, exitCode: exitOnHelp }; }
       let code: number;
@@ -77,8 +82,11 @@ export function makeCommands(s: ShellSession): Command[] {
       return f.exitCode;
     });
 
-  const isDir = async (p: string) => (await s.fs.exists(p)) && (await s.fs.stat(p)).isDirectory;
+  return { def, wrap };
+}
 
+export function makeCommands(s: ShellSession): Command[] {
+  const { def, wrap } = makeDef(s);
   return [
     def("ls", (io, a) => ls(s, io, a)),
     def("cat", cat),
@@ -93,12 +101,13 @@ export function makeCommands(s: ShellSession): Command[] {
     def("touch", (io, a) => touch(s, io, a)),
     def("tee", tee),
     def("uniq", uniq),
-    wrap("sort", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^sort: (.+): No such file or directory$/, async (m) => (await isDir(joinPath(_io.ctx.cwd, m[1])) ? `sort: read failed: ${m[1]}: Is a directory` : `sort: cannot read: ${m[1]}: No such file or directory`)) })),
-    wrap("cut", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^cut: (.+): No such file or directory$/, async (m) => (await isDir(joinPath(_io.ctx.cwd, m[1])) ? `cut: ${m[1]}: Is a directory` : m[0])) })),
+    wrap("sort", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^sort: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return c === "EISDIR" ? `sort: read failed: ${m[1]}: Is a directory` : `sort: cannot read: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) })),
+    wrap("cut", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^cut: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `cut: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) })),
     wrap("find", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^find: (.+): No such file or directory$/, async (m) => `find: ${qc(m[1].replace(/^[‘']|[’']$/g, ""))}: No such file or directory`) })),
     wrap("file", async (_io, _a, r) => ({ ...r, stdout: r.stdout.replace(/^(.+): cannot open \(No such file or directory\)$/gm, "$1: cannot open `$1' (No such file or directory)") })),
     wrap("tree", async (_io, _a, r) => ({ ...r, stdout: r.stdout.replace(/^((?:\|   |    )*)(\|--|`--) /gm, (_m, pre: string, b: string) => pre.replace(/\|   /g, "│   ") + (b === "|--" ? "├── " : "└── ")) })),
-    wrap("grep", async (_io, a, r) => {
+    wrap("grep", async (_io, a, r0) => {
+      const r = { ...r0, stderr: await rewriteLines(r0.stderr, /^grep: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `grep: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) };
       // GNU prints «./dir/file:line» for an explicit «.» operand
       const ops = grepOperands(a);
       if (/^-\w*r|^-\w*R|^--recursive/.test(a.filter((x) => x.startsWith("-")).join(" ")) || a.some((x) => /^-[a-zA-Z]*[rR]/.test(x))) {
@@ -136,10 +145,9 @@ export function makeCommands(s: ShellSession): Command[] {
       let text: string, title: string;
       if (!files.length) { text = io.stdinText(); title = ""; }
       else {
-        const p = io.path(files[0]);
-        if (!(await s.fs.exists(p))) { io.err(`${files[0]}: No such file or directory\n`); return 1; }
-        if (await isDir(p)) { io.err(`${files[0]} is a directory\n`); return 1; }
-        text = await s.fs.readFile(p); title = files[0];
+        const r = await readOp(io, files[0]);
+        if ("error" in r) { io.err(r.error === "EISDIR" ? `${files[0]} is a directory\n` : `${files[0]}: ${REASON[r.error]}\n`); return 1; }
+        text = r.text; title = files[0];
       }
       if (!s.ttyNames.has("less")) { io.out(text); return 0; }
       await s.ui.screen(new Pager(text.replace(/\n$/, "").split("\n"), title, false));
@@ -149,15 +157,20 @@ export function makeCommands(s: ShellSession): Command[] {
       const name = a.filter((x) => !x.startsWith("-") && !x.startsWith("+"))[0] ?? "";
       const p = name ? io.path(name) : "";
       let text = "", notice: string;
-      if (p && (await isDir(p))) notice = `"${name}" is a directory`;
-      else if (p && (await s.fs.exists(p))) { text = await s.fs.readFile(p); const n = text ? text.split("\n").length - (text.endsWith("\n") ? 1 : 0) : 0; notice = `Read ${n} line${n === 1 ? "" : "s"}`; }
-      else notice = "New File";
+      const code = p ? await probe(io, name) : "ENOENT";
+      if (code === "EISDIR") notice = `"${name}" is a directory`;
+      else if (code === "EACCES") notice = `Error reading ${name}: Permission denied`;
+      else if (code === "ok") {
+        text = await s.fs.readFile(p);
+        const n = text ? text.split("\n").length - (text.endsWith("\n") ? 1 : 0) : 0;
+        notice = (await s.fs.can(p, 2)) ? `Read ${n} line${n === 1 ? "" : "s"}` : `File '${name}' is unwritable`;
+      } else notice = "New File";
       const nano = new Nano(text, name, notice, async (file, body) => {
         const target = io.path(file);
         try { await s.fs.writeFile(target, body); return null; }
         catch (e) {
           const code = (e as { code?: string }).code;
-          return code === "EISDIR" ? "Is a directory" : code === "ENOTDIR" ? "Not a directory" : "No such file or directory";
+          return code === "EISDIR" ? "Is a directory" : code === "ENOTDIR" ? "Not a directory" : code === "EACCES" ? "Permission denied" : "No such file or directory";
         }
       });
       await s.ui.screen(nano);
@@ -168,9 +181,9 @@ export function makeCommands(s: ShellSession): Command[] {
     ...["vim", "vi"].map((n) => def(n, async (io, a) => {
       const name = a.filter((x) => !x.startsWith("-"))[0] ?? "";
       const p = name ? io.path(name) : "";
-      const text = p && (await s.fs.exists(p)) && !(await isDir(p)) ? await s.fs.readFile(p) : "";
+      const text = p && (await probe(io, name)) === "ok" ? await s.fs.readFile(p) : "";
       await s.ui.screen(new Vim(text, name, p ? await s.fs.exists(p) : false, async (body) => {
-        try { await s.fs.writeFile(p, body); return null; } catch { return "E212: Can't open file for writing"; }
+        try { await s.fs.writeFile(p, body); return null; } catch { return `"${name}" E212: Can't open file for writing`; }
       }));
       return 0;
     })),
@@ -238,6 +251,11 @@ function parse(a: string[], flags: string, withVal = "", long: Record<string, st
   }
   return r;
 }
+/** The reason text of a file system error, as GNU tools print it. */
+export const why = (e: unknown) => {
+  const c = errCode(e);
+  return c === "EACCES" ? "Permission denied" : c === "EPERM" ? "Operation not permitted" : c === "ENOTDIR" ? "Not a directory" : c === "EISDIR" ? "Is a directory" : c === "EEXIST" ? "File exists" : c === "ENOTEMPTY" ? "Directory not empty" : "No such file or directory";
+};
 const usage = (io: IO, name: string, bad: string) => io.err(`${name}: ${bad}\nTry '${name} --help' for more information.\n`);
 
 // ---------------------------------------------------------------------------------------------- ls
@@ -258,17 +276,13 @@ export function human(n: number) {
   if (v < 10) { const r = Math.ceil(v * 10) / 10; return r >= 10 ? `10${units[u]}` : `${r.toFixed(1)}${units[u]}`; }
   return `${Math.ceil(v)}${units[u]}`;
 }
-function permString(mode: number, kind: "d" | "-" | "l") {
-  const b = (m: number, c: string) => (mode & m ? c : "-");
-  return kind + b(0o400, "r") + b(0o200, "w") + b(0o100, "x") + b(0o40, "r") + b(0o20, "w") + b(0o10, "x") + b(0o4, "r") + b(0o2, "w") + b(0o1, "x");
-}
 /** How ls shows a name on a terminal: quoted if it has spaces or special characters. */
 function ttyName(n: string) {
   if (/^[\w.,+@%:=^~/-]+$/u.test(n)) return n;
   return n.includes("'") ? `"${n}"` : `'${n}'`;
 }
 
-type Ent = { name: string; path: string; kind: "d" | "-" | "l"; mode: number; size: number; mtime: Date; target?: string; links: number };
+type Ent = { name: string; path: string; kind: "d" | "-" | "l"; mode: number; size: number; mtime: Date; target?: string; links: number; unknown?: boolean };
 
 async function ls(s: ShellSession, io: IO, args: string[]): Promise<number> {
   const o = parse(args, "alhR1tSrdAF", "", { "--all": "a", "--recursive": "R", "--human-readable": "h", "--reverse": "r", "--directory": "d", "--almost-all": "A", "--color": "", "--classify": "F" });
@@ -276,13 +290,15 @@ async function ls(s: ShellSession, io: IO, args: string[]): Promise<number> {
   const f = o.flags;
   const tty = s.tty && !f.has("1");
   let code = 0;
+  let lastErr = "ENOENT";
 
   const ent = async (path: string, name: string): Promise<Ent | null> => {
-    const st = await s.fs.lstat(path).catch(() => null);
+    const st = await s.fs.lstat(path).catch((e) => { lastErr = errCode(e); return null; });
     if (!st) return null;
     const kind = st.isSymbolicLink ? "l" : st.isDirectory ? "d" : "-";
     let links = 1;
-    if (kind === "d") links = 2 + (await Promise.all((await s.fs.readdir(path)).map((n) => s.fs.stat(joinPath(path, n)).then((x) => x.isDirectory).catch(() => false)))).filter(Boolean).length;
+    // link count of a folder: 2 + its subfolders (the platform counts them even where the learner may not look)
+    if (kind === "d") links = 2 + (await s.asRoot(async () => (await Promise.all((await s.fs.readdir(path)).map((n) => s.fs.stat(joinPath(path, n)).then((x) => x.isDirectory).catch(() => false)))).filter(Boolean).length));
     return { name, path, kind, mode: st.mode, size: kind === "d" ? 4096 : kind === "l" ? (await s.fs.readlink(path)).length : st.size, mtime: st.mtime, target: kind === "l" ? await s.fs.readlink(path) : undefined, links };
   };
   const sortEnts = (xs: Ent[]) => {
@@ -294,7 +310,8 @@ async function ls(s: ShellSession, io: IO, args: string[]): Promise<number> {
   };
   const color = (e: Ent, shown: string) => {
     if (!tty) return shown;
-    const c = e.kind === "d" ? "01;34" : e.kind === "l" ? "01;36" : e.mode & 0o111 ? "01;32" : "";
+    // Ubuntu's dircolors: sticky other-writable folders (/tmp) on green, folders blue, links cyan, executables green
+    const c = e.kind === "d" ? ((e.mode & 0o1002) === 0o1002 ? "30;42" : (e.mode & 0o2) ? "34;42" : "01;34") : e.kind === "l" ? "01;36" : e.mode & 0o4000 ? "37;41" : e.mode & 0o111 ? "01;32" : "";
     return c ? `\x1b[${c}m${shown}\x1b[0m` : shown;
   };
   const suffix = (e: Ent) => (!f.has("F") ? "" : e.kind === "d" ? "/" : e.kind === "l" ? "@" : e.mode & 0o111 ? "*" : "");
@@ -303,15 +320,16 @@ async function ls(s: ShellSession, io: IO, args: string[]): Promise<number> {
   const render = (xs: Ent[], withTotal: boolean): string => {
     if (f.has("l")) {
       const sizes = xs.map((e) => (f.has("h") ? human(e.size) : String(e.size)));
-      const w = { links: Math.max(1, ...xs.map((e) => String(e.links).length)), own: Math.max(1, ...xs.map((e) => s.ownerOf(e.path).length)), size: Math.max(1, ...sizes.map((x) => x.length)) };
+      const w = { links: Math.max(1, ...xs.map((e) => String(e.links).length)), own: Math.max(1, ...xs.map((e) => s.ownerOf(e.path).length)), grp: Math.max(1, ...xs.map((e) => s.groupOf(e.path).length)), size: Math.max(1, ...sizes.map((x) => x.length)) };
       let out = "";
       if (withTotal) {
         const blocks = xs.reduce((t, e) => t + (e.kind === "d" ? 4 : e.kind === "l" ? 0 : Math.ceil(e.size / 4096) * 4), 0);
         out += `total ${f.has("h") ? (blocks ? human(blocks * 1024) : "0") : blocks}\n`;
       }
       xs.forEach((e, i) => {
-        const owner = s.ownerOf(e.path);
-        out += `${permString(e.mode, e.kind)} ${String(e.links).padStart(w.links)} ${owner.padEnd(w.own)} ${owner.padEnd(w.own)} ${sizes[i].padStart(w.size)} ${lsDate(e.mtime)} ${label(e)}${e.target ? ` -> ${e.target}` : ""}\n`;
+        if (e.unknown) { out += `-????????? ? ${"?".padStart(w.links)} ${"?".padEnd(w.own)} ${"?".padEnd(w.grp)} ${"?".padStart(w.size)}            ? ${e.name}
+`; return; }
+        out += `${e.kind}${rwx(e.kind === "l" ? 0o777 : e.mode)} ${String(e.links).padStart(w.links)} ${s.ownerOf(e.path).padEnd(w.own)} ${s.groupOf(e.path).padEnd(w.grp)} ${sizes[i].padStart(w.size)} ${lsDate(e.mtime)} ${label(e)}${e.target ? ` -> ${e.target}` : ""}\n`;
       });
       return out;
     }
@@ -319,34 +337,43 @@ async function ls(s: ShellSession, io: IO, args: string[]): Promise<number> {
     return columns(xs.map((e) => ({ text: label(e), width: [...(ttyName(e.name) + suffix(e))].length })), s.ui.cols);
   };
 
-  const listDir = async (path: string): Promise<Ent[]> => {
-    const names = await s.fs.readdir(path);
+  const listDir = async (path: string, shownDir = "."): Promise<Ent[] | null> => {
+    const names = await s.fs.readdir(path).catch((e) => { lastErr = errCode(e); return null; });
+    if (!names) return null;
     const shown = names.filter((n) => f.has("a") || f.has("A") || !n.startsWith("."));
-    const xs = (await Promise.all(shown.map((n) => ent(joinPath(path, n), n)))).filter((x): x is Ent => !!x);
+    // entries of a folder you may read but not enter: names only; `ls -l` cannot stat them
+    const xs = (await Promise.all(shown.map(async (n) => (await ent(joinPath(path, n), n)) ?? ({ name: n, path: joinPath(path, n), kind: "-", mode: 0, size: 0, mtime: new Date(0), links: 0, unknown: true } as Ent)))).filter((x): x is Ent => !!x);
+    if (f.has("l")) for (const e of xs) if (e.unknown) { io.err(`ls: cannot access ${q(shownDir === "." ? e.name : `${shownDir.replace(/\/$/, "")}/${e.name}`)}: Permission denied\n`); code = 1; }
     if (f.has("a")) { const d = await ent(path, "."); const p = await ent(joinPath(path, ".."), ".."); if (d) xs.push(d); if (p) xs.push(p); }
     return sortEnts(xs);
   };
 
   const ops = o.ops.length ? o.ops : ["."];
   const files: Ent[] = [], dirs: { op: string; e: Ent }[] = [];
-  const missing: string[] = [];
+  const missing: [string, string][] = [];
   for (const op of ops) {
     const e = await ent(io.path(op), op);
-    if (!e) { missing.push(op); continue; }
+    if (!e) { missing.push([op, lastErr]); continue; }
     if (e.kind === "l" && !f.has("l") && !f.has("d")) {
       const real = await s.fs.stat(io.path(op)).catch(() => null);
       if (real?.isDirectory) { dirs.push({ op, e: { ...e, kind: "d" } }); continue; }
     }
     if (e.kind === "d" && !f.has("d")) dirs.push({ op, e }); else files.push(e);
   }
-  for (const m of missing.sort()) { io.err(`ls: cannot access ${q(m)}: No such file or directory\n`); code = 2; }
+  for (const [m, c] of missing.sort()) { io.err(`ls: cannot access ${q(m)}: ${c === "EACCES" ? "Permission denied" : c === "ENOTDIR" ? "Not a directory" : "No such file or directory"}\n`); code = 2; }
   const parts: string[] = [];
   if (files.length) parts.push(render(sortEnts(files), false));
   const header = ops.length > 1 || f.has("R");
   const sortedDirs = dirs.sort((a, b) => (a.op < b.op ? -1 : 1));
   if (f.has("r")) sortedDirs.reverse();
   const walkDir = async (op: string, path: string) => {
-    const xs = await listDir(path);
+    const xs = await listDir(path, op);
+    if (!xs) {
+      io.err(`ls: cannot open directory ${q(op)}: ${lastErr === "EACCES" ? "Permission denied" : "No such file or directory"}\n`);
+      code = 2;
+      if (header) parts.push(`${op}:\n`);
+      return;
+    }
     parts.push((header ? `${op}:\n` : "") + render(xs, true));
     if (f.has("R")) for (const e of xs) if (e.kind === "d" && e.name !== "." && e.name !== "..") await walkDir(`${op === "/" ? "" : op.replace(/\/$/, "")}/${e.name}`, e.path);
   };
@@ -384,25 +411,38 @@ export function columns(items: { text: string; width: number }[], cols: number):
 // ---------------------------------------------------------------------------------------------- read helpers
 
 /** Reads an operand: «-» or nothing — stdin; errors come back as GNU's reason text. */
-async function readOp(io: IO, op: string): Promise<{ text: string } | { error: "ENOENT" | "EISDIR" }> {
+type ReadErr = "ENOENT" | "EISDIR" | "EACCES" | "ENOTDIR";
+async function readOp(io: IO, op: string): Promise<{ text: string } | { error: ReadErr }> {
   if (op === "-") return { text: io.stdinText() };
-  const p = io.path(op);
-  const fs = io.ctx.fs;
-  if (!(await fs.exists(p))) return { error: "ENOENT" };
-  if ((await fs.stat(p)).isDirectory) return { error: "EISDIR" };
-  return { text: await fs.readFile(p) };
+  const c = await probe(io, op);
+  if (c !== "ok") return { error: c };
+  try { return { text: await io.ctx.fs.readFile(io.path(op)) }; } catch (e) { return { error: errCode(e) as ReadErr }; }
 }
-const REASON = { ENOENT: "No such file or directory", EISDIR: "Is a directory" } as const;
+/** Can the effective user read this operand? "ok" or why not (as a real open() reports it). */
+export async function probe(io: IO, op: string): Promise<"ok" | ReadErr> {
+  const fs = io.ctx.fs;
+  const p = io.path(op);
+  let st;
+  try { st = await fs.stat(p); } catch (e) { const c = errCode(e); return c === "EACCES" || c === "ENOTDIR" ? c : "ENOENT"; }
+  if (st.isDirectory) return "EISDIR";
+  try { await fs.readFileBuffer(p); return "ok"; } catch (e) { const c = errCode(e); return c === "EACCES" ? "EACCES" : "ENOENT"; }
+}
+export const REASON = { ENOENT: "No such file or directory", EISDIR: "Is a directory", EACCES: "Permission denied", ENOTDIR: "Not a directory" } as const;
 const splitLines = (t: string) => { const xs = t.split("\n"); if (t.endsWith("\n")) xs.pop(); return t ? xs : []; };
 
 async function cat(io: IO, args: string[]) {
-  const o = parse(args, "nbAEsT", "", { "--number": "n", "--number-nonblank": "b" });
+  const o = parse(args, "nbAEsTv", "", { "--number": "n", "--number-nonblank": "b", "--show-all": "A", "--show-ends": "E", "--show-tabs": "T" });
   if (o.bad) { usage(io, "cat", o.bad); return 1; }
   let code = 0, n = 0;
   for (const op of o.ops.length ? o.ops : ["-"]) {
     const r = await readOp(io, op);
     if ("error" in r) { io.err(`cat: ${op}: ${REASON[r.error]}\n`); code = 1; continue; }
     let t = r.text;
+    // -A = -vET: line ends as $, tabs as ^I, control characters (the \r of a Windows file) as ^M
+    const A = o.flags.has("A");
+    if (A || o.flags.has("v")) t = t.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, (c) => (c === "\x7f" ? "^?" : "^" + String.fromCharCode(c.charCodeAt(0) + 64)));
+    if (A || o.flags.has("T")) t = t.replace(/\t/g, "^I");
+    if (A || o.flags.has("E")) t = t.replace(/\n/g, "$\n");
     if (o.flags.has("n") || o.flags.has("b")) {
       t = t.split(/(?<=\n)/).map((l) => (o.flags.has("b") && l === "\n" ? l : `${String(++n).padStart(6)}\t${l}`)).join("");
     }
@@ -428,7 +468,7 @@ async function headTail(name: "head" | "tail", io: IO, args: string[]) {
   for (const op of ops) {
     const r = await readOp(io, op);
     if ("error" in r) {
-      io.err(r.error === "ENOENT" ? `${name}: cannot open ${q(op)} for reading: No such file or directory\n` : `${name}: error reading ${q(op)}: Is a directory\n`);
+      io.err(r.error === "EISDIR" ? `${name}: error reading ${q(op)}: Is a directory\n` : `${name}: cannot open ${q(op)} for reading: ${REASON[r.error]}\n`);
       code = 1; continue;
     }
     if (headers) io.out(`${first ? "" : "\n"}==> ${op === "-" ? "standard input" : op} <==\n`);
@@ -510,20 +550,27 @@ async function cpMv(s: ShellSession, name: "cp" | "mv", io: IO, args: string[]) 
   const copyTree = async (from: string, to: string, fromShown: string, toShown: string) => {
     const st = await fs.stat(from);
     if (st.isDirectory) {
-      if (!(await fs.exists(to))) await fs.mkdir(to);
+      if (!(await fs.exists(to))) {
+        try { await fs.mkdir(to); } catch (e) { io.err(`cp: cannot create directory ${q(toShown)}: ${why(e)}\n`); code = 1; return; }
+      }
       if (f.has("v")) io.out(`${q(fromShown)} -> ${q(toShown)}\n`);
-      for (const n of (await fs.readdir(from)).sort()) await copyTree(joinPath(from, n), joinPath(to, n), shownJoin(fromShown, n), shownJoin(toShown, n));
+      let names: string[];
+      try { names = (await fs.readdir(from)).sort(); } catch (e) { io.err(`cp: cannot access ${q(fromShown)}: ${why(e)}\n`); code = 1; return; }
+      for (const n of names) await copyTree(joinPath(from, n), joinPath(to, n), shownJoin(fromShown, n), shownJoin(toShown, n));
     } else {
-      await fs.writeFile(to, await fs.readFile(from));
-      await fs.chmod(to, st.mode & 0o777);
+      let data: string;
+      try { data = await fs.readFile(from); } catch (e) { io.err(`cp: cannot open ${q(fromShown)} for reading: ${why(e)}\n`); code = 1; return; }
+      const created = !(await fs.exists(to));
+      try { await fs.writeFile(to, data); } catch (e) { io.err(`cp: cannot create regular file ${q(toShown)}: ${why(e)}\n`); code = 1; return; }
+      if (created) await fs.chmod(to, st.mode & 0o777 & ~0o022).catch(() => {});
       if (f.has("v")) io.out(`${q(fromShown)} -> ${q(toShown)}\n`);
     }
-    s.owners[to] = s.user;
   };
   for (const op of srcs) {
     const src = io.path(op);
-    if (!(await fs.exists(src))) { io.err(`${name}: cannot stat ${q(op)}: No such file or directory\n`); code = 1; continue; }
-    const srcIsDir = (await fs.stat(src)).isDirectory;
+    const sst = await fs.stat(src).catch((e: unknown) => ({ err: e }));
+    if ("err" in sst) { io.err(`${name}: cannot stat ${q(op)}: ${why(sst.err)}\n`); code = 1; continue; }
+    const srcIsDir = sst.isDirectory;
     if (srcIsDir && !rec) { io.err(`cp: -r not specified; omitting directory ${q(op)}\n`); code = 1; continue; }
     const base = src === "/" ? "/" : src.slice(src.lastIndexOf("/") + 1);
     const target = destIsDir ? joinPath(dest, base) : dest;
@@ -547,14 +594,15 @@ async function cpMv(s: ShellSession, name: "cp" | "mv", io: IO, args: string[]) 
       if (f.has("n")) continue;
       if (f.has("i") && !(await io.ask(`${name}: overwrite ${q(targetShown)}? `))) continue;
       if (tDir && srcIsDir && name === "mv") {
-        if ((await fs.readdir(target)).length) { io.err(`mv: cannot move ${q(op)} to ${q(targetShown)}: Directory not empty\n`); code = 1; continue; }
-        await fs.rm(target, { recursive: true });
+        if ((await fs.readdir(target).catch(() => [""])).length) { io.err(`mv: cannot move ${q(op)} to ${q(targetShown)}: Directory not empty\n`); code = 1; continue; }
+        try { await fs.rm(target, { recursive: true }); } catch (e) { io.err(`mv: cannot move ${q(op)} to ${q(targetShown)}: ${why(e)}\n`); code = 1; continue; }
       }
     }
     if (name === "cp") { await copyTree(src, target, op, targetShown); continue; }
-    if (exists && !srcIsDir) await fs.rm(target);
-    await fs.mv(src, target);
-    for (const k of Object.keys(s.owners)) if (k === src || k.startsWith(src + "/")) { s.owners[target + k.slice(src.length)] = s.owners[k]; delete s.owners[k]; }
+    try {
+      if (exists && !srcIsDir) await fs.rm(target);
+      await fs.mv(src, target);
+    } catch (e) { io.err(`mv: cannot move ${q(op)} to ${q(targetShown)}: ${why(e)}\n`); code = 1; continue; }
     if (f.has("v")) io.out(`renamed ${q(op)} -> ${q(targetShown)}\n`);
   }
   return code;
@@ -577,20 +625,24 @@ async function rm(s: ShellSession, io: IO, args: string[]) {
   const removeTree = async (p: string, shown: string): Promise<boolean> => {
     const st = await fs.lstat(p);
     if (st.isDirectory) {
-      const kids = (await fs.readdir(p)).sort();
+      let kids: string[];
+      try { kids = (await fs.readdir(p)).sort(); } catch (e) { io.err(`rm: cannot remove ${q(shown)}: ${why(e)}\n`); code = 1; return false; }
       if (interactive && kids.length && !(await io.ask(`rm: descend into directory ${q(shown)}? `))) return false;
       let all = true;
       for (const n of kids) if (!(await removeTree(joinPath(p, n), `${shown.replace(/\/$/, "")}/${n}`))) all = false;
       if (!all) return false;
       if (interactive && !(await io.ask(`rm: remove directory ${q(shown)}? `))) return false;
-      await fs.rm(p, { recursive: true });
+      try { await fs.rm(p, { recursive: true }); } catch (e) { io.err(`rm: cannot remove ${q(shown)}: ${why(e)}\n`); code = 1; return false; }
       if (f.has("v")) io.out(`removed directory ${q(shown)}\n`);
     } else {
-      if (interactive && !(await io.ask(`rm: remove ${st.size === 0 ? "regular empty file" : "regular file"} ${q(shown)}? `))) return false;
-      await fs.rm(p);
+      const kind = st.size === 0 ? "regular empty file" : "regular file";
+      // a file you may not write: rm asks first (unless -f), even though removing depends on the folder
+      const prot = !force && !interactive && !io.ctx.stdinProvided && !(await fs.can(p, 2));
+      if (prot && !(await io.ask(`rm: remove write-protected ${kind} ${q(shown)}? `))) return false;
+      if (interactive && !(await io.ask(`rm: remove ${kind} ${q(shown)}? `))) return false;
+      try { await fs.rm(p); } catch (e) { io.err(`rm: cannot remove ${q(shown)}: ${why(e)}\n`); code = 1; return false; }
       if (f.has("v")) io.out(`removed ${q(shown)}\n`);
     }
-    delete s.owners[p];
     return true;
   };
   for (const op of o.ops) {
@@ -598,8 +650,8 @@ async function rm(s: ShellSession, io: IO, args: string[]) {
     const base = op.replace(/\/+$/, "").split("/").pop();
     if (base === "." || base === "..") { io.err(`rm: refusing to remove '.' or '..' directory: skipping ${q(op)}\n`); code = 1; continue; }
     if (p === "/" && rec) { io.err("rm: it is dangerous to operate recursively on '/'\nrm: use --no-preserve-root to override this failsafe\n"); code = 1; continue; }
-    const st = await fs.lstat(p).catch(() => null);
-    if (!st) { if (!force) { io.err(`rm: cannot remove ${q(op)}: No such file or directory\n`); code = 1; } continue; }
+    const st = await fs.lstat(p).catch((e: unknown) => ({ err: e }));
+    if ("err" in st) { if (!force || errCode(st.err) !== "ENOENT") { io.err(`rm: cannot remove ${q(op)}: ${why(st.err)}\n`); code = 1; } continue; }
     if (st.isDirectory && !rec) {
       if (f.has("d") && !(await fs.readdir(p)).length) { await fs.rm(p, { recursive: true }); if (f.has("v")) io.out(`removed directory ${q(op)}\n`); continue; }
       io.err(`rm: cannot remove ${q(op)}: Is a directory\n`); code = 1; continue;
@@ -629,19 +681,14 @@ async function mkdir(s: ShellSession, io: IO, args: string[]) {
         const st = await fs.stat(cur).catch(() => null);
         if (st?.isDirectory) continue;
         if (st) { io.err(`mkdir: cannot create directory ${qc(op)}: ${i === parts.length - 1 ? "File exists" : "Not a directory"}\n`); failed = true; break; }
-        await fs.mkdir(cur);
-        s.owners[cur] = s.user;
+        try { await fs.mkdir(cur); } catch (e) { io.err(`mkdir: cannot create directory ${qc(shown)}: ${why(e)}\n`); failed = true; break; }
         if (o.flags.has("v")) io.out(`mkdir: created directory ${q(shown)}\n`);
       }
       if (failed) code = 1;
       continue;
     }
-    const parent = p.replace(/\/[^/]*$/, "") || "/";
-    if (await fs.exists(p)) { io.err(`mkdir: cannot create directory ${qc(op)}: File exists\n`); code = 1; continue; }
-    if (!(await fs.exists(parent))) { io.err(`mkdir: cannot create directory ${qc(op)}: No such file or directory\n`); code = 1; continue; }
-    if (!(await fs.stat(parent)).isDirectory) { io.err(`mkdir: cannot create directory ${qc(op)}: Not a directory\n`); code = 1; continue; }
-    await fs.mkdir(p);
-    s.owners[p] = s.user;
+    try { await fs.mkdir(p); }
+    catch (e) { io.err(`mkdir: cannot create directory ${qc(op)}: ${errCode(e) === "EEXIST" ? "File exists" : why(e)}\n`); code = 1; continue; }
     if (o.flags.has("v")) io.out(`mkdir: created directory ${q(op)}\n`);
   }
   return code;
@@ -655,14 +702,13 @@ async function rmdir(s: ShellSession, io: IO, args: string[]) {
   let code = 0;
   for (const op of o.ops) {
     const p = io.path(op);
-    const st = await fs.lstat(p).catch(() => null);
-    const fail = (why: string) => { io.err(`rmdir: failed to remove ${q(op)}: ${why}\n`); code = 1; };
-    if (!st) { fail("No such file or directory"); continue; }
+    const st = await fs.lstat(p).catch((e: unknown) => ({ err: e }));
+    const fail = (w: string) => { io.err(`rmdir: failed to remove ${q(op)}: ${w}\n`); code = 1; };
+    if ("err" in st) { fail(why(st.err)); continue; }
     if (!st.isDirectory) { fail("Not a directory"); continue; }
-    if ((await fs.readdir(p)).length) { fail("Directory not empty"); continue; }
+    if (await s.asRoot(async () => (await fs.readdir(p)).length)) { fail("Directory not empty"); continue; }
     if (o.flags.has("v")) io.out(`rmdir: removing directory, ${q(op)}\n`);
-    await fs.rm(p, { recursive: true });
-    delete s.owners[p];
+    try { await fs.rm(p, { recursive: true }); } catch (e) { fail(why(e)); }
   }
   return code;
 }
@@ -676,13 +722,11 @@ async function touch(s: ShellSession, io: IO, args: string[]) {
   const now = new Date();
   for (const op of o.ops) {
     const p = io.path(op);
-    if (await fs.exists(p)) { await fs.utimes(p, now, now); continue; }
-    if (o.flags.has("c")) continue;
-    try { await fs.writeFile(p, ""); s.owners[p] = s.user; }
-    catch (e) {
-      const c = (e as { code?: string }).code;
-      io.err(`touch: cannot touch ${q(op)}: ${c === "ENOTDIR" ? "Not a directory" : "No such file or directory"}\n`); code = 1;
-    }
+    try {
+      if (await fs.exists(p)) { await fs.utimes(p, now, now); continue; }
+      if (o.flags.has("c")) continue;
+      await fs.writeFile(p, "");
+    } catch (e) { io.err(`touch: cannot touch ${q(op)}: ${why(e)}\n`); code = 1; }
   }
   return code;
 }
@@ -696,10 +740,7 @@ async function tee(io: IO, args: string[]) {
   for (const op of o.ops) {
     const p = io.path(op);
     try { if (o.flags.has("a")) await io.ctx.fs.appendFile(p, text); else await io.ctx.fs.writeFile(p, text); }
-    catch (e) {
-      const c = (e as { code?: string }).code;
-      io.err(`tee: ${op}: ${c === "EISDIR" ? "Is a directory" : c === "ENOTDIR" ? "Not a directory" : "No such file or directory"}\n`); code = 1;
-    }
+    catch (e) { io.err(`tee: ${op}: ${why(e)}\n`); code = 1; }
   }
   return code;
 }

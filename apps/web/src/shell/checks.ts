@@ -10,13 +10,19 @@ export type ShellCheck = {
   fs_absent?: string;
   fs_content?: { path: string; equals?: string; contains?: string | string[]; not_contains?: string | string[]; regex?: string };
   fs_mode?: { path: string; mode: string };
+  fs_owner?: { path: string; owner?: string; group?: string };
+  /** a process with this name (or {name, user}) is running / is gone */
+  process_alive?: string | { name: string; user?: string };
+  process_absent?: string | { name: string; user?: string };
+  /** `signal` was sent to the process `to`; with `after` — and before it `after` was (TERM before KILL) */
+  signal_sent?: { to: string; signal: string; after?: string };
   last_output_contains?: string | string[];
   run?: string; stdin?: string; cwd?: string;
   stdout?: string; stdout_contains?: string | string[]; stderr?: string; stderr_contains?: string | string[]; exit_code?: number;
   command_used?: string | string[];
   forbid_commands?: string[];
 };
-export const CHECK_KINDS = ["fs_exists", "fs_absent", "fs_content", "fs_mode", "last_output_contains", "run", "command_used", "forbid_commands"] as const;
+export const CHECK_KINDS = ["fs_exists", "fs_absent", "fs_content", "fs_mode", "fs_owner", "last_output_contains", "run", "command_used", "forbid_commands", "process_alive", "process_absent", "signal_sent"] as const;
 export type ShellTests = { checks: ShellCheck[] };
 /** One step of a reference solution: a command line, optionally with answers to its questions or keys for nano. */
 export type SolutionStep = string | { cmd: string; input?: string | string[]; keys?: string[] };
@@ -37,6 +43,10 @@ export function checkName(c: ShellCheck): string {
     case "fs_absent": return `Нет ${c.fs_absent}`;
     case "fs_content": return `Содержимое ${c.fs_content!.path}`;
     case "fs_mode": return `Права ${c.fs_mode!.path}`;
+    case "fs_owner": return `Владелец ${c.fs_owner!.path}`;
+    case "process_alive": return `Процесс ${procName(c.process_alive!)} работает`;
+    case "process_absent": return `Процесса ${procName(c.process_absent!)} нет`;
+    case "signal_sent": return `Сигнал ${c.signal_sent!.signal} процессу ${c.signal_sent!.to}`;
     case "last_output_contains": return "Ответ выведен в терминал";
     case "run": return `Команда ${c.run}`;
     case "command_used": return `Использована команда ${list(c.command_used).join(" или ")}`;
@@ -45,7 +55,16 @@ export function checkName(c: ShellCheck): string {
   }
 }
 
+const procName = (x: string | { name: string }) => (typeof x === "string" ? x : x.name);
+const sigName = (x: string) => x.toUpperCase().replace(/^SIG/, "").replace(/^9$/, "KILL").replace(/^15$/, "TERM").replace(/^2$/, "INT").replace(/^1$/, "HUP");
+
+/** The checks look at everything as the platform, not as the learner: no permission limits (runs when no command does). */
 export async function runChecks(s: ShellSession, checks: ShellCheck[]): Promise<CheckResult[]> {
+  await s.procs.tick();
+  return s.asRoot(() => runChecksAsRoot(s, checks));
+}
+
+async function runChecksAsRoot(s: ShellSession, checks: ShellCheck[]): Promise<CheckResult[]> {
   const out: CheckResult[] = [];
   const used = new Set(s.log.flatMap((e) => e.commands));
   for (const c of checks) {
@@ -84,6 +103,29 @@ export async function runChecks(s: ShellSession, checks: ShellCheck[]): Promise<
         const want = parseInt(c.fs_mode!.mode, 8);
         if (!st) fail(`«${c.fs_mode!.path}» нет.`);
         else if ((st.mode & 0o777) !== want) fail(`Права «${c.fs_mode!.path}» — ${perm(st.mode)}, а нужны ${perm(want)}.`, perm(want), perm(st.mode));
+        else r.ok = true;
+      } else if (kind === "fs_owner") {
+        const fo = c.fs_owner!;
+        const p = s.abs(fo.path);
+        if (!(await s.fs.exists(p))) fail(`«${fo.path}» нет.`);
+        else {
+          const m = s.fs.metaOf(p);
+          if ((fo.owner && m.o !== fo.owner) || (fo.group && m.g !== fo.group)) fail(`Владелец «${fo.path}» — ${m.o}:${m.g}, а нужен ${fo.owner ?? m.o}:${fo.group ?? m.g}.`, `${fo.owner ?? m.o}:${fo.group ?? m.g}`, `${m.o}:${m.g}`);
+          else r.ok = true;
+        }
+      } else if (kind === "process_alive" || kind === "process_absent") {
+        const spec = (kind === "process_alive" ? c.process_alive : c.process_absent)!;
+        const name = procName(spec), user = typeof spec === "string" ? undefined : spec.user;
+        const alive = s.procs.byName(name).filter((p) => !user || p.user === user);
+        if (kind === "process_alive") { if (!alive.length) fail(`Процесс ${name} не работает — а его нужно было оставить.`); else r.ok = true; }
+        else if (alive.length) fail(`Процесс ${name} всё ещё работает (PID ${alive.map((p) => p.pid).join(", ")}).`); else r.ok = true;
+      } else if (kind === "signal_sent") {
+        const ss = c.signal_sent!;
+        const want = sigName(ss.signal), before = ss.after ? sigName(ss.after) : null;
+        const recs = s.procs.signals.filter((x) => x.to === ss.to);
+        const at = recs.findIndex((x) => x.sig === want);
+        if (at < 0) fail(`Процессу ${ss.to} не отправлен сигнал ${want}.`);
+        else if (before && !recs.slice(0, at).some((x) => x.sig === before)) fail(`Сначала ${ss.to} нужно было вежливо попросить завершиться — ${before}, и только потом ${want}.`);
         else r.ok = true;
       } else if (kind === "last_output_contains") {
         const last = stripAnsi(s.lastOutput());

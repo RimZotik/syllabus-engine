@@ -1,0 +1,46 @@
+# Образец задачи тренажёра, этап 2: права, sudo, процессы и сигналы, скрипт (docs/content/authoring.md, 3.2).
+# Не часть курса: на нём тесты платформы и валидатор (tools/program/build.py) проверяют весь путь.
+id: sh-sample-admin
+title: Навести порядок на сервере
+sandbox: shell
+difficulty: 3
+concepts: [chmod, sudo, kill, сигналы, скрипты]
+statement: |
+  Вы — `student`, пароль для `sudo` — `forge`.
+
+  1. Сделайте скрипт `deploy.sh` исполняемым — только для владельца (группа и остальные пусть только читают) — и запустите его.
+  2. В файле `/srv/app/config.ini` поменяйте порт на `8080`: должна получиться одна строка `port=8080`. Владельцем файла должен остаться `root`.
+  3. Процесс `hog` занял весь процессор — остановите его. Процесс `stubborn` тоже остановите, но сначала вежливо (TERM), а если не послушается — принудительно.
+  4. Процесс `collector` пишет журнал — его не трогайте.
+setup:
+  cwd: /home/student
+  files:
+    deploy.sh: "#!/bin/bash\necho deployed > deploy.log\n"
+    /srv/app/config.ini: {content: "port=80\n", mode: "644", owner: root}
+  processes:
+    - {name: hog, behavior: busy}
+    - {name: stubborn, behavior: ignore_term}
+    - {name: collector, user: root, behavior: logger, file: /var/log/collector.log}
+solution:
+  - chmod 744 deploy.sh
+  - ./deploy.sh
+  - {cmd: "echo port=8080 | sudo tee /srv/app/config.ini", input: ["forge"]}
+  - pkill hog
+  - pkill stubborn
+  - pkill -KILL stubborn
+tests:
+  checks:
+    - {name: deploy.sh исполняется только владельцем, fs_mode: {path: deploy.sh, mode: "744"}}
+    - {name: Скрипт запущен, fs_content: {path: deploy.log, equals: "deployed\n"}}
+    - {name: Порт 8080, fs_content: {path: /srv/app/config.ini, equals: "port=8080\n"}}
+    - {name: config.ini всё ещё принадлежит root, fs_owner: {path: /srv/app/config.ini, owner: root, group: root}}
+    - {name: hog остановлен, process_absent: hog}
+    - {name: stubborn остановлен, process_absent: stubborn}
+    - {name: "stubborn — сначала TERM, потом KILL", signal_sent: {to: stubborn, signal: KILL, after: TERM}}
+    - {name: collector работает, process_alive: collector}
+    - {name: Правка через sudo, command_used: sudo, hidden: true}
+hints:
+  - level: 1
+    text: "`chmod 744` — это rwx для владельца и r-- для группы и остальных."
+  - level: 2
+    text: "`sudo echo … > /etc/…` не сработает: перенаправление делает ваша оболочка, а не sudo. Используйте `… | sudo tee файл`."

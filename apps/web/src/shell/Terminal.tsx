@@ -21,6 +21,8 @@ export type TerminalHandle = {
   runQuiet(line: string): Promise<void>;
   clear(): void;
   fullscreen(): Promise<void>;
+  /** «Новое окно терминала»: a fresh bash that reads ~/.bashrc */
+  newWindow(): Promise<void>;
 };
 
 const visibleLen = (s: string) => [...s.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "")].length;
@@ -60,6 +62,7 @@ export const ShellTerminal = forwardRef<TerminalHandle, Props>(function ShellTer
     runQuiet: (line) => ctl.current?.runQuiet(line) ?? Promise.resolve(),
     clear: () => ctl.current?.clearScreen(),
     fullscreen: () => ctl.current?.fullscreen() ?? Promise.resolve(),
+    newWindow: () => ctl.current?.newWindow() ?? Promise.resolve(),
   }), []);
 
   return <div className="term-host" ref={host} />;
@@ -78,7 +81,8 @@ class Controller {
   draft = "";
   busy = false;
   abort: AbortController | null = null;
-  ask: { buf: string[]; resolve: (v: string | null) => void } | null = null;
+  ask: { buf: string[]; resolve: (v: string | null) => void; secret: boolean } | null = null;
+  private appTimer: ReturnType<typeof setInterval> | null = null;
   app: { app: ScreenApp; resolve: () => void } | null = null;
   tabs = 0;
   typeahead: string[] = [];
@@ -88,8 +92,11 @@ class Controller {
   private onCommand: (l: string, r: RunResult) => void;
   private el: HTMLElement;
 
+  private rows: number;
+
   constructor(el: HTMLElement, s: ShellSession, onCommand: (l: string, r: RunResult) => void, rows: number) {
     this.el = el;
+    this.rows = rows;
     this.s = s;
     this.onCommand = onCommand;
     this.term = new Terminal({
@@ -118,12 +125,17 @@ class Controller {
     this.abort?.abort();
     this.ask?.resolve(null);
     if (this.app) { this.app.app.done = true; this.app.resolve(); }
+    if (this.appTimer) clearInterval(this.appTimer);
     for (const f of this.disposers) f();
     this.term.dispose();
   }
 
+  /** Width follows the box; the height stays `rows` lines (in full screen — the whole screen). */
   private fitNow() {
-    try { this.fit.fit(); } catch { /* not visible yet */ }
+    try {
+      const d = this.fit.proposeDimensions();
+      if (d && d.cols > 0) this.term.resize(d.cols, document.fullscreenElement ? Math.max(5, d.rows) : this.rows);
+    } catch { /* not visible yet */ }
     this.s.ui.cols = this.term.cols;
     this.s.ui.rows = this.term.rows;
   }
@@ -142,11 +154,13 @@ class Controller {
   private ui(): ShellUI {
     return {
       cols: this.term.cols, rows: this.term.rows,
-      ask: (prompt) => new Promise((resolve) => { this.term.write(prompt); this.ask = { buf: [], resolve }; }),
+      // a secret answer (a password) is not echoed, as in a real terminal
+      ask: (prompt, opts) => new Promise((resolve) => { this.term.write(prompt.replace(/\n/g, "\r\n")); this.ask = { buf: [], resolve, secret: !!opts?.secret }; }),
       screen: (app) => new Promise((resolve) => {
         this.term.write("\x1b[?1049h\x1b[H\x1b[2J");
         this.app = { app, resolve };
         this.drawApp();
+        if (app.interval) this.appTimer = setInterval(() => { void (async () => { await app.tick?.(); this.drawApp(); })(); }, app.interval);
       }),
     };
   }
@@ -154,7 +168,8 @@ class Controller {
   writeln(t: string) { this.term.write(t.replace(/\n/g, "\r\n") + "\r\n"); }
 
   private promptText() {
-    return `\x1b[1;32m${this.s.user}@forge\x1b[0m:\x1b[1;34m${this.s.promptPath()}\x1b[0m${this.s.user === "root" ? "#" : "$"} `;
+    const u = this.s.promptUser();
+    return `\x1b[1;32m${u}@forge\x1b[0m:\x1b[1;34m${this.s.promptPath()}\x1b[0m${u === "root" ? "#" : "$"} `;
   }
 
   /** `col` — where the cursor is now (after output without a final newline bash prints the prompt right there) */
@@ -206,6 +221,7 @@ class Controller {
       if (this.app.app.done) {
         const done = this.app;
         this.app = null;
+        if (this.appTimer) { clearInterval(this.appTimer); this.appTimer = null; }
         this.term.write("\x1b[?1049l\x1b[?25h");
         done.resolve();
       } else this.drawApp();
@@ -217,13 +233,16 @@ class Controller {
         if (!a) break;
         if (k === "Enter") { this.term.write("\r\n"); this.ask = null; a.resolve(a.buf.join("")); }
         else if (k === "C-c") { this.term.write("^C\r\n"); this.ask = null; this.abort?.abort(); a.resolve(null); }
-        else if (k === "Backspace") { if (a.buf.length) { a.buf.pop(); this.term.write("\b \b"); } }
-        else if ([...k].length === 1 && k >= " ") { a.buf.push(k); this.term.write(k); }
+        else if (k === "Backspace") { if (a.buf.length) { a.buf.pop(); if (!a.secret) this.term.write("\b \b"); } }
+        else if ([...k].length === 1 && k >= " ") { a.buf.push(k); if (!a.secret) this.term.write(k); }
       }
       return;
     }
     if (this.busy) {
-      if (keys.includes("C-c")) { this.term.write("^C"); this.abort?.abort(); this.typeahead = []; }
+      // Ctrl+C: SIGINT to the foreground program and the line stops; Ctrl+Z: SIGTSTP — a sleeping program becomes a stopped job
+      if (keys.includes("C-c")) { this.term.write("^C"); void this.s.interrupt("INT"); this.abort?.abort(); this.typeahead = []; }
+      // Ctrl+Z: the stopped program reports «Stopped» itself; the rest of the line is dropped by the session
+      else if (keys.includes("C-z")) { this.term.write("^Z"); void this.s.interrupt("TSTP"); this.typeahead = []; }
       // typed ahead while a command runs: a real terminal keeps it for the next prompt
       else this.typeahead.push(...keys);
       return;
@@ -341,6 +360,15 @@ class Controller {
   async runQuiet(line: string) {
     this.buf = [...line]; this.cur = this.buf.length;
     await this.enter();
+  }
+
+  async newWindow() {
+    await this.chain;
+    await this.running;
+    this.term.write("\r\n\x1b[2m──────── новое окно терминала ────────\x1b[0m\r\n");
+    const chunks: { fd: 1 | 2; text: string }[] = [];
+    await this.s.newWindow((c) => { chunks.push(c); this.writeOut(c.fd, c.text); });
+    this.prompt();
   }
 
   async fullscreen() {

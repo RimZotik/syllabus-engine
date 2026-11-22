@@ -3,7 +3,7 @@
  * (new and changed entries are highlighted, the current folder is marked). Used by the task page and <Shell>.
  */
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from "react";
-import { File, Folder, FolderOpen, FolderTree, Maximize2, Minimize2 } from "lucide-react";
+import { File, Folder, FolderOpen, FolderTree, Maximize2, Minimize2, SquarePlus } from "lucide-react";
 import { ShellTerminal, type TerminalHandle } from "./Terminal";
 import type { RunResult, ShellSession, TreeNode } from "./engine";
 
@@ -19,7 +19,8 @@ function Node({ n, cwd, changed, depth }: { n: TreeNode; cwd: string; changed: S
   const Icon = n.dir ? (cwd === n.path || cwd.startsWith(n.path + "/") ? FolderOpen : Folder) : File;
   return (
     <>
-      <div className={`ft-row${changed.has(n.path) ? " new" : ""}${n.name.startsWith(".") ? " hidden" : ""}${here ? " here" : ""}`} style={{ paddingLeft: 8 + depth * 14 }} title={n.path}>
+      <div className={`ft-row${changed.has(n.path) ? " new" : ""}${n.name.startsWith(".") ? " hidden" : ""}${here ? " here" : ""}`} style={{ paddingLeft: 8 + depth * 14 }} title={`${n.path}
+${n.dir ? "d" : "-"}${perm(n.mode)} ${n.owner ?? ""}:${n.group ?? ""}`}>
         <Icon size={14} /><span className="ft-name">{n.name}{n.dir ? "/" : ""}</span>{here && <span className="ft-here">вы здесь</span>}
       </div>
       {n.children?.map((c) => <Node key={c.path} n={c} cwd={cwd} changed={changed} depth={depth + 1} />)}
@@ -28,6 +29,7 @@ function Node({ n, cwd, changed, depth }: { n: TreeNode; cwd: string; changed: S
 }
 
 export type ShellPanelHandle = TerminalHandle & { refresh(): Promise<void> };
+const perm = (m?: number) => (m === undefined ? "" : ["r", "w", "x", "r", "w", "x", "r", "w", "x"].map((c, i) => (m & (0o400 >> i) ? c : "-")).join(""));
 
 export const ShellPanel = forwardRef<ShellPanelHandle, {
   session: ShellSession; onCommand?: (line: string, r: RunResult) => void; actions?: ReactNode; greeting?: string; rows?: number; title?: string;
@@ -63,6 +65,7 @@ export const ShellPanel = forwardRef<ShellPanelHandle, {
     runQuiet: (l) => term.current?.runQuiet(l) ?? Promise.resolve(),
     clear: () => term.current?.clear(),
     fullscreen: () => term.current?.fullscreen() ?? Promise.resolve(),
+    newWindow: () => term.current?.newWindow() ?? Promise.resolve(),
     refresh,
   }), [refresh]);
 
@@ -75,6 +78,7 @@ export const ShellPanel = forwardRef<ShellPanelHandle, {
         <span className="shell-title">{title}</span>
         <div className="shell-actions">
           {actions}
+          <button className="icon-btn" onClick={() => void term.current?.newWindow().then(refresh)} title="Новое окно терминала: новый bash прочитает ~/.bashrc, переменные без export и фоновые задачи исчезнут"><SquarePlus size={16} /></button>
           <button className={`icon-btn${showTree ? " on" : ""}`} onClick={toggleTree} title={showTree ? "Скрыть дерево файлов" : "Показать дерево файлов"} aria-pressed={showTree}><FolderTree size={16} /></button>
           <button className="icon-btn" onClick={() => void term.current?.fullscreen()} title={full ? "Выйти из полноэкранного режима" : "Во весь экран — в нём браузер отдаёт терминалу и Ctrl+W"}>{full ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
         </div>
