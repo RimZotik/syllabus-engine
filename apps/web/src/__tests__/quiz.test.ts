@@ -110,10 +110,12 @@ describe("code questions", () => {
     expect(unanswered(st, { questions: [code] }, true)).toEqual([]);
   });
 
-  it("a passed program survives «Пройти заново», a failed one starts over", () => {
+  it("«Пройти заново» keeps every program: a passed one as passed, a failed one as code to check again", () => {
     const prev: Saved = { order: [], answers: { c: { code: "print(2)", ok: true } }, conf: {}, done: true, grades: {} };
     expect(restartState({ questions: [code] }, prev).answers.c).toEqual({ code: "print(2)", ok: true });
-    prev.answers.c = { code: "print(3)", ok: false };
+    prev.answers.c = { code: "print(3)", ok: false, results: [] };
+    expect(restartState({ questions: [code] }, prev).answers.c).toEqual({ code: "print(3)" });
+    delete prev.answers.c;
     expect(restartState({ questions: [code] }, prev).answers.c).toBeUndefined();
   });
 });

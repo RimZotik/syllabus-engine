@@ -9,6 +9,12 @@ import { CodeRunner } from "./CodeRunner";
 import { checkPython } from "../sandbox/runner";
 import { Modal } from "./Modal";
 
+/** A second copy of every program typed in a test, in the browser: if the saved state is ever lost
+ *  (the test changed, a save failed), the editor opens with the last typed code, not with the starter. */
+const codeKey = (scope: string, id: string) => `quiz-code:${scope}:${id}`;
+function backupCode(scope: string, id: string, code: string) { try { localStorage.setItem(codeKey(scope, id), code); } catch { /* storage off */ } }
+function backedUpCode(scope: string, id: string): string | null { try { return localStorage.getItem(codeKey(scope, id)); } catch { return null; } }
+
 /** Grows with its text; the scrollbar appears only past ~3/4 of the screen height (CSS max-height). */
 function AutoTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -85,7 +91,16 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
     let alive = true;
     api.quizState<Saved>(scope).then(({ state, passed: wasPassed }) => {
       if (!alive) return;
-      if (fits(state, dataRef.current)) { stRef.current = state; setSt(state); }
+      const base = fits(state, dataRef.current) ? state : stRef.current;
+      // a program missing from the saved state (lost or never saved) comes back from the browser copy
+      const answers = { ...base.answers };
+      for (const q of dataRef.current.questions) {
+        if (q.type !== "code" || (answers[q.id] as CodeAnswer | undefined)?.code) continue;
+        const code = backedUpCode(scope, q.id);
+        if (code && code.trim() !== (q.starter ?? "").trim()) answers[q.id] = { code };
+      }
+      const restored = { ...base, answers };
+      if (restored !== stRef.current) { stRef.current = restored; setSt(restored); }
       if (wasPassed) reported.current = true;
     }).catch(() => {}).finally(() => alive && setLoaded(true));
     return () => { alive = false; };
@@ -262,10 +277,10 @@ export function Quiz({ scope, data, onPassed, exam = false, onPhase }: { scope: 
             <div className="qtitle"><b>{n + 1}. <RichText text={q.q} /></b><span className="chip">{q.type === "single" ? "один ответ" : q.type === "multi" ? "несколько ответов" : q.type === "fields" ? "заполните поля" : q.type === "code" ? "код" : "развёрнутый ответ"}</span></div>
             {q.type === "code" ? (
               <div className="qcode">
-                <CodeRunner initial={(a as CodeAnswer | undefined)?.code ?? q.starter ?? ""} tests={q.tests ?? {}} timeoutMs={q.timeout_ms ?? 5000}
+                <CodeRunner initial={(a as CodeAnswer | undefined)?.code ?? backedUpCode(scope, q.id) ?? q.starter ?? ""} tests={q.tests ?? {}} timeoutMs={q.timeout_ms ?? 5000}
                   results={(a as CodeAnswer | undefined)?.results ?? null} stdout={(a as CodeAnswer | undefined)?.stdout} readOnly={st.done}
-                  onCode={(code) => { if ((stRef.current.answers[q.id] as CodeAnswer | undefined)?.code !== code) edit({ answers: { ...stRef.current.answers, [q.id]: { code } } }); }}
-                  onChecked={(r, code) => edit({ answers: { ...stRef.current.answers, [q.id]: { code, ok: r.results.length > 0 && r.results.every((x) => x.ok), results: r.results, stdout: r.stdout ?? null } } })} />
+                  onCode={(code) => { backupCode(scope, q.id, code); if ((stRef.current.answers[q.id] as CodeAnswer | undefined)?.code !== code) edit({ answers: { ...stRef.current.answers, [q.id]: { code } } }); }}
+                  onChecked={(r, code) => { backupCode(scope, q.id, code); edit({ answers: { ...stRef.current.answers, [q.id]: { code, ok: r.results.length > 0 && r.results.every((x) => x.ok), results: r.results, stdout: r.stdout ?? null } } }); }} />
                 {st.done && review && q.solution && <details className="solution"><summary>Эталонное решение</summary><pre>{q.solution}</pre></details>}
               </div>
             ) : q.type === "fields" ? (

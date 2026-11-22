@@ -88,9 +88,12 @@ export const accepted = (s: Saved, id: string) => s.grades[id]?.verdict === "pas
  */
 export function restartState(data: QuizData, prev: Saved): Saved {
   const next: Saved = { ...fresh(data), history: prev.history };
-  // a program that already passed its tests is kept too: nothing to retype
+  // programs are never thrown away: a passed one stays passed (nothing to retype); any other keeps its
+  // code without the old verdict, so the learner fixes it instead of retyping and «Сдать» checks it again
   for (const q of data.questions.filter((x) => x.type === "code")) {
-    if ((prev.answers[q.id] as CodeAnswer | undefined)?.ok) next.answers[q.id] = prev.answers[q.id];
+    const a = prev.answers[q.id] as CodeAnswer | undefined;
+    if (!a?.code) continue;
+    next.answers[q.id] = a.ok ? a : { code: a.code };
   }
   for (const q of data.questions.filter((x) => x.type === "open")) {
     if (prev.answers[q.id] !== undefined) next.answers[q.id] = prev.answers[q.id];
