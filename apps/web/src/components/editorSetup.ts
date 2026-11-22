@@ -3,11 +3,11 @@
  * styles.css so they follow the site's theme). Deliberately left out of CodeMirror's basicSetup: the
  * highlighted current line and the highlighting of every other occurrence of the selected word.
  */
-import { EditorView, drawSelection, dropCursor, highlightSpecialChars, keymap, lineNumbers, rectangularSelection } from "@codemirror/view";
+import { EditorView, drawSelection, dropCursor, highlightSpecialChars, keymap, lineNumbers, rectangularSelection, type Command } from "@codemirror/view";
 import { EditorState, type Extension } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { bracketMatching, HighlightStyle, indentOnInput, syntaxHighlighting } from "@codemirror/language";
-import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
+import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, syntaxHighlighting } from "@codemirror/language";
+import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
 import { python, pythonLanguage } from "@codemirror/lang-python";
 import { dotCompletions } from "./pyComplete";
 import { tags as t } from "@lezer/highlight";
@@ -49,14 +49,36 @@ const look = EditorView.theme({
   ".cm-completionDetail": { color: "var(--ink-3)", fontStyle: "normal", marginLeft: "0" },
 });
 
+/** One indent level = 4 spaces, as in every example of the course and PEP 8 (Tab, Enter after «:»). */
+export const INDENT = "    ";
+
+/** Backspace in the leading spaces of a line removes a whole indent level, like VS Code — one press, not four. */
+export const backspaceIndent: Command = (view) => {
+  const { state } = view;
+  if (state.selection.ranges.some((r) => !r.empty)) return false;
+  const changes = state.selection.ranges.map((r) => {
+    const line = state.doc.lineAt(r.head);
+    const before = state.sliceDoc(line.from, r.head);
+    if (!before.length || /[^ ]/.test(before)) return null;
+    const to = Math.floor((before.length - 1) / INDENT.length) * INDENT.length;
+    return { from: line.from + to, to: r.head };
+  });
+  if (changes.some((c) => c === null)) return false;
+  view.dispatch(state.update({ changes: changes as { from: number; to: number }[], scrollIntoView: true, userEvent: "delete.backward" }));
+  return true;
+};
+
 /** Everything the editor needs; `extra` goes first so its keys win (e.g. Ctrl+Enter). */
 export function editorExtensions(extra: Extension[] = []): Extension[] {
   return [
     ...extra,
     lineNumbers(), highlightSpecialChars(), history(), drawSelection(), dropCursor(),
-    EditorState.allowMultipleSelections.of(true), indentOnInput(), bracketMatching(), closeBrackets(),
-    autocompletion(), rectangularSelection(),
-    keymap.of([indentWithTab, ...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...completionKeymap]),
+    EditorState.allowMultipleSelections.of(true), indentUnit.of(INDENT), EditorState.tabSize.of(4),
+    indentOnInput(), bracketMatching(), closeBrackets(),
+    // a suggestion is taken with Tab; Enter always starts a new line (the list closes on its own)
+    autocompletion({ defaultKeymap: false }), rectangularSelection(),
+    keymap.of([{ key: "Tab", run: acceptCompletion }, ...completionKeymap.filter((b) => b.key !== "Enter"),
+      { key: "Backspace", run: backspaceIndent }, indentWithTab, ...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap]),
     python(), pythonLanguage.data.of({ autocomplete: dotCompletions }), syntaxHighlighting(pythonColors), look,
   ];
 }
