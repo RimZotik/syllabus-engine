@@ -6,9 +6,9 @@
 import { EditorView, drawSelection, dropCursor, highlightSpecialChars, keymap, lineNumbers, rectangularSelection, type Command } from "@codemirror/view";
 import { EditorState, type Extension } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, syntaxHighlighting } from "@codemirror/language";
-import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
-import { python, pythonLanguage } from "@codemirror/lang-python";
+import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, LanguageSupport, syntaxHighlighting } from "@codemirror/language";
+import { acceptCompletion, autocompletion, type CompletionSource, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
+import { globalCompletion, localCompletionSource, pythonLanguage } from "@codemirror/lang-python";
 import { dotCompletions } from "./pyComplete";
 import { tags as t } from "@lezer/highlight";
 
@@ -34,7 +34,8 @@ const look = EditorView.theme({
   ".cm-content": { fontFamily: "var(--f-mono)", padding: "12px 0", caretColor: "var(--ed-caret)" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--ed-caret)", borderLeftWidth: "2px" },
   ".cm-gutters": { backgroundColor: "transparent", border: "none", color: "var(--ed-gutter)" },
-  ".cm-lineNumbers .cm-gutterElement": { padding: "0 10px 0 12px" },
+  // room for three digits from the start, so the code does not shift right when line 10 appears
+  ".cm-lineNumbers .cm-gutterElement": { padding: "0 10px 0 12px", minWidth: "calc(3ch + 22px)", fontVariantNumeric: "tabular-nums" },
   "&.cm-focused": { outline: "none" },
   "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "var(--ed-selection) !important" },
   "&.cm-focused .cm-matchingBracket": { backgroundColor: "var(--ed-bracket)", outline: "1px solid var(--ed-bracket-line)", color: "inherit" },
@@ -46,7 +47,7 @@ const look = EditorView.theme({
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "var(--ed-popup-sel)", color: "var(--ink)" },
   ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "700", color: "var(--tok-keyword)" },
   ".cm-completionIcon": { opacity: ".7" },
-  ".cm-completionDetail": { color: "var(--ink-3)", fontStyle: "normal", marginLeft: "0" },
+  ".cm-completionDetail": { color: "var(--ink-3)", fontStyle: "normal", marginLeft: "0.75em" },
 });
 
 /** One indent level = 4 spaces, as in every example of the course and PEP 8 (Tab, Enter after «:»). */
@@ -68,6 +69,18 @@ export const backspaceIndent: Command = (view) => {
   return true;
 };
 
+/** Names the learner's own code defines (variables, functions, parameters) come before built-ins with the same start. */
+export const OWN_BOOST = 50;
+const ownNamesFirst: CompletionSource = (ctx) => {
+  const r = localCompletionSource(ctx);
+  return r && { ...r, options: r.options.map((o) => ({ ...o, boost: OWN_BOOST })) };
+};
+const pythonSupport = () => new LanguageSupport(pythonLanguage, [
+  pythonLanguage.data.of({ autocomplete: ownNamesFirst }),
+  pythonLanguage.data.of({ autocomplete: globalCompletion }),
+  pythonLanguage.data.of({ autocomplete: dotCompletions }),
+]);
+
 /** Everything the editor needs; `extra` goes first so its keys win (e.g. Ctrl+Enter). */
 export function editorExtensions(extra: Extension[] = []): Extension[] {
   return [
@@ -79,6 +92,6 @@ export function editorExtensions(extra: Extension[] = []): Extension[] {
     autocompletion({ defaultKeymap: false }), rectangularSelection(),
     keymap.of([{ key: "Tab", run: acceptCompletion }, ...completionKeymap.filter((b) => b.key !== "Enter"),
       { key: "Backspace", run: backspaceIndent }, indentWithTab, ...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap]),
-    python(), pythonLanguage.data.of({ autocomplete: dotCompletions }), syntaxHighlighting(pythonColors), look,
+    pythonSupport(), syntaxHighlighting(pythonColors), look,
   ];
 }
