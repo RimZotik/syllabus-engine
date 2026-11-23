@@ -1,0 +1,77 @@
+id: i1p-handoff-project
+title: Проект для коллеги — без .venv
+sandbox: shell
+difficulty: 2
+concepts: [.venv, скрытые файлы, cp -r, шаблоны]
+statement: |
+  **Соберите копию проекта `~/forge/weather` для коллеги в папке `~/handoff/weather`: в копии всё содержимое проекта, кроме окружения `.venv`.**
+
+  Папки `~/handoff` пока нет. Сам проект в `~/forge/weather` должен остаться как был — вместе со своим `.venv`.
+
+  Пример
+
+  Было:
+  ```text
+  ~/forge/weather
+  ├── .gitignore
+  ├── .python-version
+  ├── .venv/  (окружение: bin, lib, pyvenv.cfg)
+  ├── README.md
+  ├── data/
+  │   └── cities.csv
+  ├── main.py
+  ├── pyproject.toml
+  └── uv.lock
+  ```
+
+  Стало — дополнительно:
+  ```text
+  ~/handoff/weather
+  ├── .gitignore
+  ├── .python-version
+  ├── README.md
+  ├── data/
+  │   └── cities.csv
+  ├── main.py
+  ├── pyproject.toml
+  └── uv.lock
+  ```
+setup:
+  cwd: /home/student/forge
+  files:
+    weather/.gitignore: "# Python-generated files\n__pycache__/\n*.py[oc]\nbuild/\ndist/\nwheels/\n*.egg-info\n\n# Virtual environments\n.venv\n"
+    weather/.python-version: "3.12\n"
+    weather/README.md: ""
+    weather/main.py: "import csv\nfrom tabulate import tabulate\n\nwith open(\"data/cities.csv\", encoding=\"utf-8\") as f:\n    rows = list(csv.reader(f))\nprint(tabulate(rows[1:], headers=rows[0]))\n"
+    weather/data/cities.csv: "город,°C\nМосква,-3\nСочи,12\n"
+    weather/pyproject.toml: "[project]\nname = \"weather\"\nversion = \"0.1.0\"\ndescription = \"Add your description here\"\nreadme = \"README.md\"\nrequires-python = \">=3.12\"\ndependencies = [\n    \"tabulate>=0.10.0\",\n]\n"
+    weather/uv.lock: "version = 1\nrevision = 3\nrequires-python = \">=3.12\"\n\n[[package]]\nname = \"tabulate\"\nversion = \"0.10.0\"\nsource = { registry = \"https://pypi.org/simple\" }\n\n[[package]]\nname = \"weather\"\nversion = \"0.1.0\"\nsource = { virtual = \".\" }\ndependencies = [\n    { name = \"tabulate\" },\n]\n"
+    weather/.venv/pyvenv.cfg: "home = /usr/bin\ninclude-system-site-packages = false\nversion = 3.12.3\n"
+    weather/.venv/bin/activate: "# This file must be used with \"source bin/activate\" *from bash*\nVIRTUAL_ENV='/home/student/forge/weather/.venv'\nexport VIRTUAL_ENV\n"
+    weather/.venv/lib/python3.12/site-packages/tabulate/__init__.py: "# tabulate 0.10.0\n"
+solution:
+  - mkdir -p ~/handoff
+  - cp -r weather ~/handoff/
+  - rm -rf ~/handoff/weather/.venv
+tests:
+  checks:
+    - name: В копии всё, кроме .venv
+      run: ls -A ~/handoff/weather
+      stdout: ".gitignore\n.python-version\nREADME.md\ndata\nmain.py\npyproject.toml\nuv.lock\n"
+      message: "Содержимое ~/handoff/weather не совпадает с примером. Если нет .gitignore и .python-version — шаблон * не выбирает скрытые файлы."
+    - name: Окружения в копии нет
+      fs_absent: /home/student/handoff/weather/.venv
+      message: "В копии остался .venv: окружение не передают — коллега соберёт своё командой uv sync."
+    - name: Файлы скопированы, а не созданы заново
+      run: cat ~/handoff/weather/uv.lock ~/handoff/weather/.python-version ~/handoff/weather/data/cities.csv
+      stdout: "version = 1\nrevision = 3\nrequires-python = \">=3.12\"\n\n[[package]]\nname = \"tabulate\"\nversion = \"0.10.0\"\nsource = { registry = \"https://pypi.org/simple\" }\n\n[[package]]\nname = \"weather\"\nversion = \"0.1.0\"\nsource = { virtual = \".\" }\ndependencies = [\n    { name = \"tabulate\" },\n]\n3.12\nгород,°C\nМосква,-3\nСочи,12\n"
+      hidden: true
+    - name: Проект на месте — вместе с .venv
+      run: ls -A weather weather/.venv
+      stdout: "weather:\n.gitignore\n.python-version\n.venv\nREADME.md\ndata\nmain.py\npyproject.toml\nuv.lock\n\nweather/.venv:\nbin\nlib\npyvenv.cfg\n"
+      message: "Исходный проект изменился: в ~/forge/weather должно остаться всё, включая .venv."
+hints:
+  - level: 1
+    text: "Сравните `ls weather` и `ls -A weather`. Что из этого выберет шаблон `weather/*`?"
+  - level: 2
+    text: "Можно скопировать папку целиком и потом убрать из копии лишнее — главное, убирать в копии, а не в проекте. Перед `rm -rf` проверьте путь."

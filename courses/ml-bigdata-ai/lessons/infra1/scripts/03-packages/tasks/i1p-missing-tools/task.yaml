@@ -1,0 +1,56 @@
+id: i1p-missing-tools
+title: Чего не хватает на сервере
+sandbox: shell
+difficulty: 3
+concepts: [which, PATH, код возврата, аргументы скрипта, apt install]
+statement: |
+  **Напишите скрипт `need.sh ПРОГРАММА…`: из программ, названных в аргументах, он отбирает те, которых нет в `PATH`, и печатает одну команду `apt`, которая их поставит. Сделайте его исполняемым и запустите как `./need.sh tree htop jq ncdu`.**
+
+  Если нет хотя бы одной программы — скрипт печатает строку `sudo apt install` и через пробел имена недостающих в порядке аргументов, а завершается с кодом 1. Если есть все — печатает `всё установлено` и завершается с кодом 0. Других строк в stdout нет. Сам скрипт ничего не устанавливает.
+
+  Пример (в тренажёре есть `tree` и `jq`, но нет `htop` и `ncdu`)
+  ```text
+  student@forge:~/setup$ ./need.sh tree htop jq ncdu
+  sudo apt install htop ncdu
+  student@forge:~/setup$ echo $?
+  1
+  student@forge:~/setup$ ./need.sh tree jq
+  всё установлено
+  student@forge:~/setup$ echo $?
+  0
+  ```
+
+  Ограничения: имена программ — без пробелов; аргумент есть хотя бы один.
+setup:
+  cwd: /home/student/setup
+  files:
+    README.txt: "Перед работой на новом сервере проверить: tree htop jq ncdu.\n"
+solution:
+  - "cat > need.sh << 'EOF'\n#!/bin/bash\nmissing=\"\"\nfor p in \"$@\"; do\n  which \"$p\" > /dev/null || missing=\"$missing $p\"\ndone\nif [ -n \"$missing\" ]; then\n  echo \"sudo apt install$missing\"\n  exit 1\nfi\necho \"всё установлено\"\nEOF"
+  - chmod u+x need.sh
+  - ./need.sh tree htop jq ncdu
+tests:
+  checks:
+    - name: Пример из условия — две недостающие программы
+      run: ./need.sh tree htop jq ncdu; echo "код $?"
+      stdout: "sudo apt install htop ncdu\nкод 1\n"
+      message: "Для tree htop jq ncdu ожидалась ровно одна строка `sudo apt install htop ncdu` и код 1. Если в выводе есть пути вида /usr/bin/tree — их печатает which: её вывод скрипту не нужен."
+    - name: Всё на месте
+      run: ./need.sh tree jq; echo "код $?"
+      stdout: "всё установлено\nкод 0\n"
+    - name: Порядок — как в аргументах
+      run: ./need.sh ncdu nano htop; echo "код $?"
+      stdout: "sudo apt install ncdu htop\nкод 1\n"
+      hidden: true
+    - name: Одна недостающая программа
+      run: ./need.sh mc
+      stdout: "sudo apt install mc\n"
+      hidden: true
+    - {name: Скрипт запущен, command_used: need.sh}
+hints:
+  - level: 1
+    text: "Какая команда отвечает, найдётся ли программа по `PATH`, и каким кодом возврата она говорит «нет»?"
+  - level: 2
+    text: "`if` смотрит на код возврата команды. Всё, что напечатает сама проверка, в вывод скрипта попадать не должно."
+  - level: 3
+    text: "Имена недостающих программ удобно копить в переменной, дописывая к ней по одному слову в цикле, а печатать и выбирать код — уже после цикла."

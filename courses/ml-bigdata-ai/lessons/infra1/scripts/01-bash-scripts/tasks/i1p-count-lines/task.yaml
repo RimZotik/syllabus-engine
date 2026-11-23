@@ -1,0 +1,62 @@
+id: i1p-count-lines
+title: Строки в файлах-аргументах
+sandbox: shell
+difficulty: 3
+concepts: [аргументы скрипта, "\"$@\"", if, "[ -f ]", exit, stderr]
+statement: |
+  **Напишите скрипт `lines.sh ФАЙЛ…`: для каждого аргумента он печатает `ФАЙЛ: N`, где N — число строк, как его считает `wc -l`. Несуществующий файл скрипт не считает, а пишет в stderr `ФАЙЛ: нет такого файла` и переходит к следующему.**
+
+  Код возврата: 0 — все файлы найдены, 1 — хотя бы одного нет. Без аргументов скрипт пишет в stderr строку, начинающуюся с `использование:`, и завершается с кодом 2. Имена файлов бывают с пробелами. Скрипт запускают как `./lines.sh`.
+
+  Пример
+  ```text
+  student@forge:~/shop$ ./lines.sh jan.csv nope.csv "отчёт май.csv"; echo "код $?"
+  jan.csv: 3
+  nope.csv: нет такого файла
+  отчёт май.csv: 2
+  код 1
+  student@forge:~/shop$ ./lines.sh; echo "код $?"
+  использование: ./lines.sh ФАЙЛ...
+  код 2
+  ```
+setup:
+  cwd: /home/student/shop
+  files:
+    jan.csv: "id,amount\n1,10\n2,20\n"
+    feb.csv: "id,amount\n3,5\n"
+    отчёт май.csv: "id\n1\n"
+    notes.txt: "сверить кассу\nзаказать ленту\nпозвонить поставщику\nпроверить ценники\n"
+solution:
+  - "cat > lines.sh << 'EOF'\n#!/bin/bash\nif [ $# -eq 0 ]; then\n  echo \"использование: $0 ФАЙЛ...\" >&2\n  exit 2\nfi\nstatus=0\nfor f in \"$@\"; do\n  if [ -f \"$f\" ]; then\n    echo \"$f: $(wc -l < \"$f\")\"\n  else\n    echo \"$f: нет такого файла\" >&2\n    status=1\n  fi\ndone\nexit $status\nEOF"
+  - chmod u+x lines.sh
+  - ./lines.sh jan.csv nope.csv "отчёт май.csv"
+tests:
+  checks:
+    - name: Все файлы есть — строки и код 0
+      run: ./lines.sh notes.txt "отчёт май.csv" feb.csv
+      stdout: "notes.txt: 4\nотчёт май.csv: 2\nfeb.csv: 2\n"
+      exit_code: 0
+      message: "./lines.sh notes.txt \"отчёт май.csv\" feb.csv должен напечатать по строке «ФАЙЛ: N» на каждый файл, в порядке аргументов, и вернуть 0."
+    - name: Нет файла — ошибка в stderr, остальные посчитаны
+      run: ./lines.sh jan.csv nope.csv feb.csv 2> err.txt; echo "код $?"; cat err.txt
+      stdout: "jan.csv: 3\nfeb.csv: 2\nкод 1\nnope.csv: нет такого файла\n"
+      message: "Для ./lines.sh jan.csv nope.csv feb.csv: в stdout — две строки с числами и код 1, в stderr — одна строка «nope.csv: нет такого файла»."
+    - name: Код 1, даже если пропущенный файл не последний
+      run: ./lines.sh nope.csv jan.csv > /dev/null 2>&1; echo "код $?"
+      stdout: "код 1\n"
+      message: "./lines.sh nope.csv jan.csv вернул не 1: код возврата должен помнить пропуск, даже если после него файлы нашлись."
+    - name: Без аргументов — использование и код 2
+      run: ./lines.sh 2> err.txt; echo "код $?"; grep -c '^использование:' err.txt
+      stdout: "код 2\n1\n"
+      message: "./lines.sh без аргументов должен ничего не печатать в stdout, написать в stderr строку «использование: …» и вернуть 2."
+    - name: Новый файл с пробелом в имени
+      run: printf 'a\nb\nc\nd\ne\n' > "new file.txt"; ./lines.sh "new file.txt"
+      stdout: "new file.txt: 5\n"
+      hidden: true
+hints:
+  - level: 1
+    text: "Число аргументов — `$#`, все аргументы по одному слову — `\"$@\"`. Сообщение в stderr — `echo … >&2`."
+  - level: 2
+    text: "`wc -l файл` печатает число и имя, а `wc -l < файл` — только число."
+  - level: 3
+    text: "`exit 1` сразу на пропущенном файле оборвёт цикл. Запомните неудачу в переменной и выйдите с ней после цикла."

@@ -1,0 +1,74 @@
+id: i1p-backup-dated
+title: Копия выгрузок в папку с датой
+sandbox: shell
+difficulty: 2
+concepts: [скрипт, шебанг, chmod +x, подстановка команды, date +%F]
+statement: |
+  **Напишите скрипт `backup.sh`: он создаёт папку `backup-ГГГГ-ММ-ДД` с сегодняшней датой, копирует в неё все `.csv` из папки `data` и последней строкой печатает имя этой папки. Сделайте скрипт исполняемым и запустите.**
+
+  Скрипт запускают как `./backup.sh` из папки, где лежат он сам и `data`. Повторный запуск в тот же день проходит без ошибок, с кодом 0. Другие файлы из `data` не копируются.
+
+  Пример (если сегодня 2026-11-24)
+  ```text
+  было:                     стало:
+  ├── backup.sh             ├── backup-2026-11-24
+  └── data                  │   ├── feb.csv
+      ├── feb.csv           │   └── jan.csv
+      ├── jan.csv           ├── backup.sh
+      └── readme.txt        └── data   (без изменений)
+
+  student@forge:~/shop$ ./backup.sh
+  backup-2026-11-24
+  ```
+
+  Ограничения: дату в скрипт руками не пишите — завтра скрипт должен сделать папку с завтрашней датой. Формат ГГГГ-ММ-ДД задайте командой `date +%F`.
+setup:
+  cwd: /home/student/shop
+  files:
+    data/jan.csv: "id,amount\n1,10\n2,20\n"
+    data/feb.csv: "id,amount\n3,5\n"
+    data/отчёт май.csv: "id,amount\n4,7\n"
+    data/readme.txt: "Выгрузки из кассы, по месяцам.\n"
+solution:
+  - "cat > backup.sh << 'EOF'\n#!/bin/bash\nd=\"backup-$(date +%F)\"\nmkdir -p \"$d\"\ncp data/*.csv \"$d\"/\necho \"$d\"\nEOF"
+  - chmod u+x backup.sh
+  - ./backup.sh
+tests:
+  checks:
+    - name: backup.sh исполняемый
+      run: "[ -x backup.sh ] && echo да || echo нет"
+      stdout: "да\n"
+      message: "У backup.sh нет права на выполнение: ./backup.sh ответит Permission denied."
+    - name: Копия за сегодня сделана
+      run: ls "backup-$(date +%F)"
+      stdout: "feb.csv\njan.csv\nотчёт май.csv\n"
+      message: "В папке backup-<сегодняшняя дата> не те файлы — или её нет: скрипт не запускали либо он копирует не все .csv из data."
+    - name: Повторный запуск — без ошибок
+      run: ./backup.sh > /dev/null; echo "код $?"
+      stdout: "код 0\n"
+      stderr: ""
+      message: "Второй запуск в тот же день печатает ошибку или завершается не с кодом 0: папка уже есть."
+    - name: Последней строкой — имя папки
+      run: '[ "$(./backup.sh | tail -n 1)" = "backup-$(date +%F)" ] && echo да || echo нет'
+      stdout: "да\n"
+      message: "Последняя строка вывода скрипта — не backup-<сегодняшняя дата>."
+    - name: Новая выгрузка тоже попадает в копию
+      run: rm -rf backup-*; echo 'id,amount' > data/mar.csv; ./backup.sh > /dev/null; ls "backup-$(date +%F)"
+      stdout: "feb.csv\njan.csv\nmar.csv\nотчёт май.csv\n"
+      message: "Новый файл data/mar.csv не скопирован: скрипт перечисляет файлы сам, а не берёт все .csv из data."
+    - name: Дата берётся в момент запуска
+      run: "mkdir -p /tmp/fake; printf '#!/bin/bash\\necho 2027-01-15\\n' > /tmp/fake/date; chmod +x /tmp/fake/date; PATH=/tmp/fake:$PATH ./backup.sh > /dev/null; ls -d backup-2027-*"
+      stdout: "backup-2027-01-15\n"
+      message: "В день 2027-01-15 скрипт не создал папку backup-2027-01-15: дата записана в скрипт, а не получена командой date при запуске."
+      hidden: true
+    - name: data не тронута
+      run: ls data
+      stdout: "feb.csv\njan.csv\nreadme.txt\nотчёт май.csv\n"
+      hidden: true
+hints:
+  - level: 1
+    text: "Команды скрипта сначала выполните по одной в терминале. Сегодняшнюю дату в нужном виде печатает `date +%F`, а вывод команды можно подставить в строку через `$(…)`."
+  - level: 2
+    text: "`mkdir` без флага падает, если папка уже есть. Имя файла в выгрузках бывает с пробелом — переменную с именем папки берите в кавычки."
+  - level: 3
+    text: "Файл, созданный в `nano`, получает права `rw-r--r--` — для запуска `./backup.sh` нужен бит x."

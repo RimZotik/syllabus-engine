@@ -1,0 +1,49 @@
+id: i1p-crlf-script
+title: Скрипт из Блокнота
+sandbox: shell
+difficulty: 2
+concepts: [концы строк, CRLF, "$'\\r'", sed, cat -A]
+statement: |
+  **Скрипт `report.sh` набрали в Блокноте Windows, и он не запускается. Уберите из него концы строк Windows, ничего больше в нём не меняя, и запустите его как `./report.sh`.**
+
+  Скрипт считает строки в выгрузках из `data` и пишет итог в `summary.txt`.
+
+  Пример
+  ```text
+  student@forge:~/shop$ ./report.sh
+  bash: ./report.sh: /bin/bash^M: bad interpreter: No such file or directory
+  ...
+  student@forge:~/shop$ ./report.sh
+  готово
+  ```
+
+  Ограничения: скрипт остаётся исполняемым (`rwxr-xr-x`), текст его команд — прежним. Alt+D в `nano` здесь не поможет: `nano` тренажёра формат DOS не распознаёт.
+setup:
+  cwd: /home/student/shop
+  files:
+    report.sh: {content: "#!/bin/bash\r\ncd data\r\nwc -l *.csv > ../summary.txt\r\necho готово\r\n", mode: "755"}
+    data/jan.csv: "id,amount\n1,10\n2,20\n"
+    data/feb.csv: "id,amount\n3,5\n"
+solution:
+  - cat -A report.sh
+  - sed -i 's/\r$//' report.sh
+  - ./report.sh
+tests:
+  checks:
+    - name: В скрипте нет \r, команды прежние
+      fs_content: {path: report.sh, equals: "#!/bin/bash\ncd data\nwc -l *.csv > ../summary.txt\necho готово\n"}
+      message: "report.sh отличается от исходного без \\r: либо \\r остался (cat -A покажет ^M), либо изменились сами команды."
+    - {name: Скрипт по-прежнему исполняемый, fs_mode: {path: report.sh, mode: "755"}}
+    - name: Скрипт запущен и посчитал строки
+      fs_content: {path: summary.txt, equals: " 2 feb.csv\n 3 jan.csv\n 5 total\n"}
+      message: "summary.txt нет или в нём не итог wc -l по data/*.csv: исправленный скрипт не запускали."
+    - name: ./report.sh работает
+      run: ./report.sh
+      stdout: "готово\n"
+      exit_code: 0
+      hidden: true
+hints:
+  - level: 1
+    text: "`cat -A report.sh` показывает невидимые символы: `^M` перед `$` в конце строки — это `\\r`."
+  - level: 2
+    text: "В теме есть команда, которая удаляет `\\r` в конце каждой строки прямо в файле. Права файла она сохраняет."

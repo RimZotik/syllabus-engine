@@ -1,0 +1,60 @@
+id: i1p-ai-gitignore
+title: "ИИ написал команду: .venv в .gitignore"
+sandbox: shell
+difficulty: 2
+concepts: [.gitignore, .venv, перенаправление, перевод строки]
+statement: |
+  **ИИ-помощник предложил исключить окружение из Git командой `echo .venv > .gitignore`. Найдите в ней ошибку и допишите в `.gitignore` проекта `shop` строку `.venv` так, чтобы прежние строки остались.**
+
+  Текущая папка — `~/forge/shop`. В `.gitignore` каждое правило — отдельная строка; после правки проверьте файл командой `cat`.
+
+  Пример
+
+  Было — `cat .gitignore`:
+  ```text
+  __pycache__/
+  *.log
+  data/raw/
+  ```
+
+  Стало:
+  ```text
+  __pycache__/
+  *.log
+  data/raw/
+  .venv
+  ```
+
+  Ограничения: команду помощника в исходном виде не выполняйте — если всё-таки выполнили, нажмите «Сбросить».
+setup:
+  cwd: /home/student/forge/shop
+  files:
+    .gitignore: "__pycache__/\n*.log\ndata/raw/"
+    app.py: "import requests\n\nprint(requests.get(\"https://example.org\").status_code)\n"
+    requirements.txt: "requests==2.32.3\n"
+    data/raw/orders.csv: "id,amount\n1,10\n"
+    .venv/pyvenv.cfg: "home = /usr/bin\ninclude-system-site-packages = false\nversion = 3.12.3\n"
+solution:
+  - cat -A .gitignore
+  - echo >> .gitignore
+  - echo .venv >> .gitignore
+  - cat .gitignore
+tests:
+  checks:
+    - name: Прежние правила на месте
+      fs_content: {path: .gitignore, contains: ["__pycache__/\n*.log\n"]}
+      message: "Прежних строк в .gitignore нет: одна стрелка > сначала очищает файл."
+    - name: .venv — отдельной строкой в конце
+      fs_content: {path: .gitignore, regex: "^__pycache__/\\n\\*\\.log\\ndata/raw/\\n\\.venv\\n?$"}
+      message: "Файл должен состоять из четырёх строк: три прежних и .venv. Если вышло data/raw/.venv — у последней строки файла не было перевода строки, и новая приклеилась к ней."
+    - name: Окружение и данные не тронуты
+      run: ls -A
+      stdout: ".gitignore\n.venv\napp.py\ndata\nrequirements.txt\n"
+      hidden: true
+hints:
+  - level: 1
+    text: "Что делает с файлом одна стрелка `>`, ещё до того, как `echo` что-то напечатает?"
+  - level: 2
+    text: "Допишите строку и посмотрите на файл. Если `.venv` оказалась на одной строке с `data/raw/`, посмотрите на конец файла через `cat -A`: где стоит `$`?"
+  - level: 3
+    text: "Недостающий перевод строки можно дописать отдельно: `echo` без аргументов печатает только его. Или поправьте файл в `nano`."

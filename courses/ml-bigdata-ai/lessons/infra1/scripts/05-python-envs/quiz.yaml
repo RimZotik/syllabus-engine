@@ -1,0 +1,126 @@
+title: Проверка темы
+pass: 0.85
+minutes: 25
+questions:
+- id: uv-after-install
+  type: multi
+  q: 'Установщик uv положил `uv` в `~/.local/bin` и дописал в `~/.bashrc` строку, которая добавляет эту папку в `PATH`. В том же окне `uv --version` отвечает `command not found`. После какой команды `uv --version` в этом окне заработает?'
+  options:
+  - '`source ~/.local/bin/env`'
+  - '`source ~/.bashrc`'
+  - '`export PATH="$HOME/.local/bin:$PATH"`'
+  - '`bash ~/.local/bin/env`'
+  - '`sudo uv --version`'
+  answer: [0, 1, 2]
+  explain: 'Нужно, чтобы `~/.local/bin` попала в `PATH` процесса bash этого окна. `source` выполняет файл в текущей оболочке — и `env`, и `~/.bashrc`, где теперь есть строка для `uv`; `export` меняет `PATH` прямо. `bash ~/.local/bin/env` поменяет `PATH` дочернего процесса, который сразу завершится. `sudo` ищет команду по своему `PATH`, где папки `~/.local/bin` нет.'
+- id: uv-add-files
+  type: single
+  q: |
+    Что записано в файлах проекта после этой команды?
+    ```
+    student@HOMEPC:~/forge/sales$ uv add pandas
+    Resolved 7 packages in 412ms
+    Prepared 6 packages in 2.31s
+    Installed 6 packages in 95ms
+     + numpy==2.3.5
+     + pandas==2.3.3
+     + python-dateutil==2.9.0.post0
+     + pytz==2025.2
+     + six==1.17.0
+     + tzdata==2025.2
+    ```
+  options:
+  - 'В `pyproject.toml` — только `pandas>=2.3.3`; в `uv.lock` — точные версии pandas и всех его зависимостей'
+  - 'В `pyproject.toml` — все шесть пакетов с точными версиями; `uv.lock` uv создаст при первом `uv run`'
+  - 'В `pyproject.toml` — `pandas==2.3.3`; в `uv.lock` — только pandas'
+  - 'Оба файла не меняются: `uv add` ставит пакеты в `.venv`, а записывает их `uv sync`'
+  answer: 0
+  explain: '`pyproject.toml` хранит то, что нужно проекту, — условие «pandas не старее 2.3.3». `uv.lock` хранит принятое решение: точную версию каждого пакета, включая зависимости зависимостей, вроде `six`. `uv add` делает всё сразу — пишет оба файла и ставит пакеты в `.venv`.'
+- id: activated-other-project
+  type: multi
+  q: 'В окне включено окружение проекта `shop` (`source .venv/bin/activate`), в нём только `requests`. Вы перешли `cd ~/forge/weather`, где у проекта на uv своё `.venv` с `tabulate`, а `main.py` делает `from tabulate import tabulate`. Какие команды напечатают таблицу?'
+  options:
+  - '`uv run main.py`'
+  - '`.venv/bin/python3 main.py`'
+  - '`python3 main.py`'
+  - '`python main.py`'
+  - '`/usr/bin/python3 main.py`'
+  answer: [0, 1]
+  explain: '`uv run` берёт окружение проекта из текущей папки, а `.venv/bin/python3` — путь к Python окружения `weather`. `python3` и `python` ищутся по `PATH`, а в его начале по-прежнему `.venv/bin` проекта `shop`: активация привязана к окну, а не к папке. Там `tabulate` нет — `ModuleNotFoundError`. Системный Python не знает ни об одном окружении.'
+- id: what-to-send
+  type: multi
+  q: 'Архив проекта на uv для сервера весит 600 МБ. Что из него можно убрать, чтобы на сервере `uv sync` собрал то же окружение?'
+  options:
+  - '`.venv`'
+  - '`uv.lock`'
+  - '`pyproject.toml`'
+  - '`.python-version`'
+  answer: [0]
+  explain: '`uv sync` создаёт `.venv` заново ровно по `uv.lock`, а в `pyproject.toml` — сам проект и его зависимости. Без `uv.lock` uv подберёт версии заново, и они могут оказаться новее ваших. `.python-version` говорит, какой Python брать. Своё `.venv` не переносится: внутри — абсолютные пути вашей машины.'
+- id: uv-pip-then-sync
+  type: single
+  q: 'В проекте на uv вы поставили пакет командой `uv pip install rich`, проверили, что программа работает, а потом выполнили `uv sync`. Что стало с `rich`?'
+  options:
+  - '`uv sync` удалил его: окружение подогнано под `uv.lock`, а `rich` там нет'
+  - '`uv sync` дописал его в `uv.lock`: пакет нашёлся в `.venv`'
+  - 'Ничего: `uv sync` только доустанавливает недостающее и лишнего не трогает'
+  - '`uv sync` остановился с ошибкой: окружение не совпадает с lock-файлом'
+  answer: 0
+  explain: 'Направление одно: от `pyproject.toml` к `uv.lock`, от `uv.lock` к `.venv`. Пакет, поставленный мимо `uv add`, не записан ни в один из файлов, и `uv sync` убирает его как лишний. Чтобы `rich` остался, его добавляют `uv add rich`.'
+- id: freeze-contents
+  type: single
+  q: 'В окружении `shop`, где по `requirements.txt` стоит `requests` с зависимостями, вы для опыта выполнили `pip install rich`, а затем `pip freeze > requirements.txt`. Что теперь в файле?'
+  options:
+  - 'Все пакеты окружения с точными версиями: `requests`, его зависимости, `rich` и зависимости `rich`'
+  - 'Только `requests==2.32.3`: freeze сохраняет то, что было в файле'
+  - '`requests` и `rich` — пакеты, поставленные вручную, без зависимостей'
+  - 'Только `rich`: freeze дописывает пакеты, поставленные после прошлой записи'
+  answer: 0
+  explain: '`pip freeze` переписывает то, что оказалось в окружении, и не знает, какой пакет был нужен проекту, а какой поставлен для опыта. `>` при этом заменил файл целиком. В `uv.lock` такого не случится: он выводится из `pyproject.toml`, а не из содержимого окружения.'
+- id: renamed-pip-shebang
+  type: single
+  q: 'Первая строка `.venv/bin/pip` — `#!/home/student/forge/shop/.venv/bin/python3`. Папку `shop` переименовали в `shop2`. Что ответит `.venv/bin/pip install rich` из `~/forge/shop2`?'
+  options:
+  - 'Ошибку: программы из первой строки файла нет, запускать `pip` нечем'
+  - 'Поставит `rich` в `shop2/.venv`: путь к файлу `pip` указан от текущей папки'
+  - 'Поставит `rich` в системный Python: окружение опирается на `/usr/bin/python3`'
+  - 'Ошибку `externally-managed-environment`: окружение перестало быть окружением'
+  answer: 0
+  explain: 'Файл запускается по пути, и ОС берёт программу из шебанга — `/home/student/forge/shop/.venv/bin/python3`. Такой папки больше нет, и запуск падает, до pip дело не доходит. Поэтому окружение не переносят и не переименовывают, а создают заново.'
+- id: venv-python-link
+  type: single
+  q: |
+    Что значит этот вывод?
+    ```
+    student@HOMEPC:~/forge/shop$ ls -l .venv/bin/python3
+    lrwxrwxrwx 1 student student 16 Nov 23 00:54 .venv/bin/python3 -> /usr/bin/python3
+    ```
+  options:
+  - 'Python окружения — ссылка на системный: свои у окружения пакеты, а не интерпретатор'
+  - 'Окружение хранит свою копию Python размером 16 байт'
+  - 'Окружение сломано: оно должно указывать на свой Python, а не на системный'
+  - '`python3` окружения — обычный файл, который может запускать кто угодно'
+  answer: 0
+  explain: '`l` в начале и стрелка — символическая ссылка: 16 байт — длина пути `/usr/bin/python3`, а не программы. Окружение опирается на установленный Python, а пакеты берёт из `.venv/lib` — так ему велит `pyvenv.cfg`. Права `rwxrwxrwx` у ссылки ничего не решают: проверяются права файла, на который она ведёт.'
+- id: python-version-missing
+  type: single
+  q: 'Коллега получил ваш проект, где в `.python-version` записано `3.13`, а в его Ubuntu только системный Python 3.12. Он выполнил `uv sync`. Что произойдёт?'
+  options:
+  - 'uv скачает Python 3.13 в свою папку и соберёт `.venv` на нём; системный 3.12 не изменится'
+  - 'uv остановится и попросит поставить `python3.13` через `apt`'
+  - 'uv соберёт `.venv` на 3.12: версия в `.python-version` — только пожелание'
+  - 'uv заменит системный Python 3.12 на 3.13'
+  answer: 0
+  explain: 'Python нужной версии uv при необходимости скачивает сам, как делает `uv python install`, и кладёт в свою папку. Системный Python принадлежит `apt`, и его uv не трогает — иначе сломались бы программы Ubuntu.'
+- id: open-why-no-venv
+  type: open
+  q: 'Почему проект передают коллеге без `.venv`? И что из переданного позволит ему получить ровно те же версии пакетов, что у вас?'
+  rubric:
+  - '`.venv` привязано к вашей машине: в нём абсолютные пути (в `activate`, в первой строке `pip`) и ссылка на ваш Python; в другой папке или на другом компьютере оно не работает, к тому же много весит'
+  - 'Окружение собирают заново по описанию: `uv sync` создаёт `.venv` по `uv.lock`, где записаны точные версии всех пакетов, включая зависимости; `pyproject.toml` говорит, что нужно проекту, `.python-version` — какой Python'
+  wrong_answers:
+  - '`.venv` не передают, потому что там пароли'
+  - 'Хватит `pyproject.toml`: в нём точные версии всех пакетов'
+  - 'Коллеге нужно выполнить `pip install` для каждого пакета вручную'
+  followups:
+  - 'Что изменится у коллеги, если не передать `uv.lock`?'

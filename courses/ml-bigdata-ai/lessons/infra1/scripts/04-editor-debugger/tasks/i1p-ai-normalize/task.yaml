@@ -1,0 +1,84 @@
+id: i1p-ai-normalize
+title: ИИ-ассистент делит на максимум
+sandbox: python-browser
+difficulty: 3
+concepts: [отладка, изменяемость, max, вычисление внутри цикла]
+statement: |
+  **Исправьте функцию `normalize(values)`, которую написал ИИ-ассистент: она должна вернуть новый список, где каждое число поделено на наибольшее число исходного списка, а сам `values` оставить без изменений.**
+
+  `values` — непустой список положительных чисел. На примере 2 код ассистента возвращает верный список, но переписывает `values` — поэтому и этот пример не проходит; на примере 1 он возвращает `[1.0, 1.0, 1.0]`. Пройдите пример 1 «По шагам» и на каждом шаге цикла сравнивайте `values` до и после деления. На своём компьютере удобно вписать `max(values)` в панель WATCH отладчика VS Code.
+
+  Пример 1
+  ```call
+  normalize([4, 2, 1])
+  ```
+  ```return
+  [1.0, 0.5, 0.25]
+  ```
+
+  Пример 2
+  ```call
+  normalize([2, 4])
+  ```
+  ```return
+  [0.5, 1.0]
+  ```
+
+  Ограничения: в списке от 1 до 1000 чисел.
+starter: |
+  # Решение от ИИ-ассистента
+  def normalize(values):
+      for i in range(len(values)):
+          values[i] = values[i] / max(values)
+      return values
+
+
+  print(normalize([4, 2, 1]))
+  print(normalize([2, 4]))
+solution: |
+  def normalize(values):
+      top = max(values)
+      result = []
+      for v in values:
+          result.append(v / top)
+      return result
+
+
+  print(normalize([4, 2, 1]))
+  print(normalize([2, 4]))
+tests:
+  function: normalize
+  no_mutate: true
+  tol: 1e-9
+  calls:
+    - name: Пример 1
+      args: [[4, 2, 1]]
+      expect: [1.0, 0.5, 0.25]
+    - name: Пример 2
+      args: [[2, 4]]
+      expect: [0.5, 1.0]
+    - name: Одно число
+      args: [[5]]
+      expect: [1.0]
+    - name: Максимум в конце
+      args: [[10, 5, 20]]
+      expect: [0.5, 0.25, 1.0]
+    - name: Максимум в начале
+      args: [[8, 4, 2, 6]]
+      expect: [1.0, 0.5, 0.25, 0.75]
+      hidden: true
+    - name: Одинаковые числа
+      args: [[3, 3]]
+      expect: [1.0, 1.0]
+      hidden: true
+    - name: Дробные числа
+      args: [[0.5, 2.5, 1.0]]
+      expect: [0.2, 1.0, 0.4]
+      hidden: true
+hints:
+  - level: 1
+    text: "Чему равно `max(values)` на втором шаге цикла примера 1 и чему оно должно быть равно? Что успело измениться в `values` за первый шаг?"
+  - level: 2
+    text: "Наибольшее число исходного списка не меняется — его достаточно найти один раз, до цикла."
+  - level: 3
+    text: "Ответ должен быть новым списком: пока функция пишет результат в `values[i]`, она портит и максимум, и список, который ей передали."

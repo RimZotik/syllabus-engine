@@ -1,0 +1,219 @@
+export const meta = {
+  minutes: 90,
+  lead: "Тренажёр — только модель Linux. Поставим настоящую Ubuntu рядом с Windows, разберёмся, где лежат её файлы, и впервые зайдём на «другую машину» по SSH — пока по паролю.",
+  uses: ["operating-system", "process", "cpu", "cpu-core", "ram", "terminal", "shell", "prompt", "home-directory", "root-user", "sudo", "signal", "exit-status", "line-ending", "shell-script", "package", "virtual-environment", "environment-variable"]
+}
+
+<Page title="Linux на своём компьютере" minutes={12}>
+
+## Зачем, если есть тренажёр
+
+В тренажёре процессы искусственные, нет `python3` и программ не поставить. А сервер, на который вы будете выкладывать модели, — настоящий Linux. Нужен такой же у себя. Windows для этого сносить не нужно: обе системы работают одновременно, если одна запущена внутри виртуальной машины.
+
+<Theorem kind="definition" title="Виртуальная машина"
+  formal="Виртуальная машина — эффективная изолированная копия реальной машины: программы в ней ведут себя как на настоящем компьютере, а ресурсами управляет монитор виртуальных машин (гипервизор)."
+  source="G. Popek, R. Goldberg, «Formal Requirements for Virtualizable Third Generation Architectures», CACM, 1974 (пересказ); Oracle VirtualBox User Guide 7.2, гл. 1">
+
+<Term id="virtual-machine">Виртуальная машина</Term> (ВМ) — компьютер, который программа собирает из части ресурсов настоящего: часть процессора, часть памяти, файл вместо диска. Внутри работает своя ОС. Гипервизор делит железо между системами так же, как ОС делит его между программами.
+
+</Theorem>
+
+Linux в строгом смысле — <Term id="os-kernel">ядро ОС</Term> (kernel): главная программа системы, которая распределяет процессор, память и устройства между остальными, — то, что в теме о процессах делала «ОС». Не путайте с ядрами процессора. Ядро вместе с оболочкой, основными командами и программой установки программ — <Term id="linux-distribution">дистрибутив Linux</Term> (distro). У пакетов Python «дистрибутив» — архив одной библиотеки, здесь — целая система. В курсе везде Ubuntu 24.04 LTS (Long Term Support — долгая поддержка); её же ставят на серверы.
+
+## Два пути: WSL и VirtualBox
+
+<Term id="wsl">WSL</Term> (Windows Subsystem for Linux) — компонент Windows, который запускает настоящее ядро Linux в лёгкой служебной ВМ. Рабочего стола у неё нет: с Ubuntu работают в терминале, а Windows и Linux видят файлы друг друга. VirtualBox — полная ВМ со своим экраном, как отдельный компьютер. Основной путь курса — WSL 2: запускается за секунды; VirtualBox — запасной.
+
+<Check
+  q={"В Ubuntu под WSL вы набрали ps aux. В Windows открыты браузер и Telegram. Будут ли они в списке?"}
+  options={["Нет: ps показывает процессы Linux внутри ВМ, а не процессы Windows", "Да: WSL переводит команды Linux в команды Windows", "Да, но без PID: у программ Windows нет номеров", "Нет: ps в WSL показывает только процессы текущего окна"]}
+  answer={0}
+  explain={"В WSL 2 работает своё ядро Linux, и ps спрашивает о его процессах. WSL ничего не переводит: ps здесь — та же программа Linux, что на сервере."}
+/>
+
+</Page>
+
+<Page title="Ставим WSL и Ubuntu" minutes={20}>
+
+## Шаг за шагом
+
+1. **PowerShell от имени администратора**: «Пуск» → `PowerShell` → правой кнопкой → «Запуск от имени администратора». Это другая оболочка, не bash.
+2. **WSL и Ubuntu 24.04:**
+
+   ```text
+   PS C:\WINDOWS\system32> wsl --install -d Ubuntu-24.04
+   ```
+
+   Без `-d` поставится `Ubuntu` — самая новая LTS, не та, что в курсе. Все имена — `wsl --list --online`.
+3. **Перезагрузка**, если установка попросит.
+4. **Пользователь Linux.** При первом запуске Ubuntu спросит имя (латиницей, строчными, с Windows не связано) и пароль. Пароль при вводе не виден — «слепой ввод», как у `sudo`. Пользователь — администратор Ubuntu: `sudo` спросит этот пароль при первом вызове и потом раз в 15 минут.
+5. **Проверка** в обычном PowerShell:
+
+   ```text
+   PS C:\Users\Анна> wsl -l -v
+     NAME            STATE           VERSION
+   * Ubuntu-24.04    Running         2
+   ```
+
+   `VERSION 2` — WSL 2 с настоящим ядром Linux; `*` — дистрибутив по умолчанию.
+
+Ubuntu открывают в Windows Terminal (профиль «Ubuntu 24.04 LTS») или из PowerShell командой `wsl`; обратно — `exit`.
+
+## Если что-то пошло не так
+
+- **`Error: 0x80370102 The virtual machine could not be started because a required feature is not installed.`** Выключена виртуализация процессора: её включают в UEFI (BIOS) — пункт VT-x у Intel или SVM Mode у AMD. Потом проверьте компонент Windows «Платформа виртуальной машины» и перезагрузитесь.
+- **Висит на 0.0%** — `Ctrl+C` и `wsl --install --web-download -d Ubuntu-24.04`.
+- **Нет прав администратора.** Если `wsl --version` в обычном PowerShell печатает версию, WSL уже включён, и дистрибутив, скорее всего, встанет и так — он ставится для одного пользователя. Если нет — нужен администратор компьютера.
+- **Забыли пароль Linux.** `wsl -d Ubuntu-24.04 -u root` откроет Ubuntu от root, `passwd student` задаст новый пароль, `exit` — обратно. Не переустанавливайте: `wsl --unregister` удаляет дистрибутив со всеми файлами.
+
+**VirtualBox — если WSL недоступен.** Создайте ВМ (2 ядра процессора, 4 ГБ памяти, диск 25 ГБ) из образа Ubuntu Server 24.04 LTS, отметив в установщике «Install OpenSSH server». Работают с ней по SSH, как с сервером.
+
+</Page>
+
+<Page title="Первые шаги в своей Ubuntu" minutes={20}>
+
+## Обещанное: настоящие sudo, top и Python
+
+Приглашение — как в тренажёре, только с вашими именами: пользователь Linux и имя компьютера из Windows (в примерах — `student@HOMEPC:~$`). Всё пройденное работает так же. Теперь — то, чего тренажёр не умел:
+
+- **sudo.** `sudo ls /root` спросит `[sudo] password for student:`.
+- **top.** Десятки настоящих процессов; ядер процессора и памяти видно столько, сколько WSL выделил ВМ (по умолчанию — половину памяти).
+- **Python 3.12** уже есть. Предскажите, что ответит `python`, и только потом наберите. Флаг `-c` выполняет код из аргумента:
+
+```text
+student@HOMEPC:~$ python
+Command 'python' not found, did you mean:
+  command 'python3' from deb python3
+  command 'python' from deb python-is-python3
+student@HOMEPC:~$ python3 -c "pirnt('hi')"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+NameError: name 'pirnt' is not defined. Did you mean: 'print'?
+```
+
+Теперь `Ctrl+C`: запустите `python3 -c "while True: pass"`, во втором окне найдите в `top` процесс `python3` с `%CPU` около 100, в первом нажмите `Ctrl+C` — будет `KeyboardInterrupt`. Предскажите, что ответит `echo $?`: `130`, то есть 128 + 2, номер SIGINT.
+
+## Два мира файлов
+
+- **Диски Windows из Linux** — в `/mnt`: `C:\Users\Анна` — это `/mnt/c/Users/Анна`.
+- **Файлы Linux из Windows** — в Проводнике: `\\wsl$\Ubuntu-24.04\home\student` (он покажет `\\wsl.localhost\…` — это то же). Текущую папку открывает `explorer.exe .` (с точкой).
+
+<Mark>Проекты держат в файловой системе Linux — в `~`, а не в `/mnt/c`.</Mark> Обращение через границу систем медленнее — на тысячах мелких файлов, как в виртуальном окружении, заметно. Linux различает регистр: `Report.csv` и `report.csv` в `~` — два файла. Блокнот пишет концы строк `\r\n`, и скрипт из него сломается. Если WSL ведёт себя странно, `wsl --shutdown` в PowerShell останавливает его целиком; следующий запуск Ubuntu поднимет его заново.
+
+<Check
+  q={"Проект лежит в C:\\Users\\Анна\\shop, вы работаете с ним из Ubuntu через /mnt/c/Users/Анна/shop. Что верно?"}
+  options={["Работает, но медленнее, чем в ~/shop: обращения идут через границу систем", "Файлы не откроются: Linux не видит диски Windows", "Работает так же быстро: /mnt/c — обычная папка Linux", "Работает, но после этого Linux перестанет различать регистр и в ~"]}
+  answer={0}
+  explain={"Диски Windows видны в /mnt, но доступ к ним медленнее. Регистр в ~ различает файловая система Linux, это не меняется."}
+/>
+
+</Page>
+
+<Page title="SSH: терминал другой машины" minutes={22}>
+
+## Канал к чужой оболочке
+
+Монитора у сервера в дата-центре нет: команды набирают у себя, а выполняются они там.
+
+<Theorem kind="definition" title="SSH"
+  formal="SSH (Secure Shell) — протокол защищённого удалённого входа и других сетевых служб поверх незащищённой сети: клиент устанавливает зашифрованное соединение, проверяет подлинность сервера по его ключу, а пользователь входит паролем или ключом."
+  source="RFC 4251 «The Secure Shell (SSH) Protocol Architecture», Abstract (пересказ); OpenBSD manual pages, ssh(1)">
+
+<Term id="ssh">SSH</Term> — зашифрованный канал к оболочке на другой машине. У вас — клиент `ssh`, на сервере — служба `sshd`, которая ждёт подключений, «слушает порт», обычно 22. Порт — номер, по которому на одной машине различают сетевые службы.
+
+</Theorem>
+
+Пароль для сервера в интернете — плохой способ: боты круглые сутки перебирают пароли на порту 22, поэтому на настоящих серверах входят по ключу. Ключ вы создадите в разделе «GitHub», а вход без пароля настроите в теме «SSH — генерируем ключи сами, ssh config, вход без пароля».
+
+## Сервер — ваша же Ubuntu
+
+Сервер — WSL, клиент — Windows: `ssh.exe` в Windows 11 уже есть. В Ubuntu поставьте `sshd` — пакет `openssh-server`:
+
+```text
+student@HOMEPC:~$ sudo apt update
+student@HOMEPC:~$ sudo apt install openssh-server
+```
+
+Что делают эти команды и зачем `sudo`, разберём в теме «Установка программ и пакетные менеджеры». После установки `sshd` сразу слушает порт 22, а WSL передаёт ему обращения к `localhost` из Windows.
+
+## Первый вход
+
+У сервера SSH есть **ключ** — пара длинных чисел: секретная часть хранится только на сервере, открытая (файл `.pub`) показывается каждому клиенту. Ответить как настоящий сервер может только владелец секретной части. В PowerShell:
+
+```text
+PS C:\Users\Анна> ssh student@localhost
+The authenticity of host 'localhost (::1)' can't be established.
+ED25519 key fingerprint is SHA256:Q3n0l7xVb5kW2p...
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+```
+
+`student@localhost` — кто и куда входит (`localhost` — этот же компьютер; в скобках бывает и `127.0.0.1`). Ключ клиенту ещё не знаком, и он показывает <Term id="host-key-fingerprint">отпечаток ключа сервера</Term> — короткую строку, вычисленную из открытой части. `yes` вслепую — значит принять и сервер злоумышленника, вставшего посередине; отпечаток сверяют с тем, что сообщил владелец. Свой узнайте в окне Ubuntu (`-l` — показать отпечаток, `-f` — файл ключа):
+
+```text
+student@HOMEPC:~$ ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+256 SHA256:Q3n0l7xVb5kW2p... root@HOMEPC (ED25519)
+```
+
+Совпало — `yes`. Клиент напишет `Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.`, запомнит ключ в `C:\Users\Анна\.ssh\known_hosts` и спросит `student@localhost's password:` — пароль Linux, вслепую. Предскажите: спросит ли он отпечаток при следующем входе? Нет — ключ уже известен. А если ключ сервера изменится, `ssh` откажется входить: `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`
+
+После входа приглашение `PS C:\…>` сменится на `student@HOMEPC:~$`. `hostname` и `whoami` ответят как в обычном окне Ubuntu — сервер ваш же. Отличает сеанс переменная окружения `SSH_CONNECTION`: в обычном окне она пустая, здесь — адреса и порты клиента и сервера. `exit` закрывает сеанс — `logout`, `Connection to localhost closed.` — и вы снова в PowerShell; `sshd` ждёт следующих подключений.
+
+**scp** копирует файлы по тому же каналу; путь на сервере — после двоеточия: `scp .\notes.txt student@localhost:~/`, обратно — `scp student@localhost:~/report.csv .`
+
+## Если вход не получился
+
+- **`ssh: connect to host localhost port 22: Connection refused`** — `sshd` не слушает порт; в Ubuntu `systemctl status ssh.socket` должен показать `active (listening)`. Службы — в теме «Службы systemd, логи, cron».
+- **`Permission denied, please try again.`** — неверный пароль или имя: нужно имя пользователя Linux.
+- **VirtualBox.** У ВМ своя сеть, и настраивают проброс портов: «Сеть» → «Дополнительно» → «Проброс портов», порт 2222 Windows → порт 22 ВМ. Вход — `ssh -p 2222 student@localhost`.
+
+<Check
+  q={"Во вкладке Windows Terminal приглашение student@HOMEPC:~$. Как понять, обычное это окно Ubuntu или сеанс SSH к ней?"}
+  options={["echo $SSH_CONNECTION: в сеансе SSH она не пустая", "hostname: в сеансе SSH ответит localhost", "whoami: в сеансе SSH ответит имя пользователя Windows", "Никак: это один и тот же bash"]}
+  answer={0}
+  explain={"Сервер — ваша же Ubuntu, поэтому hostname и whoami совпадают. Но сеанс SSH — отдельный процесс bash, которому sshd передал SSH_CONNECTION."}
+/>
+
+</Page>
+
+<Page title="Практика" minutes={25}>
+
+## На своём компьютере
+
+Практика — не в тренажёре. Автоматических задач в теме пока нет: сверяйтесь с ожидаемым результатом.
+
+1. `wsl -l -v` в PowerShell показывает `Ubuntu-24.04` с `VERSION 2`.
+2. `sudo whoami` в Ubuntu после пароля печатает `root`.
+3. `mkdir -p ~/forge && echo 'привет из WSL' > ~/forge/hello.txt`, `cd ~/forge`, `explorer.exe .` — `hello.txt` открывается в Блокноте.
+4. Скрипт из темы о скриптах в `~/forge` запускается как `./имя.sh`; упал с `$'\r'` — почините.
+5. `sleep 600 &`, `pgrep -l sleep`, `kill` с найденным PID — и `pgrep -l sleep` пуст.
+6. `ssh student@localhost` из PowerShell, сверьте отпечаток с `ssh-keygen -lf`; внутри `echo $SSH_CONNECTION` не пуста.
+7. `scp` файла из Windows в `~/forge`, проверка — `ls -l ~/forge`.
+8. Учебный `sshd` больше не нужен: `sudo systemctl disable --now ssh.socket ssh`.
+
+<Check
+  q={"В Ubuntu вы создали ~/forge/hello.txt. Потом в окне PS C:\\Users\\Анна> набрали cat ~/forge/hello.txt. Что будет?"}
+  options={["Ошибка: путь не найден — ~ в PowerShell это C:\\Users\\Анна", "Выведет текст: cat — команда Linux", "Выведет текст: WSL показывает файлы Linux в папках Windows", "Откроется Ubuntu и выведет текст"]}
+  answer={0}
+  explain={"В PowerShell cat — его собственная команда, а ~ — папка пользователя Windows; файлы Linux видны из Windows только через \\\\wsl$."}
+/>
+
+<Check
+  q={"Ubuntu переустановили, и ssh student@localhost пишет WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! Почему?"}
+  options={["Установка создала новый ключ сервера, а в known_hosts записан старый", "Пароль student изменился", "Переустановка удалила known_hosts в Windows", "sshd теперь слушает другой порт"]}
+  answer={0}
+  explain={"Клиент помнит ключ прежней установки и видит другой — так выглядела бы и подмена. Причина известна, и старую запись удаляют: ssh-keygen -R localhost."}
+/>
+
+</Page>
+
+<Page title="Итог" minutes={3}>
+
+<Summary items={[
+  "Виртуальная машина — компьютер из части ресурсов настоящего, со своей ОС; WSL 2 — ядро Linux в лёгкой ВМ, VirtualBox — полная ВМ; дистрибутив — ядро и всё вокруг",
+  "wsl --install -d Ubuntu-24.04 из PowerShell администратора; wsl -l -v — VERSION 2; 0x80370102 — выключена виртуализация",
+  "Диски Windows — /mnt/c, файлы Linux — \\\\wsl$; проекты держат в ~",
+  "SSH — зашифрованный канал к оболочке другой машины: ssh ↔ sshd, порт 22; отпечаток ключа сверяют; exit закрывает сеанс, а не сервер; scp копирует файлы"
+]} />
+
+</Page>

@@ -1,0 +1,176 @@
+title: Проверка темы
+pass: 0.85
+minutes: 25
+questions:
+- id: plan-enter
+  type: single
+  q: |
+    Вы нажали Enter. Что будет?
+    ```
+    student@HOMEPC:~$ sudo apt install jq
+    ...
+    The following additional packages will be installed:
+      libjq1 libonig5
+    The following NEW packages will be installed:
+      jq libjq1 libonig5
+    0 upgraded, 3 newly installed, 0 to remove and 12 not upgraded.
+    Do you want to continue? [Y/n]
+    ```
+  options:
+  - 'Поставятся `jq` и две библиотеки, без которых он не работает'
+  - 'Поставится только `jq`: дополнительные пакеты `apt` лишь перечисляет, ставят их отдельной командой'
+  - 'Ничего не поставится: на вопрос нужно ответить буквой, пустой ответ отменяет установку'
+  - 'Поставятся три пакета, а заодно обновятся 12 программ из последней строки'
+  answer: 0
+  explain: 'В `[Y/n]` заглавная буква — ответ по умолчанию, Enter значит «да». Библиотеки из `additional packages` — зависимости `jq`, и `apt` ставит их сам: они уже в списке `NEW`. `12 not upgraded` — программы, для которых есть новые версии; `install` их не трогает, обновляет `upgrade`.'
+- id: upgrade-without-update
+  type: single
+  q: 'Полгода назад вы выполнили `sudo apt update` и `sudo apt upgrade`, а сегодня — только `sudo apt upgrade`. Он ответил `0 upgraded`. Что это значит?'
+  options:
+  - 'Новых версий нет только в полугодовом списке пакетов на диске: свежий список не скачивали'
+  - 'Все программы свежие: перед обновлением `upgrade` сам скачивает новый список'
+  - 'Команда не сработала: без `update` в тот же день `upgrade` выходит, ничего не проверив'
+  - 'Список пакетов обновлён, а программы обновит следующий запуск `upgrade`'
+  answer: 0
+  explain: '`upgrade` сравнивает установленные программы со списком на диске, а скачивает список только `update`. После прошлого раза программы уже совпадают с тем списком, поэтому обновлять «не до чего». Сначала `sudo apt update`, потом `upgrade`.'
+- id: which-need-sudo
+  type: multi
+  q: 'Какие команды в Ubuntu выполнятся успешно без `sudo`?'
+  options:
+  - '`apt search --names-only htop`'
+  - '`apt show htop`'
+  - '`apt list --installed`'
+  - '`apt update`'
+  - '`apt install htop`'
+  - '`apt remove htop`'
+  answer: [0, 1, 2]
+  explain: 'Поиск, описание и список установленного только читают. `apt update` ничего не ставит, но переписывает список пакетов на диске — это изменение системы, и без root команда упирается в права. `install` и `remove` меняют систему тем более: без `sudo` — ошибка про файл блокировки.'
+- id: locate-fresh
+  type: single
+  q: 'В только что установленной Ubuntu `sudo apt install tree` отвечает `E: Unable to locate package tree`. Имя пакета верное. Что делать?'
+  options:
+  - 'Выполнить `sudo apt update`, затем повторить установку'
+  - 'Поставить через `pip install tree`: раз `apt` пакета не знает, он есть только на PyPI'
+  - 'Повторить через `sudo -i`: под обычным `sudo` `apt` не видит репозиторий'
+  - 'Удалить `/var/lib/dpkg/lock-frontend`: блокировка мешает прочитать список'
+  answer: 0
+  explain: '`apt` ищет пакет в списке на диске, а в свежей системе он устарел или почти пуст. `sudo` уже даёт права root, `sudo -i` ничего не добавит. pip ставит модули Python, а не программы системы. Блокировка дала бы другую ошибку — про lock, а не «не найден».'
+- id: hide-warning
+  type: single
+  q: 'Команда `apt list --installed | grep htop` печатает нужную строку, а над ней — `WARNING: apt does not have a stable CLI interface. Use with caution in scripts.` Как убрать предупреждение с экрана, сохранив найденную строку?'
+  options:
+  - '`apt list --installed 2> /dev/null | grep htop`'
+  - '`apt list --installed | grep htop 2> /dev/null`'
+  - '`apt list --installed | grep -v WARNING | grep htop`'
+  - '`apt list --installed > /dev/null | grep htop`'
+  answer: 0
+  explain: 'Предупреждение `apt` пишет в stderr, а по конвейеру идёт только stdout, поэтому строка попадает прямо на экран. Перенаправлять нужно stderr самого `apt`. `2> /dev/null` у `grep` глушит ошибки `grep`, а не `apt`; `grep -v WARNING` предупреждения не видит — его нет во входе. `> /dev/null` у `apt` выбрасывает весь список, и `grep` ничего не найдёт.'
+- id: signed-list
+  type: single
+  q: 'Злоумышленник подменил на зеркале файл пакета `htop` и вписал в список пакетов сумму своего файла. Подпись списка он оставил прежней. Что будет при `sudo apt update` и `sudo apt install htop`?'
+  options:
+  - '`apt` не примет изменённый список: подпись не соответствует его новому содержимому'
+  - 'Поставится подменённый `htop`: сумма его файла совпадает с суммой в списке'
+  - '`apt` поставит подменённый файл, но предупредит, что подпись старая'
+  - 'Поставится настоящий `htop`: `apt` сравнит файл с прежней версией у себя на диске'
+  answer: 0
+  explain: 'Подпись заверяет список целиком: изменили хоть одну строку — подпись к нему не подходит, и `apt update` откажется брать такой список. Чтобы подделка прошла, нужно подписать новый список, а для этого нужен секретный ключ разработчиков Ubuntu.'
+- id: winget-exact
+  type: single
+  q: 'Почему в инструкции пишут `winget install --id Microsoft.VisualStudioCode -e`, а не `winget install code`?'
+  options:
+  - 'Чтобы поставить ровно этот пакет: по слову `code` найдутся и другие, похожие по имени'
+  - '`-e` отвечает «да» на все вопросы установщика, как `-y` у `apt`'
+  - 'Без `--id` `winget` ищет программу на сайтах в интернете, а не в своём хранилище'
+  - '`-e` ставит программу без прав администратора'
+  answer: 0
+  explain: '`--id` и `-e` требуют точного совпадения идентификатора, и `winget` не перепутает VS Code с пакетом, где в имени тоже есть «code». Отвечать «да» `-e` не умеет. Хранилище у `winget` одно и то же при любом способе поиска, а права зависят от самого пакета: VS Code ставится для одного пользователя.'
+- id: pip-refused-fixes
+  type: multi
+  q: 'В проекте в Ubuntu `pip install requests` отвечает `error: externally-managed-environment`. Какие из этих решений правильные?'
+  options:
+  - 'Создать окружение `python3 -m venv .venv`, включить его и выполнить `pip install requests`'
+  - 'В проекте на uv выполнить `uv add requests`'
+  - 'Выполнить `sudo pip install requests`: запрет снимают права root'
+  - 'Выполнить `pip install --break-system-packages requests`'
+  - 'Выполнить `sudo apt install python3-requests`: версия запишется в зависимости проекта'
+  answer: [0, 1]
+  explain: 'Запрет — метка на системном Python, а не нехватка прав, поэтому `sudo` ничего не меняет. `--break-system-packages` снимает запрет ценой того, о чём говорит его название: в Python системы появится второй хозяин. `python3-requests` из `apt` — общая для системы версия, и в зависимостях проекта она не записывается. Внутри окружения запрет не действует.'
+- id: script-typo
+  type: single
+  q: |
+    Скрипт запускают через `sudo ./setup.sh`. Чем он закончится?
+    ```bash
+    #!/bin/bash
+    set -e
+    apt-get update
+    apt-get install -y htop tre
+    echo готово
+    ```
+  options:
+  - 'Ошибкой `E: Unable to locate package tre`: ничего не установится, и скрипт остановится без «готово»'
+  - '`htop` установится, про `tre` будет ошибка, а затем «готово»'
+  - '`htop` установится, а на ошибке про `tre` скрипт остановится без «готово»'
+  - '`apt-get` спросит, какой пакет имелся в виду, и скрипт будет ждать ответа'
+  answer: 0
+  explain: '`apt-get` сначала составляет план для всех названных пакетов, а для `tre` его не составить: он выходит с кодом 100, ничего не поменяв, — `htop` тоже не ставится. Код не 0, и `set -e` останавливает скрипт. Вопросов о похожих именах `apt-get` не задаёт.'
+- id: code-new-packages
+  type: code
+  q: |
+    **Напишите `new_packages(text)`: по выводу `apt install` вернуть список пакетов, которые будут поставлены заново, — из блока `The following NEW packages will be installed:`.**
+    `text` — вывод целиком, строки разделены `\n`. Имена идут в строках после заголовка блока; каждая такая строка начинается с двух пробелов, имена в ней — через пробел. Блок кончается на первой строке, которая не начинается с пробела. Порядок — как в выводе. Если блока нет — пустой список.
+    ```call
+    new_packages("The following additional packages will be installed:\n  libjq1 libonig5\nThe following NEW packages will be installed:\n  jq libjq1 libonig5\n0 upgraded, 3 newly installed, 0 to remove and 12 not upgraded.")
+    ```
+    ```return
+    ['jq', 'libjq1', 'libonig5']
+    ```
+  starter: |
+    def new_packages(text):
+        return []
+  solution: |
+    def new_packages(text):
+        result = []
+        inside = False
+        for line in text.split("\n"):
+            if line == "The following NEW packages will be installed:":
+                inside = True
+            elif inside and line.startswith("  "):
+                result.extend(line.split())
+            else:
+                inside = False
+        return result
+  tests:
+    function: new_packages
+    calls:
+    - name: Пример
+      args: ["The following additional packages will be installed:\n  libjq1 libonig5\nThe following NEW packages will be installed:\n  jq libjq1 libonig5\n0 upgraded, 3 newly installed, 0 to remove and 12 not upgraded."]
+      expect: ['jq', 'libjq1', 'libonig5']
+    - name: Блок на двух строках, рядом — Suggested
+      args: ["Reading package lists... Done\nThe following additional packages will be installed:\n  libnl-3-200 libnl-genl-3-200\nSuggested packages:\n  lm-sensors strace\nThe following NEW packages will be installed:\n  htop libnl-3-200\n  libnl-genl-3-200\n0 upgraded, 3 newly installed, 0 to remove and 285 not upgraded.\nNeed to get 238 kB of archives."]
+      expect: ['htop', 'libnl-3-200', 'libnl-genl-3-200']
+    - name: Нечего ставить
+      args: ["Reading package lists... Done\nhtop is already the newest version (3.3.0-4build1).\n0 upgraded, 0 newly installed, 0 to remove and 285 not upgraded."]
+      expect: []
+    - name: Блок — последний в выводе
+      args: ["The following NEW packages will be installed:\n  tree"]
+      expect: ['tree']
+      hidden: true
+    - name: Другие блоки с отступом после NEW не попадают
+      args: ["The following NEW packages will be installed:\n  jq\nThe following packages will be upgraded:\n  libc6 libssl3t64\n1 upgraded, 1 newly installed, 0 to remove and 11 not upgraded."]
+      expect: ['jq']
+      hidden: true
+  explain: 'Нужен флаг «мы внутри блока»: его включает строка-заголовок, а выключает первая строка без отступа. Без выключения в ответ попали бы имена из следующего блока — например, обновляемых пакетов. `split()` без аргумента режет по пробелам и не оставляет пустых строк от отступа.'
+- id: open-sudo-pip
+  type: open
+  q: 'Коллега получил в Ubuntu `error: externally-managed-environment` и говорит: «Просто не хватило прав — добавлю `sudo`». Объясните, почему `sudo pip install` не поможет, от чего защищает этот запрет и куда ставить пакеты проекта.'
+  rubric:
+  - 'Дело не в правах: системный Python помечен как внешне управляемый — им управляет `apt`, и pip отказывается работать в нём при любых правах'
+  - 'Запрет защищает системные программы на Python: pip поставил бы свои версии пакетов рядом с пакетами `apt` (и раньше них в поиске модулей), и системная программа получила бы не ту версию — у одного Python было бы два хозяина'
+  - 'Пакеты проекта ставят в его виртуальное окружение (`python3 -m venv` и pip внутри или `uv add`), где запрет не действует'
+  wrong_answers:
+  - 'С `sudo` pip поставит пакеты, просто так делать не рекомендуют'
+  - 'pip запрещён в Ubuntu совсем, пакеты Python ставят только через `apt`'
+  - 'Нужно добавить флаг `--break-system-packages`, это штатный способ'
+  followups:
+  - 'Почему пакет из `apt`, например `python3-requests`, плохо подходит для зависимостей проекта?'

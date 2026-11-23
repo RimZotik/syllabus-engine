@@ -1,0 +1,83 @@
+id: i1p-debug-warmer-days
+title: Сколько раз потеплело
+sandbox: python-browser
+difficulty: 1
+concepts: [отладка, range, граница цикла]
+statement: |
+  **Исправьте функцию `count_warmer(temps)`: она должна возвращать, сколько дней были теплее предыдущего дня, но иногда недосчитывает.**
+
+  `temps` — список целых температур по дням подряд; первый день сравнивать не с чем. Найдите ошибку, не добавляя `print`: пройдите вызов кнопкой «По шагам» и следите, какие значения принимает `i` и на каком она останавливается. На своём компьютере то же покажет точка останова в VS Code.
+
+  Пример 1
+  ```call
+  count_warmer([1, 3, 2, 5])
+  ```
+  ```return
+  2
+  ```
+
+  Пример 2
+  ```call
+  count_warmer([4, 2, 6])
+  ```
+  ```return
+  1
+  ```
+
+  Ограничения: в списке от 0 до 365 чисел.
+starter: |
+  def count_warmer(temps):
+      count = 0
+      for i in range(1, len(temps) - 1):
+          if temps[i] > temps[i - 1]:
+              count += 1
+      return count
+
+
+  print(count_warmer([1, 3, 2, 5]))
+solution: |
+  def count_warmer(temps):
+      count = 0
+      for i in range(1, len(temps)):
+          if temps[i] > temps[i - 1]:
+              count += 1
+      return count
+
+
+  print(count_warmer([1, 3, 2, 5]))
+tests:
+  function: count_warmer
+  calls:
+    - name: Пример 1
+      args: [[1, 3, 2, 5]]
+      expect: 2
+    - name: Пример 2
+      args: [[4, 2, 6]]
+      expect: 1
+    - name: Теплеет каждый день
+      args: [[-3, -1, 0, 2]]
+      expect: 3
+    - name: Одинаковая температура — не теплее
+      args: [[2, 2, 2]]
+      expect: 0
+    - name: Два дня
+      args: [[-5, -4]]
+      expect: 1
+      hidden: true
+    - name: Холодает
+      args: [[5, 4, 3, 1]]
+      expect: 0
+      hidden: true
+    - name: Один день
+      args: [[7]]
+      expect: 0
+      hidden: true
+    - name: Пустой список
+      args: [[]]
+      expect: 0
+      hidden: true
+hints:
+  - level: 1
+    text: "Какое значение `i` — последнее в цикле для списка из четырёх дней? Какой день при этом ни разу не сравнили с предыдущим?"
+  - level: 2
+    text: "`range(a, b)` доходит до `b - 1`. Каким должен быть последний номер дня, который сравнивают с предыдущим?"

@@ -1,0 +1,130 @@
+title: Проверка темы
+pass: 0.85
+minutes: 20
+questions:
+- id: wsl-or-virtualbox
+  type: single
+  q: 'Анне для курса нужна Ubuntu на ноутбуке с Windows 11: терминал, Python, обращаться к файлам из Проводника. `wsl --install -d Ubuntu-24.04` в PowerShell администратора завершился ошибкой `0x80370102`. Что ей делать?'
+  options:
+  - 'Включить в UEFI виртуализацию процессора (VT-x или SVM Mode) и повторить установку WSL'
+  - 'Отказаться от WSL и поставить VirtualBox: ему виртуализация процессора не нужна'
+  - 'Повторить команду в обычном PowerShell: администратору компонент не ставится'
+  - 'Повторить команду без `-d Ubuntu-24.04`: эта версия на её компьютере не поддерживается'
+  answer: 0
+  explain: '`0x80370102` значит, что ВМ не может стартовать: выключена виртуализация процессора. WSL 2 и VirtualBox — обе виртуальные машины, и VirtualBox без неё тоже не обойдётся. Для задач Анны WSL подходит лучше: запускается за секунды и видит файлы Windows.'
+- id: windows-file-from-ubuntu
+  type: single
+  q: 'Выгрузка лежит в Windows: `C:\Users\Анна\Downloads\sales.csv`. Какая команда в окне Ubuntu под WSL скопирует её в папку проекта `~/forge`?'
+  options:
+  - '`cp /mnt/c/Users/Анна/Downloads/sales.csv ~/forge/`'
+  - '`cp C:\Users\Анна\Downloads\sales.csv ~/forge/`'
+  - '`cp ~/Downloads/sales.csv ~/forge/`'
+  - '`cp /c/Users/Анна/Downloads/sales.csv ~/forge/`'
+  answer: 0
+  explain: 'Диски Windows видны в Linux в `/mnt`: диск C — `/mnt/c`, а разделитель — `/`. В bash `\` — экранирование, так что Windows-путь превратится в другое имя. `~` в Ubuntu — домашняя папка пользователя Linux, и папки `Downloads` из Windows там нет.'
+- id: linux-file-from-explorer
+  type: single
+  q: 'Пользователь Linux — `student`, дистрибутив — `Ubuntu-24.04`. По какому адресу Проводник Windows откроет файл `~/forge/hello.txt`?'
+  options:
+  - '`\\wsl$\Ubuntu-24.04\home\student\forge\hello.txt`'
+  - '`C:\home\student\forge\hello.txt`'
+  - '`\\wsl$\Ubuntu-24.04\~\forge\hello.txt`'
+  - '`/mnt/c/home/student/forge/hello.txt`'
+  answer: 0
+  explain: 'Файлы Linux Windows видит через сетевой путь `\\wsl$\имя-дистрибутива`, дальше — полный путь Linux: `~` — это `/home/student`. Значок `~` понимает только оболочка, а не Проводник. `/mnt/c` — путь со стороны Linux к диску Windows, а не наоборот.'
+- id: ssh-connection-refused
+  type: single
+  q: |
+    В PowerShell:
+    ```text
+    PS C:\Users\Анна> ssh student@localhost
+    ssh: connect to host localhost port 22: Connection refused
+    ```
+    Что это значит?
+  options:
+  - 'На порту 22 никто не ждёт подключений: в Ubuntu не запущен `sshd`'
+  - 'Пароль пользователя `student` неверный'
+  - 'Ключ сервера изменился, и клиент отказался подключаться'
+  - 'Пользователя `student` в Ubuntu нет'
+  answer: 0
+  explain: 'До пароля и имени дело не дошло: соединение отклонено на уровне порта, потому что его не слушает ни одна служба. Неверные имя или пароль дают `Permission denied, please try again.` уже после вопроса о пароле, а смена ключа — предупреждение `REMOTE HOST IDENTIFICATION HAS CHANGED!`.'
+- id: ssh-wrong-user
+  type: single
+  q: |
+    Пользователь Linux — `student`, пользователь Windows — `anna`. В PowerShell:
+    ```text
+    PS C:\Users\anna> ssh anna@localhost
+    anna@localhost's password:
+    Permission denied, please try again.
+    ```
+    Пароль Linux набран верно. В чём ошибка?
+  options:
+  - 'В команде имя пользователя Windows, а входить нужно под пользователем Linux: `ssh student@localhost`'
+  - 'Пароль нужно вводить от учётной записи Windows'
+  - 'Нужно добавить номер порта: `ssh -p 22 anna@localhost`'
+  - 'Сначала нужно принять отпечаток ключа сервера'
+  answer: 0
+  explain: 'SSH входит в Ubuntu, а там пользователя `anna` нет, поэтому пароль Linux к нему не подходит. Порт 22 и так используется по умолчанию, а отпечаток спрашивают до пароля — раз пароль спросили, соединение уже установлено.'
+- id: virtualbox-port
+  type: single
+  q: 'Ubuntu Server стоит в VirtualBox, в настройках ВМ проброс: порт 2222 Windows → порт 22 ВМ. Как войти по SSH из PowerShell под пользователем `student`?'
+  options:
+  - '`ssh -p 2222 student@localhost`'
+  - '`ssh -p 22 student@localhost`'
+  - '`ssh student@localhost:2222`'
+  - '`ssh student@localhost 2222`'
+  answer: 0
+  explain: 'Клиент подключается к порту на Windows — 2222, а VirtualBox передаёт соединение на порт 22 ВМ; порт задаёт флаг `-p`. Двоеточие после адреса `ssh` за порт не принимает — так пишут путь в `scp`. Слово после адреса `ssh` считает командой, которую нужно выполнить на сервере.'
+- id: first-connect-fingerprint
+  type: single
+  q: 'Вы впервые подключаетесь к своей Ubuntu, и `ssh` спрашивает `Are you sure you want to continue connecting (yes/no/[fingerprint])?`, показав отпечаток `SHA256:…`. Как поступить правильно?'
+  options:
+  - 'Сравнить отпечаток с выводом `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` в окне Ubuntu и ответить `yes`, только если они совпали'
+  - 'Ответить `yes`: в первый раз ключ всегда незнаком, вопрос можно пропускать'
+  - 'Ответить `no` и сначала ввести пароль: отпечаток проверяют после входа'
+  - 'Сравнить отпечаток с содержимым `known_hosts` на Windows и ответить `yes`, если он там уже есть'
+  answer: 0
+  explain: 'Отпечаток — короткая строка, вычисленная из открытого ключа сервера, и сверяют её с тем, что сообщает владелец сервера, — здесь это вы сами. Ответ `yes` вслепую принимает и ключ того, кто встал посередине. Если бы ключ уже был в `known_hosts`, `ssh` бы этого вопроса не задал.'
+- id: host-key-changed-work
+  type: single
+  q: 'Вы каждый день входите по SSH на рабочий сервер. Сегодня `ssh` пишет `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`, а администратор ни о какой переустановке не сообщал. Что делать?'
+  options:
+  - 'Не входить и спросить администратора, менялся ли ключ сервера'
+  - 'Удалить старую запись командой `ssh-keygen -R` и войти: предупреждение означает лишь, что ключ обновился'
+  - 'Войти по паролю, а не по ключу: предупреждение касается только входа по ключу'
+  - 'Подождать и повторить попытку: это временный сбой сети'
+  answer: 0
+  explain: 'Ключ, который помнит клиент, и ключ, который ему показали, разные. Так выглядит и переустановка сервера, и подмена — злоумышленник посередине. Пока причина неизвестна, вводить пароль нельзя: удалять старую запись можно, когда вы знаете, что ключ сменился законно.'
+- id: inside-ssh-session
+  type: multi
+  q: 'В PowerShell вы набрали `ssh student@localhost` и вошли в свою Ubuntu под WSL. Что верно в этом сеансе?'
+  options:
+  - 'Набранные команды выполняет bash в Ubuntu'
+  - '`ls ~` покажет домашнюю папку пользователя Linux `student`'
+  - '`exit` закроет сеанс и вернёт в PowerShell, а `sshd` продолжит ждать подключений'
+  - 'Работают команды PowerShell, например `Get-ChildItem C:\`'
+  - '`exit` выключит Ubuntu, и следующий `ssh` ответит `Connection refused`'
+  answer: [0, 1, 2]
+  explain: 'Сеанс SSH — оболочка на другой машине: здесь это bash в Ubuntu, и `~` — домашняя папка пользователя Linux. `exit` завершает только этот bash, служба `sshd` продолжает работать. Пути вида `C:\` и команды PowerShell остаются в окне Windows.'
+- id: scp-direction
+  type: single
+  q: 'Вы в PowerShell в папке `C:\Users\Анна\reports`. Как скопировать сюда файл `~/forge/report.csv` с вашей Ubuntu по SSH?'
+  options:
+  - '`scp student@localhost:~/forge/report.csv .`'
+  - '`scp .\report.csv student@localhost:~/forge/`'
+  - '`scp student@localhost/forge/report.csv .`'
+  - '`ssh student@localhost cp ~/forge/report.csv .`'
+  answer: 0
+  explain: 'У `scp` первым идёт откуда, вторым — куда; путь на сервере пишется после двоеточия. Команда `scp .\report.csv student@localhost:~/forge/` копирует в обратную сторону. `ssh … cp` выполнит `cp` на сервере, и точка там — папка на сервере, а не в Windows.'
+- id: open-host-key
+  type: open
+  q: 'Зачем `ssh` при первом подключении показывает отпечаток ключа сервера и просит его подтвердить? Что изменится при следующих подключениях к тому же серверу?'
+  rubric:
+  - 'Отпечаток вычислен из открытой части ключа сервера, а ответить как этот сервер может только владелец секретной части; сверка отпечатка с тем, что сообщил владелец, доказывает, что клиент говорит с нужным сервером, а не с тем, кто встал посередине'
+  - 'Принятый ключ клиент запоминает в `known_hosts`: при следующих подключениях вопроса нет, а если ключ сервера окажется другим, `ssh` откажется входить с предупреждением'
+  wrong_answers:
+  - Отпечаток шифрует пароль, поэтому его нужно подтвердить перед вводом пароля
+  - Отпечаток — это пароль сервера, его вводят при каждом входе
+  - После подтверждения пароль больше не спрашивают
+  followups:
+  - Почему сверять отпечаток нужно с тем, что сообщил владелец сервера, а не с тем, что показал сам `ssh`?

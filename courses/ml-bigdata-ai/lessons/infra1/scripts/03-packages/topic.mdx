@@ -1,0 +1,246 @@
+export const meta = {
+  minutes: 70,
+  lead: "На сервере нет браузера, чтобы найти сайт с установщиком, и мыши, чтобы его запустить. Программы там ставят одной командой из проверенного хранилища. Разберём apt в Ubuntu и winget в Windows, научимся читать их ошибки и поймём, почему pip в системном Python отказывается работать.",
+  uses: ["package", "pip", "pypi", "dependency", "virtual-environment", "operating-system", "python", "terminal", "shell", "sudo", "root-user", "path-variable", "exit-status", "process", "command-option", "pipeline", "standard-stream", "redirection", "bashrc", "home-directory", "ssh", "shell-script"]
+}
+
+<Page title="Откуда берутся программы" minutes={10}>
+
+## Команды нет — но её можно поставить
+
+Цветной вариант `top` называется `htop`. Наберите его в своей Ubuntu:
+
+```text
+student@HOMEPC:~$ htop
+Command 'htop' not found, but can be installed with:
+sudo apt install htop
+```
+
+Код возврата — 127, как у любой команды, которой нет в папках `PATH`. Подсказку печатает Ubuntu: она знает, откуда эту программу можно поставить. Иногда она предлагает ещё `sudo snap install` — в курсе ставим через `apt`.
+
+В Windows программу ищут на сайте: сайт бывает подделкой, а обновлять каждую программу приходится вручную. Linux решает это иначе. Две такие команды вы уже вводили, не разбирая их, когда ставили службу SSH: `sudo apt update` и `sudo apt install openssh-server`.
+
+<Theorem kind="definition" title="Пакетный менеджер"
+  formal="Пакет — архив с файлами программы и сведениями о ней: имя, версия, описание и зависимости — другие пакеты, без которых она не работает. Пакеты хранятся в репозиториях, которые ведёт дистрибутив. Система управления пакетами устанавливает, обновляет и удаляет пакеты из репозиториев, сама разрешая зависимости."
+  source="W. Shotts, «The Linux Command Line», гл. 14 «Package Management» (пересказ); Debian Reference, гл. 2 «Debian package management»">
+
+Пакет Ubuntu — то же понятие, что пакет Python: архив, версия, зависимости, только для программ системы. <Term id="package-manager">Пакетный менеджер</Term> ставит программу одной командой и сам доустанавливает всё, что ей нужно. Берёт он её из <Term id="package-repository">репозитория пакетов</Term> — хранилища на сервере дистрибутива.
+
+</Theorem>
+
+Схема та же, что у pip, но выложить пакет на PyPI может любой, а в репозиторий Ubuntu пакеты отбирают разработчики дистрибутива. Подделку отсекают две вещи:
+
+- **Контрольная сумма** — короткое число, вычисленное из всех байтов файла: изменился хоть один байт — сумма другая. Список пакетов хранит сумму каждого пакета.
+- **Подпись** — такая сумма самого списка, заверенная секретным ключом разработчиков Ubuntu, как сервер SSH подтверждает себя своим ключом. Проверить её может любой, подделать без ключа нельзя.
+
+В Ubuntu пакетный менеджер — <Term id="apt">`apt`</Term> (Advanced Package Tool). Он скачивает пакеты и подбирает зависимости, а распаковку и учёт установленного ведёт программа `dpkg`.
+
+<Check
+  q={"Кто-то подменил файл пакета htop на сервере-зеркале, откуда его скачивает apt. Список пакетов не тронут. Что будет при sudo apt install htop?"}
+  options={["apt откажется ставить: сумма скачанного файла не совпадёт с суммой из подписанного списка", "Поставится подменённый htop: apt доверяет любому серверу из своего списка", "apt поставит пакет, но предупредит, что файл изменён", "Поставится настоящий htop: apt сам найдёт исходный файл"]}
+  answer={0}
+  explain={"Сумма подменённого файла другая, а список с верной суммой заверен подписью — без ключа его не поправить. apt останавливается с ошибкой, а искать «настоящий» файл ему негде."}
+/>
+
+</Page>
+
+<Page title="apt: список, поиск, установка" minutes={16}>
+
+## Сначала — свежий список
+
+`apt` ставит программы по **списку пакетов** — копии списка из репозитория у вас на диске. Список устаревает, поэтому работу начинают с его обновления:
+
+```text
+student@HOMEPC:~$ sudo apt update
+Get:1 http://archive.ubuntu.com/ubuntu noble InRelease [256 kB]
+...
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+285 packages can be upgraded. Run 'apt list --upgradable' to see them.
+```
+
+`noble` — кодовое имя Ubuntu 24.04. Для 285 установленных пакетов вышли новые версии (у вас число другое). Сами программы `apt update` **не обновляет** — он только скачивает свежий список.
+
+## Найти и поставить
+
+Смотреть можно без `sudo`: `apt search --names-only htop` найдёт пакеты с `htop` в имени, `apt show htop` покажет версию и строку `Depends:` — зависимости. Ставят с `sudo`. Предскажите, сколько пакетов поставит `apt`, если просили один:
+
+```text
+student@HOMEPC:~$ sudo apt install htop
+...
+The following additional packages will be installed:
+  libnl-3-200 libnl-genl-3-200
+Suggested packages:
+  lm-sensors strace
+The following NEW packages will be installed:
+  htop libnl-3-200 libnl-genl-3-200
+0 upgraded, 3 newly installed, 0 to remove and 285 not upgraded.
+Need to get 238 kB of archives.
+After this operation, 665 kB of additional disk space will be used.
+Do you want to continue? [Y/n]
+```
+
+Три: две библиотеки нужны `htop`, и `apt` добавил их сам, как pip добавлял зависимости `requests`. `Suggested` — необязательное. Перед изменением системы `apt` показывает план и спрашивает `[Y/n]`; заглавная буква — ответ по умолчанию, достаточно нажать Enter. Флаг `-y` отвечает «да» заранее. В скриптах пишут `apt-get` — его вывод не меняется от версии к версии.
+
+## Где теперь программа
+
+`which htop` отвечает `/usr/bin/htop`. Эта папка есть в `PATH`, а оболочка ищет команду по `PATH` при каждом запуске, поэтому новое окно не нужно: `PATH` не менялся, в папке просто появился файл. Все файлы пакета перечислит `dpkg -L htop` — программу, документацию, страницу `man`.
+
+</Page>
+
+<Page title="Обновить, удалить, разобрать ошибку" minutes={14}>
+
+## update и upgrade
+
+- `sudo apt update` — обновить **список** пакетов. Программы не меняются.
+- `sudo apt upgrade` — обновить **программы** до версий из списка. Без `update` перед ним обновлять не до чего.
+
+Свежая Ubuntu в WSL собрана давно, и первый `upgrade` скачивает пару сотен мегабайт. Сделайте его сразу: в обновлениях — исправления уязвимостей.
+
+`sudo apt remove htop` удаляет программу. Библиотеки, которые приехали вместе с ней, останутся; убрать ставшие ненужными — `sudo apt autoremove`. Стоит ли программа, покажет `apt list --installed | grep htop`; строку `WARNING` над ответом `apt` пишет в stderr, и `grep` её не видит.
+
+## Типичные ошибки
+
+Ошибки `apt` начинаются с `E:`, код возврата — 100. Предскажите, что ответит `apt install htop` без `sudo`.
+
+```text
+student@HOMEPC:~$ apt install htop
+E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)
+E: Unable to acquire the dpkg frontend lock (/var/lib/dpkg/lock-frontend), are you root?
+```
+
+Чтобы две программы не меняли систему одновременно, `apt` сначала занимает **файл блокировки** в `/var/lib/dpkg`, а писать туда может только root. Лечится повтором с `sudo`, а не правкой прав папки.
+
+**Блокировка занята:**
+
+```text
+Waiting for cache lock: Could not get lock /var/lib/dpkg/lock-frontend. It is held by process 1123 (unattended-upgr)... 12s
+```
+
+В скобках — кто держит блокировку. `unattended-upgr` — Ubuntu сама ставит обновления безопасности вскоре после запуска. `apt` ждёт; подождите и вы. Удалять файл блокировки нельзя: два `dpkg`, пишущих одновременно, оставят базу пакетов полуобновлённой.
+
+**Пакет не найден** — `E: Unable to locate package tree`. Опечатка в имени или устаревший список — тогда помогает `sudo apt update`.
+
+<Check
+  q={"Скрипт начинается с set -e, а первой командой выполняет apt-get install -y jq — без sudo. Что будет?"}
+  options={["apt-get завершится с ошибкой и кодом 100, и скрипт остановится на этой строке", "apt-get сам запросит пароль, и скрипт продолжится", "Скрипт продолжится: ошибки apt пишет в stderr, а set -e смотрит только на stdout", "jq поставится только для текущего пользователя"]}
+  answer={0}
+  explain={"Без прав root apt-get не займёт файл блокировки и выйдет с кодом 100. set -e останавливает скрипт после любой команды с ненулевым кодом, а куда команда писала — неважно. Пароль спрашивает sudo, а не apt-get; установки «для одного пользователя» у apt нет."}
+/>
+
+</Page>
+
+<Page title="Системный Python и pip" minutes={15}>
+
+## pip отказывается
+
+В Ubuntu уже есть Python 3.12 — на нём работают её собственные программы; вы видели, что команда называется `python3`, а команды `python` нет. Нет и `pip` — подсказка предложит `sudo apt install python3-pip`. Поставив его, попробуйте установить пакет:
+
+```text
+student@HOMEPC:~$ pip install requests
+error: externally-managed-environment
+
+× This environment is externally managed
+╰─> To install Python packages system-wide, try apt install
+    python3-xyz, where xyz is the package you are trying to
+    install.
+
+    If you wish to install a non-Debian-packaged Python package,
+    create a virtual environment using python3 -m venv path/to/venv.
+    ...
+hint: See PEP 668 for the detailed specification.
+```
+
+Это не поломка, а защита.
+
+<Theorem kind="rule" title="Внешне управляемое окружение (PEP 668)"
+  formal="Установка Python может объявить себя внешне управляемой — файлом EXTERNALLY-MANAGED в папке стандартной библиотеки. Тогда установщики пакетов Python по умолчанию не устанавливают и не удаляют пакеты в её общем окружении, а направляют пользователя к виртуальному окружению. Внутри виртуального окружения запрет не действует."
+  source="PEP 668 «Marking Python base environments as “externally managed”», Abstract и Specification (пересказ)">
+
+Системным Python в Ubuntu управляет `apt` — это <Term id="externally-managed-environment">внешне управляемое окружение</Term>. Ваши пакеты pip поставит только в виртуальное окружение.
+
+</Theorem>
+
+Зачем запрет. В Ubuntu уже стоит `requests` 2.31 — пакет `python3-requests`, на нём работают системные программы. `sudo pip install requests` положил бы свежую версию в `/usr/local/lib/python3.12/dist-packages`, где Python ищет модули раньше, чем в папке пакетов `apt`, — и системная программа получила бы не ту версию, на которой её проверяли. У одного Python было бы два хозяина, не знающих друг о друге.
+
+Отсюда выводы:
+
+- **`sudo pip install` не помогает:** дело не в правах, а в метке на системном Python.
+- **Флаг `--break-system-packages` из подсказки не используйте** — название честно говорит, что он делает.
+- **Каждому проекту — своё окружение.** Его создадут `venv` или `uv`, о них — тема «Изолированные окружения Python (uv, venv)».
+
+У каждого уровня установки свой хозяин; `uv` вы поставите в теме об окружениях:
+
+| Что ставим | Кто ставит | Пример |
+|---|---|---|
+| Программы системы | `apt`, в Windows — `winget` | `sudo apt install htop` |
+| Программу на Python для себя, во всех папках | `uv tool` | `uv tool install ruff` |
+| Версию Python для проекта | `uv` | `uv python install 3.13` |
+| Пакеты одного проекта | `uv` или pip в окружении | `uv add requests` |
+
+<Check
+  q={"Проекту в Ubuntu нужен пакет tabulate. Коллега советует sudo apt install python3-tabulate — «системно и надёжно». Что не так?"}
+  options={["Версию выберет дистрибутив, одну на всю систему, и в зависимостях проекта она не записана", "apt не умеет ставить пакеты Python", "Для каждого import понадобится sudo", "Ничего: apt поставит самую свежую версию с PyPI"]}
+  answer={0}
+  explain={"Версия python3-tabulate — та, что в репозитории Ubuntu, общая для системы и меняется вместе с ней. Проекту нужна своя записанная версия, которую повторит другой человек. apt ставит пакеты Python из своего репозитория, а не с PyPI; для import права root не нужны."}
+/>
+
+</Page>
+
+<Page title="Windows: winget" minutes={6}>
+
+## Тот же подход в Windows
+
+В Windows 11 пакетный менеджер — `winget`; он работает в PowerShell. Поиск в Windows с русским интерфейсом:
+
+```text
+PS C:\Users\Анна> winget search --id Microsoft.VisualStudioCode
+Имя                                       ИД                                      Версия  Источник
+---------------------------------------------------------------------------------------------------
+Microsoft Visual Studio Code              Microsoft.VisualStudioCode              1.146.0 winget
+...
+```
+
+Ставят по идентификатору из столбца `ИД`: `winget install --id Microsoft.VisualStudioCode -e`; `-e` требует точного совпадения, чтобы не поставить похожий пакет. VS Code `winget` ставит для одного пользователя — права администратора не нужны.
+
+</Page>
+
+<Page title="Практика" minutes={20}>
+
+## Установка на своём компьютере
+
+Шаги 1–6 — в Ubuntu, шаг 7 — в PowerShell; сверяйтесь с ожидаемым результатом. Задача с автопроверкой — в тренажёре, в конце страницы.
+
+1. `sudo apt update`, затем `sudo apt upgrade`. Повторный `upgrade` пишет `0 upgraded`.
+2. `sudo apt install htop tree`. `which htop tree` печатает две строки с `/usr/bin/`.
+3. Запустите `htop`, найдите в списке свой `bash`, выйдите клавишей `q`.
+4. В выводе `dpkg -L tree` найдите страницу `man` и откройте её: `man tree`.
+5. `apt install jq` без `sudo` — сравните ошибку со своим предсказанием, затем поставьте `jq` правильно.
+6. По желанию — отказ pip: `sudo apt install --no-install-recommends python3-pip` и `pip install requests`. Флаг ставит только обязательные зависимости, без компилятора на 280 МБ. Дальше системный pip не нужен.
+7. Найдите VS Code через `winget search` и, если его нет, поставьте — он нужен в следующей теме.
+
+<Check
+  q={"Вы создали окружение python3 -m venv .venv, включили его source .venv/bin/activate и выполнили pip install requests. Что будет?"}
+  options={["requests встанет в .venv: запрет PEP 668 внутри окружения не действует", "Ошибка externally-managed-environment: Python в окружении тот же системный", "Ошибка, пока не добавить sudo", "requests встанет в системный Python, потому что окружение на него опирается"]}
+  answer={0}
+  explain={"Окружение опирается на системный Python, но пакеты у него свои — в .venv, и метка PEP 668 к ним не относится. Права root для своей папки не нужны. В системную папку pip окружения ничего не пишет."}
+/>
+
+Задача — в тренажёре: `apt` в нём нет, но найти недостающие программы можно.
+
+<Sandbox task="i1p-missing-tools" />
+
+</Page>
+
+<Page title="Итог" minutes={3}>
+
+<Summary items={[
+  "Пакетный менеджер ставит программы из репозитория одной командой вместе с зависимостями; подделку отсекают контрольные суммы и подпись списка; в Ubuntu — apt, в Windows — winget",
+  "sudo apt update обновляет список, sudo apt upgrade — программы; смотреть (search, show, list) можно без sudo, менять (install, remove) — только с ним; в скриптах — apt-get",
+  "Ошибки apt начинаются с E: — без sudo нет доступа к файлу блокировки; занятую блокировку ждут, а не удаляют; Unable to locate package — опечатка или нужен update",
+  "Программы из apt попадают в папку /usr/bin, а она есть в PATH: команда доступна сразу",
+  "Системный Python внешне управляемый (PEP 668): pip в нём отказывается даже с sudo; пакеты проекта — в его окружении, программы на Python для себя — через uv tool"
+]} />
+
+</Page>

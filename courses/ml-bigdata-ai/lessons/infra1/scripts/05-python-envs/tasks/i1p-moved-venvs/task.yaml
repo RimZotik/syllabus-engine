@@ -1,0 +1,58 @@
+id: i1p-moved-venvs
+title: Окружения, переехавшие с проектом
+sandbox: shell
+difficulty: 3
+concepts: [.venv, абсолютный путь, grep, шаблоны]
+statement: |
+  **В `~/forge` четыре проекта с окружениями `.venv`. Удалите `.venv` в каждом проекте, окружение которого создано не в его папке, а остальные окружения не трогайте.**
+
+  Где окружение создано, записано в нём самом: путь к `.venv` — в файлах `.venv/bin/activate` и `.venv/pyvenv.cfg`. Файлы проектов вне `.venv` не меняются.
+
+  Пример
+
+  В проекте `~/forge/notes` файл `.venv/pyvenv.cfg` содержит строку
+  ```text
+  command = /usr/bin/python3 -m venv /home/student/old/notes/.venv
+  ```
+  Окружение создано в `~/old/notes`, а не в `~/forge/notes`, поэтому `~/forge/notes/.venv` удаляют. Окружение со строкой `… -m venv /home/student/forge/notes/.venv` остаётся.
+setup:
+  cwd: /home/student/forge
+  files:
+    shop/.venv/bin/activate: "# This file must be used with \"source bin/activate\" *from bash*\n# You cannot run it directly\n\ndeactivate () {\n    # reset old environment variables\n    if [ -n \"${_OLD_VIRTUAL_PATH:-}\" ] ; then\n        PATH=\"${_OLD_VIRTUAL_PATH:-}\"\n        export PATH\n        unset _OLD_VIRTUAL_PATH\n    fi\n}\n\n# unset irrelevant variables\ndeactivate nondestructive\n\nVIRTUAL_ENV=\"/home/student/forge/shop/.venv\"\nexport VIRTUAL_ENV\n\n_OLD_VIRTUAL_PATH=\"$PATH\"\nPATH=\"$VIRTUAL_ENV/bin:$PATH\"\nexport PATH\n"
+    shop/.venv/pyvenv.cfg: "home = /usr/bin\ninclude-system-site-packages = false\nversion = 3.12.3\nexecutable = /usr/bin/python3.12\ncommand = /usr/bin/python3 -m venv /home/student/forge/shop/.venv\n"
+    shop/requirements.txt: "requests==2.32.3\n"
+    shop/app.py: "print('ok')\n"
+    shop2/.venv/bin/activate: "# This file must be used with \"source bin/activate\" *from bash*\n# You cannot run it directly\n\ndeactivate () {\n    # reset old environment variables\n    if [ -n \"${_OLD_VIRTUAL_PATH:-}\" ] ; then\n        PATH=\"${_OLD_VIRTUAL_PATH:-}\"\n        export PATH\n        unset _OLD_VIRTUAL_PATH\n    fi\n}\n\n# unset irrelevant variables\ndeactivate nondestructive\n\nVIRTUAL_ENV=\"/home/student/forge/shop/.venv\"\nexport VIRTUAL_ENV\n\n_OLD_VIRTUAL_PATH=\"$PATH\"\nPATH=\"$VIRTUAL_ENV/bin:$PATH\"\nexport PATH\n"
+    shop2/.venv/pyvenv.cfg: "home = /usr/bin\ninclude-system-site-packages = false\nversion = 3.12.3\nexecutable = /usr/bin/python3.12\ncommand = /usr/bin/python3 -m venv /home/student/forge/shop/.venv\n"
+    shop2/requirements.txt: "requests==2.32.3\n"
+    shop2/app.py: "print('ok')\n"
+    report/.venv/bin/activate: "# This file must be used with \"source bin/activate\" *from bash*\n# You cannot run it directly\n\ndeactivate () {\n    # reset old environment variables\n    if [ -n \"${_OLD_VIRTUAL_PATH:-}\" ] ; then\n        PATH=\"${_OLD_VIRTUAL_PATH:-}\"\n        export PATH\n        unset _OLD_VIRTUAL_PATH\n    fi\n}\n\n# unset irrelevant variables\ndeactivate nondestructive\n\nVIRTUAL_ENV=\"/home/anna/work/report/.venv\"\nexport VIRTUAL_ENV\n\n_OLD_VIRTUAL_PATH=\"$PATH\"\nPATH=\"$VIRTUAL_ENV/bin:$PATH\"\nexport PATH\n"
+    report/.venv/pyvenv.cfg: "home = /usr/bin\ninclude-system-site-packages = false\nversion = 3.12.3\nexecutable = /usr/bin/python3.12\ncommand = /usr/bin/python3 -m venv /home/anna/work/report/.venv\n"
+    report/requirements.txt: "tabulate==0.10.0\n"
+    report/app.py: "print('ok')\n"
+    budget/.venv/bin/activate: "# This file must be used with \"source bin/activate\" *from bash*\n# You cannot run it directly\n\ndeactivate () {\n    # reset old environment variables\n    if [ -n \"${_OLD_VIRTUAL_PATH:-}\" ] ; then\n        PATH=\"${_OLD_VIRTUAL_PATH:-}\"\n        export PATH\n        unset _OLD_VIRTUAL_PATH\n    fi\n}\n\n# unset irrelevant variables\ndeactivate nondestructive\n\nVIRTUAL_ENV=\"/home/student/forge/budget/.venv\"\nexport VIRTUAL_ENV\n\n_OLD_VIRTUAL_PATH=\"$PATH\"\nPATH=\"$VIRTUAL_ENV/bin:$PATH\"\nexport PATH\n"
+    budget/.venv/pyvenv.cfg: "home = /usr/bin\ninclude-system-site-packages = false\nversion = 3.12.3\nexecutable = /usr/bin/python3.12\ncommand = /usr/bin/python3 -m venv /home/student/forge/budget/.venv\n"
+    budget/requirements.txt: "requests==2.32.3\ntabulate==0.10.0\n"
+    budget/app.py: "print('ok')\n"
+solution:
+  - grep VIRTUAL_ENV= */.venv/bin/activate
+  - rm -rf shop2/.venv report/.venv
+tests:
+  checks:
+    - name: Остались только окружения, созданные на месте
+      run: ls -d */.venv
+      stdout: "budget/.venv\nshop/.venv\n"
+      message: "Набор оставшихся окружений не тот. Для каждого проекта сравните путь, записанный в его .venv, с папкой, где этот .venv лежит."
+    - name: Рабочие окружения на месте
+      run: ls shop/.venv budget/.venv
+      stdout: "budget/.venv:\nbin\npyvenv.cfg\n\nshop/.venv:\nbin\npyvenv.cfg\n"
+      message: "Удалено окружение, созданное в своей же папке: путь в его файлах совпадает с местом, где оно лежит."
+    - name: Файлы проектов на месте
+      run: ls shop shop2 report budget
+      stdout: "budget:\napp.py\nrequirements.txt\n\nreport:\napp.py\nrequirements.txt\n\nshop:\napp.py\nrequirements.txt\n\nshop2:\napp.py\nrequirements.txt\n"
+      hidden: true
+hints:
+  - level: 1
+    text: "Нужную строку из `activate` всех четырёх проектов сразу покажет одна команда поиска с шаблоном в пути. Скрытую папку `.venv` шаблон `*` не выберет — её имя пишут явно."
+  - level: 2
+    text: "Для каждого найденного пути сравните: в какой папке лежит этот `activate` и в какую папку ведёт записанный в нём путь?"

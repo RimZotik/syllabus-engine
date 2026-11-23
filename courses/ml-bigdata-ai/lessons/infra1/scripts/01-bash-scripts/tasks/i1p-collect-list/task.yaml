@@ -1,0 +1,58 @@
+id: i1p-collect-list
+title: Собрать файлы по списку
+sandbox: shell
+difficulty: 3
+concepts: [while read -r, кавычки, аргументы скрипта, "$1"]
+statement: |
+  **Напишите скрипт `collect.sh СПИСОК`: он читает из файла `СПИСОК` имена файлов, по одному в строке, и копирует каждый из них в папку `outbox`, создавая её, если её нет. Запустите его со списком `send.txt`.**
+
+  Имена в списке бывают с пробелами. Последняя строка списка может быть без перевода строки — её файл тоже нужно скопировать. Файлы, которых нет в списке, в `outbox` не попадают.
+
+  Пример
+  ```text
+  send.txt:                    после ./collect.sh send.txt:
+  jan.csv                      outbox
+  price list.txt               ├── feb.csv
+  feb.csv  (без \n в конце)    ├── jan.csv
+                               └── price list.txt
+  ```
+setup:
+  cwd: /home/student/office
+  files:
+    jan.csv: "id,amount\n1,10\n"
+    feb.csv: "id,amount\n2,20\n"
+    mar.csv: "id,amount\n3,30\n"
+    price list.txt: "Цены поставщика на ноябрь.\n"
+    contract.pdf: "%PDF-1.4\n"
+    send.txt: "jan.csv\nprice list.txt\nfeb.csv"
+solution:
+  - "cat > collect.sh << 'EOF'\n#!/bin/bash\nmkdir -p outbox\nwhile read -r name || [ -n \"$name\" ]; do\n  cp \"$name\" outbox/\ndone < \"$1\"\nEOF"
+  - chmod u+x collect.sh
+  - ./collect.sh send.txt
+tests:
+  checks:
+    - name: По send.txt скопированы все три файла
+      run: ls outbox
+      stdout: "feb.csv\njan.csv\nprice list.txt\n"
+      message: "В outbox не те файлы: проверьте имя с пробелом и последнюю строку send.txt — у неё нет перевода строки."
+    - name: Копии совпадают с оригиналами
+      run: cat "outbox/price list.txt" outbox/feb.csv
+      stdout: "Цены поставщика на ноябрь.\nid,amount\n2,20\n"
+      hidden: true
+    - name: Скрипт работает с другим списком
+      run: "rm -rf outbox; printf 'contract.pdf\\nmar.csv' > other.txt; ./collect.sh other.txt; ls outbox"
+      stdout: "contract.pdf\nmar.csv\n"
+      message: "Со списком other.txt (contract.pdf и mar.csv без перевода строки в конце) в outbox попало не то: скрипт должен брать имя списка из аргумента."
+    - name: Повторный запуск не падает на готовой папке
+      run: ./collect.sh send.txt > /dev/null; echo "код $?"
+      stdout: "код 0\n"
+      stderr: ""
+      message: "Второй запуск печатает ошибку или завершился не с кодом 0: папка outbox уже есть, а скрипт должен создавать её только если её нет."
+    - {name: Оригиналы на месте, run: 'ls contract.pdf feb.csv jan.csv mar.csv "price list.txt" send.txt', stdout: "contract.pdf\nfeb.csv\njan.csv\nmar.csv\nprice list.txt\nsend.txt\n", hidden: true}
+hints:
+  - level: 1
+    text: "Построчно файл читает `while read -r …; do …; done < файл`, а `for` по `$(cat …)` разрежет имя с пробелом надвое."
+  - level: 2
+    text: "На последней строке без `\\n` команда `read` строку прочитает, но вернёт 1 — и тело цикла не выполнится. В теме показано, как пропустить в тело и её."
+  - level: 3
+    text: "Имя списка скрипт получает первым аргументом. Переменную с именем файла берите в кавычки."

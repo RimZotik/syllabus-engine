@@ -1618,3 +1618,164 @@
     настройки — export и сокращения команд.
   example: source ~/.bashrc — применить правку в уже открытом окне
   introduced_in: infra1.shell.6
+
+# ── infra1.scripts
+
+- id: shell-script
+  term: скрипт оболочки (bash-скрипт)
+  en: shell script
+  short: Текстовый файл с командами оболочки, которые bash выполняет по порядку. Запускается как bash файл.sh (хватает права
+    на чтение) или ./файл.sh (нужен бит x, программу называет шебанг); работает в дочернем процессе.
+  example: bash backup.sh или chmod u+x backup.sh && ./backup.sh
+  introduced_in: infra1.scripts.1
+
+- id: shebang
+  term: шебанг
+  en: shebang
+  short: 'Первая строка исполняемого файла, начинающаяся с #!: путь к программе, которой ОС передаст файл при запуске по пути.
+    Для самого bash это комментарий, поэтому при запуске bash файл.sh она ничего не делает.'
+  example: '#!/bin/bash, #!/usr/bin/env bash, #!/usr/bin/env python3'
+  introduced_in: infra1.scripts.1
+
+- id: command-substitution
+  term: подстановка команды
+  en: command substitution
+  short: 'Конструкция $(команда): оболочка выполняет команду и подставляет вместо конструкции то, что команда напечатала в
+    stdout, без завершающих переводов строки.'
+  example: today=$(date +%F) — в today попадёт строка вида 2026-11-23
+  introduced_in: infra1.scripts.1
+
+- id: positional-parameters
+  term: позиционные параметры
+  en: positional parameters
+  short: 'Аргументы, с которыми запустили скрипт: $1, $2, … по порядку, $# — их число, "$@" — все, каждый отдельным словом;
+    $0 — имя, под которым запустили скрипт.'
+  example: ./count.sh a.csv b.csv — внутри $1 = a.csv, $# = 2
+  introduced_in: infra1.scripts.1
+
+- id: virtual-machine
+  term: виртуальная машина (ВМ)
+  en: virtual machine, VM
+  short: Компьютер, который программа-гипервизор собирает из части ресурсов настоящего — процессора, памяти, диска. Внутри
+    работает своя ОС, как на отдельной машине.
+  example: Ubuntu Server в VirtualBox; служебная ВМ, в которой WSL 2 запускает ядро Linux.
+  introduced_in: infra1.scripts.2
+
+- id: os-kernel
+  term: ядро ОС
+  en: kernel, operating system kernel
+  short: Главная программа операционной системы — распределяет процессор, память и устройства между остальными программами.
+    Linux в строгом смысле — ядро. Не путать с ядром процессора.
+  example: ядро Linux в WSL 2; ядро Windows NT.
+  introduced_in: infra1.scripts.2
+
+- id: linux-distribution
+  term: дистрибутив Linux
+  en: Linux distribution, distro
+  short: Готовая система на ядре Linux — ядро вместе с оболочкой, основными командами, программой установки программ и настройками.
+    Не путать с дистрибутивом-пакетом Python.
+  example: Ubuntu 24.04 LTS, Debian, Fedora.
+  introduced_in: infra1.scripts.2
+
+- id: wsl
+  term: WSL
+  en: Windows Subsystem for Linux, WSL
+  short: Компонент Windows, который запускает настоящее ядро Linux в лёгкой виртуальной машине (WSL 2). С дистрибутивом работают
+    в терминале, а файлы Windows и Linux видны друг другу.
+  example: wsl --install -d Ubuntu-24.04; wsl -l -v
+  introduced_in: infra1.scripts.2
+
+- id: ssh
+  term: SSH
+  en: SSH (Secure Shell)
+  short: Протокол зашифрованного входа на другую машину. Клиент ssh подключается к службе sshd (обычно порт 22), проверяет
+    ключ сервера, пользователь входит паролем или ключом и работает в оболочке сервера.
+  example: ssh student@localhost; exit — закрыть сеанс
+  introduced_in: infra1.scripts.2
+
+- id: host-key-fingerprint
+  term: отпечаток ключа сервера
+  en: host key fingerprint
+  short: Короткая строка, вычисленная из открытой части ключа, которым сервер SSH подтверждает, что он — это он. При первом
+    входе её сверяют с сообщённой владельцем; принятый ключ клиент хранит в ~/.ssh/known_hosts.
+  example: ED25519 key fingerprint is SHA256:Q3n0l7xVb5kW2p…
+  introduced_in: infra1.scripts.2
+
+# ── infra1.scripts
+
+- id: package-manager
+  term: пакетный менеджер
+  en: package manager
+  short: Программа, которая ставит, обновляет и удаляет программы из репозитория пакетов и сама доустанавливает их зависимости.
+    В Ubuntu это apt, в Windows — winget; для пакетов Python ту же работу делают pip и uv, но их репозиторий PyPI никто не
+    проверяет.
+  example: sudo apt install htop ставит htop и две библиотеки, без которых он не работает.
+  introduced_in: infra1.scripts.3
+
+- id: package-repository
+  term: репозиторий пакетов
+  en: package repository
+  short: Хранилище пакетов на сервере дистрибутива вместе с их списком — версии, зависимости, контрольные суммы. Пакетный
+    менеджер скачивает этот список к себе и по нему ставит пакеты.
+  example: http://archive.ubuntu.com/ubuntu — основной репозиторий Ubuntu.
+  introduced_in: infra1.scripts.3
+
+- id: apt
+  term: apt
+  en: APT (Advanced Package Tool)
+  decode: Advanced Package Tool — «продвинутый инструмент для пакетов»
+  short: Пакетный менеджер Ubuntu и Debian. apt update обновляет список пакетов, apt install ставит пакет с зависимостями,
+    apt upgrade обновляет установленное, apt remove удаляет. Всё, что меняет систему, — через sudo.
+  example: sudo apt update && sudo apt install tree
+  introduced_in: infra1.scripts.3
+
+- id: externally-managed-environment
+  term: внешне управляемое окружение (PEP 668)
+  en: externally managed environment
+  short: Python, которым управляет пакетный менеджер ОС. Ставить в него пакеты pip по умолчанию отказывается (ошибка externally-managed-environment),
+    чтобы не сломать программы системы; пакеты проекта ставят в его виртуальное окружение.
+  example: pip install requests в Ubuntu 24.04 вне окружения — error externally-managed-environment, даже с sudo.
+  introduced_in: infra1.scripts.3
+
+- id: code-editor
+  term: редактор кода
+  en: code editor
+  short: Текстовый редактор для программ — с подсветкой синтаксиса, подсказками, запуском и отладчиком. Близкое понятие —
+    IDE, среда разработки, где все инструменты собраны в одной программе; VS Code с расширениями работает как IDE.
+  example: VS Code, PyCharm.
+  introduced_in: infra1.scripts.4
+
+- id: debugger
+  term: отладчик
+  en: debugger
+  short: Программа, которая запускает другую программу под наблюдением — останавливает её в точках останова, выполняет по
+    шагам и показывает значения имён и стек вызовов.
+  example: 'в VS Code — точка останова на строке, затем Python Debugger: Debug Python File; F10 — шаг без захода в функцию,
+    F11 — с заходом.'
+  introduced_in: infra1.scripts.4
+
+- id: breakpoint
+  term: точка останова
+  en: breakpoint
+  short: Отметка на строке программы, перед выполнением которой отладчик её приостанавливает. Условная точка останова срабатывает,
+    только когда её условие истинно.
+  example: точка на строке total += v с условием v > 4 остановит программу на первом значении больше 4.
+  introduced_in: infra1.scripts.4
+
+- id: uv
+  term: uv
+  en: uv
+  short: Программа для Python-проектов — ставит нужную версию Python, создаёт окружение .venv, записывает зависимости в pyproject.toml
+    и точные версии в uv.lock, запускает программу в окружении проекта. uv tool install ставит программы на Python для себя
+    — во всех папках, каждую в своё окружение.
+  example: uv init --no-package weather; uv add tabulate; uv run main.py
+  introduced_in: infra1.scripts.5
+
+- id: lock-file
+  term: lock-файл
+  en: lock file
+  short: Файл с точными версиями всех пакетов проекта, включая зависимости зависимостей, выбранными при разрешении зависимостей,
+    — рецепт, по которому собирают окружение на любой машине. Его пишет программа (у uv — uv.lock), а не человек; его передают
+    вместе с кодом.
+  example: uv sync собирает .venv ровно по uv.lock.
+  introduced_in: infra1.scripts.5

@@ -1,0 +1,215 @@
+export const meta = {
+  minutes: 65,
+  lead: "Пакеты проекта в системный Python ставить нельзя, а виртуальное окружение вы пока видели только в тексте. Соберём проект на своей машине двумя путями — через uv и через venv — и разберём, что лежит в .venv, что передают коллеге и почему окружение не копируют.",
+  uses: ["python", "script", "module", "package", "pip", "pypi", "dependency", "virtual-environment", "standard-library", "path-variable", "bashrc", "home-directory", "hidden-file", "working-directory", "sudo", "pipeline", "traceback", "exception", "file-permissions", "package-manager", "apt", "externally-managed-environment", "code-editor"]
+}
+
+<Page title="Установка uv" minutes={10}>
+
+## Программа для проектов
+
+<Term id="uv">uv</Term> — программа для Python-проектов от компании Astral: создаёт окружение, ставит пакеты, записывает зависимости, при нужде скачивает другую версию Python. В `apt` её нет; ставят по инструкции с docs.astral.sh:
+
+```text
+student@HOMEPC:~$ curl -LsSf https://astral.sh/uv/install.sh | sh
+downloading uv 0.13.9 x86_64-unknown-linux-gnu
+installing to /home/student/.local/bin
+...
+everything's installed!
+```
+
+Версия у вас может быть новее. `curl` скачивает скрипт, а конвейер отдаёт его `sh` — простой оболочке, родственнице bash, — на выполнение. Скрипт выполнится с вашими правами, а вы его так и не увидите. Поэтому так ставят только по адресу из официальной документации — так же, как пакеты ставят только по имени, сверенному с ней.
+
+Предскажите, что ответит `uv --version` в том же окне. Команды не найдётся: установщик положил `uv` в `~/.local/bin` и дописал в `~/.bashrc` строку, добавляющую эту папку в `PATH`, а открытое окно прочитало `~/.bashrc` раньше. Выполните `source ~/.local/bin/env` или откройте новое окно. Если Ubuntu предложит `snap install`, не соглашайтесь: uv уже стоит.
+
+</Page>
+
+<Page title="Проект на uv" minutes={20}>
+
+## Новый проект
+
+```text
+student@HOMEPC:~$ cd ~/forge
+student@HOMEPC:~/forge$ uv init --no-package weather
+Initialized project `weather` at `/home/student/forge/weather`
+student@HOMEPC:~/forge$ cd weather
+student@HOMEPC:~/forge/weather$ ls -A
+.git  .gitignore  .python-version  README.md  main.py  pyproject.toml
+```
+
+Флаг `--no-package` создаёт проект обычной программы с кодом в `main.py`; без него uv заготовит библиотеку для выкладки на PyPI — о таких проектах расскажет раздел «Качество и упаковка». Что создано:
+
+- `pyproject.toml` — описание проекта: имя, версия, нужный Python, пока пустой список `dependencies`. Формат файла разберём там же, а пока его пишет uv.
+- `.python-version` — на каком Python работает проект, здесь `3.12`.
+- `.git` и `.gitignore` — заготовка для Git, о нём — следующая дисциплина. В `.gitignore` уже вписана `.venv`.
+
+```text
+student@HOMEPC:~/forge/weather$ uv run main.py
+Using CPython 3.12.3 interpreter at: /usr/bin/python3.12
+Creating virtual environment at: .venv
+Hello from weather!
+```
+
+CPython — обычный Python, тот, что с python.org и из Ubuntu. `uv run` сам создал окружение `.venv` на системном Python 3.12 и запустил в нём программу.
+
+## Зависимость и lock-файл
+
+```text
+student@HOMEPC:~/forge/weather$ uv add tabulate
+Resolved 2 packages in 358ms
+Prepared 1 package in 211ms
+Installed 1 package in 3ms
+ + tabulate==0.10.0
+```
+
+`uv add` вписал `"tabulate>=0.10.0"` в `dependencies` файла `pyproject.toml`, выбрал точные версии и записал их в `uv.lock`, а потом поставил пакет в `.venv`.
+
+<Theorem kind="definition" title="Lock-файл"
+  formal="uv.lock — универсальный lock-файл проекта: точные версии всех пакетов, выбранные при разрешении зависимостей из pyproject.toml для любых ОС и версий Python, вместе с источниками и контрольными суммами. Окружение проекта собирается по нему. Файл хранят вместе с кодом, чтобы у всех ставились одни и те же версии; создаёт и обновляет его uv, вручную его не правят."
+  source="uv documentation, Concepts → Projects → Structure and files, «The lockfile»; Locking and syncing (пересказ)">
+
+<Term id="lock-file">Lock-файл</Term> — записанное решение: какие точные версии всех пакетов, включая зависимости зависимостей, ставить. `pyproject.toml` говорит «нужен tabulate 0.10.0 или новее», `uv.lock` — «ставить ровно 0.10.0», а `.venv` собирается по нему.
+
+</Theorem>
+
+Похоже на `requirements.txt` из `pip freeze`, но наоборот: freeze переписывает то, что оказалось в окружении, а `uv.lock` выводится из `pyproject.toml`, и окружение подгоняют под него. Перед каждым `uv run` uv сверяет одно с другим и доустанавливает недостающее.
+
+Отсюда правило: **в проекте на uv пакеты ставят только через `uv add`**, удаляют — `uv remove`. Своего pip в `.venv` uv не кладёт, а пакет, поставленный мимо `uv add` (например, `uv pip install`), не попадёт ни в `pyproject.toml`, ни в `uv.lock`, и следующий `uv sync` его удалит.
+
+Напишите в `main.py` таблицу городов через `from tabulate import tabulate` (сделаете это в практике) и предскажите: заработает ли обычный `python3 main.py`?
+
+```text
+student@HOMEPC:~/forge/weather$ uv run main.py
+город      °C
+-------  ----
+Москва     -3
+Сочи       12
+student@HOMEPC:~/forge/weather$ python3 main.py
+Traceback (most recent call last):
+  File "/home/student/forge/weather/main.py", line 1, in <module>
+    from tabulate import tabulate
+ModuleNotFoundError: No module named 'tabulate'
+```
+
+`python3` — системный Python, а пакет стоит в `.venv`: знакомое «пакет поставили не в тот Python».
+
+## Что передать другому
+
+Коллеге или на сервер передают `pyproject.toml`, `uv.lock`, `.python-version` и код, но не `.venv`. Там выполняют `uv sync`, и uv собирает `.venv` ровно по `uv.lock`. Так же чинят испорченное окружение: `rm -rf .venv` и `uv sync`. Нужен Python, которого нет в системе, — `uv python install 3.13` скачает его в папку uv, не трогая системный.
+
+Программу на Python, нужную вам во всех папках, а не одному проекту (например, проверку стиля `ruff`), ставят `uv tool install ruff`: uv создаст ей отдельное окружение и положит команду в `~/.local/bin`. Разово запустить её, не устанавливая, — `uvx ruff`. В науке о данных встречается и conda — ещё один менеджер окружений со своим репозиторием пакетов; в курсе хватит uv: он берёт пакеты с PyPI и сам ставит Python.
+
+<Check
+  q={"Вы поставили в проект на uv пакет rich командой uv pip install rich, а не uv add. Программа с import rich через uv run работает. Коллега получил от вас pyproject.toml, uv.lock и код и выполнил uv sync. Что у него?"}
+  options={["rich нет: его нет ни в pyproject.toml, ни в uv.lock, и программа падает с ModuleNotFoundError", "rich есть: uv sync копирует пакеты из вашего .venv", "rich есть: uv run у вас записал его в uv.lock", "uv sync откажется работать, пока не выполнить uv pip install rich"]}
+  answer={0}
+  explain={"uv sync ставит ровно то, что записано в uv.lock, а uv pip install туда ничего не пишет. Ваш .venv коллеге не передавался и не передаётся. uv run доустанавливает пакеты по lock-файлу, но не дописывает в него то, что поставлено мимо uv add."}
+/>
+
+</Page>
+
+<Page title="venv вручную: что внутри .venv" minutes={15}>
+
+## Окружение без uv
+
+Классический путь — модуль `venv` из стандартной библиотеки. Возьмём проект `shop` с файлом `requirements.txt`, где одна строка `requests==2.32.3`. Первая попытка в чистой Ubuntu:
+
+```text
+student@HOMEPC:~/forge/shop$ python3 -m venv .venv
+The virtual environment was not created successfully because ensurepip is not
+available.  On Debian/Ubuntu systems, you need to install the python3-venv
+package using the following command.
+
+    apt install python3.12-venv
+...
+```
+
+`ensurepip` — модуль, который ставит pip в новое окружение, а Ubuntu вынесла его вместе с `venv` в отдельный пакет: `sudo apt install python3-venv` (подтянет `python3.12-venv`). Неудачная попытка оставила недоделанную `.venv` — удалите её: `rm -rf .venv` удаляет папку целиком и без вопросов, так что сначала проверьте, что вы в папке проекта. Затем создайте окружение заново:
+
+```text
+student@HOMEPC:~/forge/shop$ python3 -m venv .venv
+student@HOMEPC:~/forge/shop$ ls -l .venv/bin/python*
+lrwxrwxrwx 1 student student  7 Nov 23 00:54 .venv/bin/python -> python3
+lrwxrwxrwx 1 student student 16 Nov 23 00:54 .venv/bin/python3 -> /usr/bin/python3
+lrwxrwxrwx 1 student student  7 Nov 23 00:54 .venv/bin/python3.12 -> python3
+student@HOMEPC:~/forge/shop$ cat .venv/pyvenv.cfg
+home = /usr/bin
+include-system-site-packages = false
+version = 3.12.3
+...
+```
+
+`l` в начале строки значит **символическую ссылку** — файл-указатель на другой файл, вроде ярлыка в Windows: `python3` окружения ведёт на системный `/usr/bin/python3`. Python не скопирован: окружение опирается на уже установленный Python — так и сказано в определении виртуального окружения. `pyvenv.cfg` при запуске сообщает этому Python, что он в окружении и пакеты берёт из `.venv/lib`. Своё у окружения — папка пакетов, `pip` и скрипты `activate`.
+
+## Активация и пакеты
+
+`source .venv/bin/activate` ставит `.venv/bin` в начало `PATH`, как вы уже знаете. Дальше — как в ваших Python-проектах раньше, но теперь pip не отказывается: запрет PEP 668 внутри окружения не действует.
+
+```text
+student@HOMEPC:~/forge/shop$ source .venv/bin/activate
+(.venv) student@HOMEPC:~/forge/shop$ pip install -r requirements.txt
+...
+Successfully installed certifi-2026.11.20 charset-normalizer-3.5.2 idna-3.20 requests-2.32.3 urllib3-2.8.0
+(.venv) student@HOMEPC:~/forge/shop$ deactivate
+```
+
+## Окружение не переносят
+
+В `.venv` записаны абсолютные пути — в `activate`, в первой строке `pip`. Переименуйте `shop` в `shop2` и активируйте окружение. Предскажите, что ответит `which python3`. Ответ — `/usr/bin/python3`: `activate` поставил в `PATH` старый путь, которого больше нет. Документация Python прямо говорит: окружение не переносят и не копируют, а создают заново.
+
+| | venv и pip | uv |
+|---|---|---|
+| Создать окружение | `python3 -m venv .venv` | автоматически при `uv run` или `uv sync` |
+| Поставить пакет | `pip install` в активном окружении | `uv add` |
+| Записать версии | `pip freeze > requirements.txt` — вручную | `uv.lock` — автоматически |
+| Другая версия Python | ставить отдельно | `uv python install` |
+
+</Page>
+
+<Page title="Практика" minutes={20}>
+
+## Окружения на своём компьютере
+
+Сверяйтесь с ожидаемым результатом. Задачи с автопроверкой — в конце страницы.
+
+1. Поставьте uv, откройте новое окно Ubuntu. `uv --version` печатает версию.
+2. В `~/forge` создайте проект командой `uv init --no-package weather`, добавьте `tabulate` и напишите в `main.py` таблицу из двух городов. `uv run main.py` печатает таблицу, `python3 main.py` падает с `ModuleNotFoundError`.
+3. Удалите `.venv` и выполните `uv sync`. `uv run main.py` снова печатает таблицу.
+4. Откройте `weather` командой `code .` и выберите Python из `.venv` командой **Python: Select Interpreter** — VS Code находит папку `.venv` сам и предлагает первой.
+5. Сделайте проект `shop` через `venv`: `requirements.txt` со строкой `requests==2.32.3`, окружение, `pip install -r requirements.txt`. `.venv/bin/python3 -c "import requests; print(requests.__version__)"` печатает `2.32.3`, а то же через `python3` — `2.31.0`, системную версию.
+
+<Check
+  q={"Вы открыли weather в VS Code, и редактор подчёркивает строку from tabulate import tabulate: модуль не найден. В терминале uv run main.py работает. Что вероятнее всего не так?"}
+  options={["В VS Code выбран системный Python, а не Python из .venv", "tabulate надо поставить ещё раз — уже для VS Code", "uv поставил пакет в Windows, а VS Code смотрит в Ubuntu", "VS Code не умеет работать с окружениями uv"]}
+  answer={0}
+  explain={"Пакет стоит в .venv, а редактор проверяет код тем Python, который выбран для проекта. Выберите Python из .venv командой Python: Select Interpreter. Отдельной установки «для VS Code» нет: в WSL он запускает тот же Python, что и терминал Ubuntu."}
+/>
+
+<Check
+  q={"Проект shop вместе с .venv вы скопировали на другой компьютер, в папку с другим именем. Там source .venv/bin/activate прошёл без ошибок, а python3 app.py падает с ModuleNotFoundError: No module named 'requests'. Почему?"}
+  options={["activate вписал в PATH путь окружения с прежнего компьютера, и нашёлся системный python3", "requests нельзя ставить в окружение, только в системный Python", "Пакеты окружения зашифрованы для прежнего компьютера", "python3 внутри окружения всегда ищет пакеты в системной папке"]}
+  answer={0}
+  explain={"Путь в activate абсолютный — к старой папке. В начало PATH встала несуществующая папка, и поиск нашёл /usr/bin/python3, где requests нет. Окружение создают заново: python3 -m venv .venv и pip install -r requirements.txt."}
+/>
+
+Задачи — в тренажёре: uv и Python в нём нет, но файлы проекта и окружения те же, что у вас: соберите проект для коллеги, поправьте `.gitignore` и найдите окружения, переехавшие вместе с проектом.
+
+<Sandbox task="i1p-handoff-project" />
+
+<Sandbox task="i1p-ai-gitignore" />
+
+<Sandbox task="i1p-moved-venvs" />
+
+</Page>
+
+<Page title="Итог" minutes={3}>
+
+<Summary items={[
+  "uv init --no-package создаёт проект; uv add записывает пакет в pyproject.toml, выбирает версии в uv.lock и ставит в .venv; uv run сверяет окружение с lock-файлом и запускает; uv sync собирает .venv заново",
+  "Lock-файл — записанное решение о точных версиях, окружение собирают по нему; в проекте на uv пакеты ставят только через uv add — поставленное мимо удалит uv sync",
+  "Передают pyproject.toml, uv.lock, .python-version и код; .venv не передают и не переносят — его создают заново",
+  "venv вручную: в Ubuntu нужен пакет python3-venv; в .venv — символические ссылки на системный Python, pyvenv.cfg и свои пакеты; внутри окружения pip работает",
+  "Программы на Python для всех папок — uv tool install, разовый запуск — uvx"
+]} />
+
+</Page>
