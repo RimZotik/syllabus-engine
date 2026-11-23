@@ -107,7 +107,7 @@ describe("Ubuntu 24.04 parity", () => {
     expect((await run(s, "command -v python3; echo rc=$?")).out).toBe("rc=1\n");
     expect((await run(s, "which python3; echo rc=$?")).out).toBe("rc=1\n");
     expect((await run(s, "ls /usr/bin/python3")).err).toBe("ls: cannot access '/usr/bin/python3': No such file or directory\n");
-    expect((await run(s, "bash run.sh")).err).toBe("bash: python3: command not found\n");
+    expect((await run(s, "bash run.sh")).err).toBe("run.sh: line 1: python3: command not found\n");
   });
 });
 

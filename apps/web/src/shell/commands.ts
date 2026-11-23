@@ -28,6 +28,8 @@ export type Impl = (io: IO, args: string[]) => Promise<number>;
 export const q = (s: string) => (s.includes("'") ? `"${s}"` : `'${s}'`);
 /** ‘name’ — the locale quoting some messages use (mkdir, find, invalid numbers). */
 export const qc = (s: string) => `‘${s}’`;
+/** coreutils quotef: a name is quoted only when the shell would need it (wc: 'a b': …, wc: plain: …). */
+export const qf = (s: string) => (s === "" || /[\s!"$&'()*;<>?[\\\]^`{|}]/.test(s) || /^[#~]/.test(s) ? q(s) : s);
 
 const decoder = new TextDecoder();
 export const bytesToText = (b: unknown): string => {
@@ -102,7 +104,7 @@ export function makeCommands(s: ShellSession): Command[] {
     def("tee", tee),
     def("uniq", uniq),
     def("sort", sort),
-    wrap("cut", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^cut: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `cut: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) })),
+    wrap("cut", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^cut: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `cut: ${qf(m[1])}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) })),
     wrap("find", async (_io, a, r) => {
       let stderr = await rewriteLines(r.stderr, /^find: (.+): No such file or directory$/, async (m) => `find: ${qc(m[1].replace(/^[‘']|[’']$/g, ""))}: No such file or directory`);
       // an unquoted -name pattern that the shell expanded into several names: findutils 4.9 adds a hint
@@ -113,7 +115,7 @@ export function makeCommands(s: ShellSession): Command[] {
     wrap("file", async (_io, _a, r) => ({ ...r, stdout: r.stdout.replace(/^(.+): cannot open \(No such file or directory\)$/gm, "$1: cannot open `$1' (No such file or directory)") })),
     def("tree", (io, a) => tree(s, io, a)),
     wrap("grep", async (_io, a, r0) => {
-      const r = { ...r0, stderr: await rewriteLines(r0.stderr, /^grep: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `grep: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) };
+      const r = { ...r0, stderr: await rewriteLines(showGlobs(r0.stderr), /^grep: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `grep: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) };
       // GNU prints «./dir/file:line» for an explicit «.» operand
       const ops = grepOperands(a);
       if (/^-\w*r|^-\w*R|^--recursive/.test(a.filter((x) => x.startsWith("-")).join(" ")) || a.some((x) => /^-[a-zA-Z]*[rR]/.test(x))) {
@@ -125,7 +127,9 @@ export function makeCommands(s: ShellSession): Command[] {
       const a = a0.filter((x) => !/^--colou?r(=.*)?$/.test(x));
       // `grep -r pattern` without a folder searches the current one
       const rec = a.some((x) => /^-[a-zA-Z]*[rR]/.test(x) || x === "--recursive");
-      return rec && grepOperands(a).length === 0 ? [...a, "."] : a;
+      if (rec && grepOperands(a).length === 0) return [...a, "."];
+      const idx = new Set(grepOperandIdx(a));
+      return a.map((x, i) => (idx.has(i) ? hideGlobs(x) : x));
     }),
     def("history", async (io, a) => {
       if (a[0] === "-c") { s.history.length = 0; return 0; }
@@ -207,18 +211,23 @@ async function rewriteLines(text: string, re: RegExp, f: (m: RegExpMatchArray) =
 }
 
 const GREP_WITH_ARG = new Set(["-e", "-f", "-m", "-A", "-B", "-C", "--include", "--exclude", "--exclude-dir"]);
-function grepOperands(a: string[]) {
-  const ops: string[] = [];
+function grepOperandIdx(a: string[]) {
+  const ops: number[] = [];
   let pattern = a.some((x) => x === "-e" || x.startsWith("--regexp")) ;
   for (let i = 0; i < a.length; i++) {
     const x = a[i];
-    if (x === "--") { ops.push(...a.slice(i + 1)); break; }
+    if (x === "--") { for (let j = i + 1; j < a.length; j++) ops.push(j); break; }
     if (x.startsWith("-") && x.length > 1) { if (GREP_WITH_ARG.has(x)) i++; continue; }
     if (!pattern) { pattern = true; continue; }
-    ops.push(x);
+    ops.push(i);
   }
   return ops;
 }
+const grepOperands = (a: string[]) => grepOperandIdx(a).map((i) => a[i]);
+/** grep never expands wildcards itself (the shell did); the interpreter's grep does — its operands get look-alike characters and are restored in the messages */
+const GLOB_HIDE: Record<string, string> = { "*": String.fromCharCode(0xe001), "?": String.fromCharCode(0xe002), "[": String.fromCharCode(0xe003) };
+const hideGlobs = (x: string) => x.replace(/[*?[]/g, (c) => GLOB_HIDE[c]);
+const showGlobs = (x: string) => Object.entries(GLOB_HIDE).reduce((t, [k, v]) => t.split(v).join(k), x);
 
 function wrapList(names: string[], width: number) {
   const out: string[] = [];
@@ -463,7 +472,7 @@ async function cat(io: IO, args: string[]) {
   let code = 0, n = 0;
   for (const op of o.ops.length ? o.ops : ["-"]) {
     const r = await readOp(io, op);
-    if ("error" in r) { io.err(`cat: ${op}: ${REASON[r.error]}\n`); code = 1; continue; }
+    if ("error" in r) { io.err(`cat: ${qf(op)}: ${REASON[r.error]}\n`); code = 1; continue; }
     let t = r.text;
     // -A = -vET: line ends as $, tabs as ^I, control characters (the \r of a Windows file) as ^M
     const A = o.flags.has("A");
@@ -526,7 +535,7 @@ async function wc(io: IO, args: string[]) {
   for (const op of ops) {
     const r = await readOp(io, op);
     if ("error" in r) {
-      errs.push({ at: rows.length, text: `wc: ${op}: ${REASON[r.error]}\n` });
+      errs.push({ at: rows.length, text: `wc: ${qf(op)}: ${REASON[r.error]}\n` });
       code = 1;
       if (r.error === "EISDIR") rows.push({ counts: which.map(() => 0), name: op });
       continue;
@@ -787,7 +796,7 @@ async function uniq(io: IO, args: string[]) {
   if (o.bad) { usage(io, "uniq", o.bad); return 1; }
   const [inp, outp] = o.ops;
   const r = await readOp(io, inp ?? "-");
-  if ("error" in r) { io.err(`uniq: ${inp}: ${REASON[r.error]}\n`); return 1; }
+  if ("error" in r) { io.err(`uniq: ${qf(inp)}: ${REASON[r.error]}\n`); return 1; }
   const lines = splitLines(r.text);
   const key = (l: string) => (o.flags.has("i") ? l.toLowerCase() : l);
   let out = "";
@@ -831,7 +840,7 @@ async function sort(io: IO, args: string[]) {
   let text = "";
   for (const op of o.ops.length ? o.ops : ["-"]) {
     const r = await readOp(io, op);
-    if ("error" in r) { io.err(r.error === "EISDIR" ? `sort: read failed: ${op}: Is a directory\n` : `sort: cannot read: ${op}: ${REASON[r.error]}\n`); return 2; }
+    if ("error" in r) { io.err(r.error === "EISDIR" ? `sort: read failed: ${qf(op)}: Is a directory\n` : `sort: cannot read: ${qf(op)}: ${REASON[r.error]}\n`); return 2; }
     text += r.text && !r.text.endsWith("\n") ? r.text + "\n" : r.text;
   }
   const rows = splitLines(text);

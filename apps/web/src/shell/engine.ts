@@ -169,10 +169,19 @@ function strictFs(lib: Lib, s: ShellSession): StrictFs {
       }
     }
     override async writeFile(p: string, c: Parameters<InMemoryFs["writeFile"]>[1], o?: Parameters<InMemoryFs["writeFile"]>[2]) {
-      const created = await this.checkWrite(p); await super.writeFile(p, c, o); if (created) this.setMine(p);
+      const created = await this.checkWrite(p);
+      // overwriting a file keeps its mode (`echo x > run.sh`, `sed -i`): the interpreter's store would reset it to 644
+      const mode = created ? null : (await super.stat(p)).mode;
+      await super.writeFile(p, c, o);
+      if (mode !== null) await super.chmod(p, mode);
+      if (created) this.setMine(p);
     }
     override async appendFile(p: string, c: Parameters<InMemoryFs["appendFile"]>[1], o?: Parameters<InMemoryFs["appendFile"]>[2]) {
-      const created = await this.checkWrite(p); await super.appendFile(p, c, o); if (created) this.setMine(p);
+      const created = await this.checkWrite(p);
+      const mode = created ? null : (await super.stat(p)).mode;
+      await super.appendFile(p, c, o);
+      if (mode !== null) await super.chmod(p, mode);
+      if (created) this.setMine(p);
     }
     override async readFile(p: string, o?: Parameters<InMemoryFs["readFile"]>[1]) { await this.checkRead(p); return super.readFile(p, o); }
     override async readFileBuffer(p: string) { await this.checkRead(p); return super.readFileBuffer(p); }
@@ -509,6 +518,19 @@ export class ShellSession {
     } catch { return []; }
   }
 
+  /** A script with line markers (markStatements) and `[`/`test` renamed; null when it cannot be parsed or would be broken by markers. */
+  markScript(text: string, xtrace = false): string | null {
+    // `exec >file` would take the markers along; a script that sets traps or reads its own file is left alone
+    if (/^\s*exec\s+[0-9]*[<>&]/m.test(text)) return null;
+    try {
+      const ast = this.bash.transform(text).ast as unknown as AnyNode;
+      markStatements(ast, xtrace);
+      renameTests(ast);
+      this.nextAst = ast;
+      const out = this.bash.transform(text).script;
+      return out;
+    } catch { return null; } finally { this.nextAst = null; }
+  }
   /** Runs one command line as typed at the prompt; `onChunk` receives the output as it is produced. */
   run(line: string, opts: { signal?: AbortSignal; onChunk?: (c: Chunk) => void; record?: boolean; terminal?: boolean } = {}): Promise<RunResult> {
     return this.locked(() => this.runNow(line, opts));
@@ -679,7 +701,7 @@ export class ShellSession {
     const key = lines.join("\n");
     let st = this.preludeCache.get(key);
     if (!st) {
-      try { st = (this.bash.transform(key).ast as unknown as Ast).statements; } catch { st = []; }
+      try { st = (this.bash.transform(key).ast as unknown as Ast).statements; renameTests(st); } catch { st = []; }
       if (this.preludeCache.size > 50) this.preludeCache.clear();
       this.preludeCache.set(key, st);
     }
@@ -765,6 +787,7 @@ export class ShellSession {
     walk(pipeline, (n) => {
       if (n.type === "ParameterExpansion" && n.parameter === "!") { for (const k of Object.keys(n)) delete n[k]; n.type = "Literal"; n.value = this.procs.lastBg; }
     });
+    renameTests(pipeline);
     for (const c of ((pipeline as { commands?: AnyNode[] }).commands ?? [])) {
       if (c.type !== "SimpleCommand" || !c.name) continue;
       const name = wordText(c.name);
@@ -924,6 +947,96 @@ function walk(node: unknown, f: (n: AnyNode & { name?: unknown }) => void) {
 }
 const literalWord = (value: string) => ({ type: "Word", parts: [{ type: "Literal", value }] });
 
+/** `[ ... ]` and `test ...` go through our /usr/bin/__test (bash's own messages, «integer expression expected»): the interpreter's builtin is silent about the latter. */
+function renameTests(node: unknown) {
+  walk(node, (n) => {
+    if (n.type !== "SimpleCommand" || !n.name) return;
+    const parts = (n.name as { parts?: { type: string; value?: string; pattern?: string }[] }).parts ?? [];
+    if (parts.length !== 1) return;
+    const p = parts[0];
+    const word = p.type === "Literal" ? p.value : p.type === "Glob" ? p.pattern : undefined;
+    if (word !== "test" && word !== "[") return;
+    n.args = [literalWord(word), ...((n.args as unknown[]) ?? [])];
+    n.name = literalWord("/usr/bin/__test");
+  });
+}
+
+const stmtNode = (cmd: AnyNode, line: number) => ({ type: "Statement", pipelines: [{ type: "Pipeline", commands: [{ ...cmd, line }], negated: false, timed: false, timePosix: false }], operators: [], background: false });
+const stWord = (name: string) => ({ type: "Word", parts: [{ type: "ParameterExpansion", parameter: name, operation: null }] });
+const firstLine = (node: unknown): number => { let l = 0; walk(node, (n) => { if (!l && n.type === "SimpleCommand" && typeof n.line === "number") l = n.line; }); return l; };
+
+/** `bash -x`: before a statement, `__xt WORDS` prints «+ WORDS» (expanded, quoted as bash does) for each simple command of its first pipeline; commands whose words run substitutions are not traced (they would run twice). */
+function xtraceNodes(st: AnyNode, line: number): unknown[] {
+  const cmds = ((st.pipelines as AnyNode[])[0]?.commands as AnyNode[]) ?? [];
+  if (!cmds.length || cmds.some((c) => c.type !== "SimpleCommand")) return [];
+  const out: unknown[] = [];
+  for (const c of cmds) {
+    const words: unknown[] = [];
+    for (const a of (c.assignments as AnyNode[]) ?? []) {
+      const v = (a.value as { parts?: unknown[] } | null)?.parts ?? [];
+      words.push({ type: "Word", parts: [{ type: "Literal", value: String.fromCharCode(3) + String(a.name) + (a.append ? "+=" : "=") }, ...v] });
+    }
+    if (c.name) { const nm = wordText(c.name); words.push(nm === null ? c.name : literalWord(nm), ...((c.args as unknown[]) ?? [])); }
+    if (!words.length) continue;
+    let side = false;
+    walk(words, (n) => { if (["CommandSubstitution", "ArithmeticExpansion", "ProcessSubstitution"].includes(n.type)) side = true; });
+    if (side) continue;
+    out.push(stmtNode({ type: "SimpleCommand", name: literalWord("/usr/bin/__xt"), args: words, assignments: [], redirections: [] }, line));
+  }
+  return out;
+}
+
+/**
+ * A script with line markers: before each statement `__ST=$?` (the status the statement sees as `$?`) and `__ln LINE`
+ * (writes a marker to stderr, and to stdout for statements of the top level). The caller turns the markers into
+ * «script: line N:» in front of bash's messages and into the right order of stdout and stderr. `$?` and a bare
+ * `exit`/`return` read `$__ST`, so the markers change neither the status nor `set -e`.
+ */
+export function markStatements(root: AnyNode, xtrace = false) {
+  const isStatements = (v: unknown): v is AnyNode[] => Array.isArray(v) && v.length > 0 && v.every((x) => (x as AnyNode)?.type === "Statement");
+  // $? and a bare exit/return read $__ST — but only in the first pipeline of a statement: after `&&`/`||` they mean the command before
+  const fixNode = (node: unknown, rewrite: boolean) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      if (isStatements(node)) { for (const st of node) fixStatement(st); return; }
+      for (const x of node) fixNode(x, rewrite);
+      return;
+    }
+    const n = node as AnyNode;
+    if (rewrite) {
+      if (n.type === "ParameterExpansion" && n.parameter === "?") n.parameter = "__ST";
+      else if (n.type === "SimpleCommand" && n.name && (n.args as unknown[]).length === 0 && ["exit", "return"].includes(wordText(n.name) ?? "")) n.args = [stWord("__ST")];
+    }
+    for (const v of Object.values(n)) fixNode(v, rewrite);
+  };
+  const fixStatement = (st: AnyNode) => (st.pipelines as unknown[]).forEach((p, i) => fixNode(p, i === 0));
+  let last = 1;
+  const visit = (node: unknown) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) { for (const x of node) visit(x); return; }
+    const n = node as AnyNode;
+    // command substitutions are not marked: their output is data
+    if (n.type === "CommandSubstitution" || n.type === "ProcessSubstitution") return;
+    for (const [k, v] of Object.entries(n)) {
+      if (!v || typeof v !== "object") continue;
+      if (!isStatements(v)) { visit(v); continue; }
+      const out: AnyNode[] = [];
+      for (const st of v) {
+        const line = firstLine(st) || last;
+        last = line;
+        visit(st);
+        out.push(stmtNode({ type: "SimpleCommand", name: null, args: [], redirections: [], assignments: [{ type: "Assignment", name: "__ST", value: { type: "Word", parts: [{ type: "ParameterExpansion", parameter: "?", operation: null }] }, append: false, array: null }] }, line));
+        out.push(stmtNode({ type: "SimpleCommand", name: literalWord("/usr/bin/__ln"), args: [literalWord(n === root ? "T" : "L"), literalWord(String(line))], assignments: [], redirections: [] }, line));
+        if (xtrace) for (const x of xtraceNodes(st as unknown as AnyNode, line)) out.push(x as AnyNode);
+        out.push(st);
+      }
+      (n as Record<string, unknown>)[k] = out;
+    }
+  };
+  fixNode(root, false);
+  visit(root);
+}
+
 /** `exit [N]` / `logout` as the whole pipeline. */
 function exitWord(pl: unknown): { code: number | null } | null {
   const cmds = (pl as { commands?: AnyNode[] }).commands ?? [];
@@ -974,8 +1087,14 @@ export function wordExpanded(w: unknown, env: Record<string, string>, home: stri
 /** Which of ls, man, less write to the terminal in every use on the line (last in the pipeline, stdout not redirected). */
 function terminalNames(ast: unknown): Set<string> {
   const ok = new Map<string, boolean>();
+  // `$(ls)`, `<(ls)`: the output goes to the shell, not to the terminal
+  const inSubst = new Set<unknown>();
+  walk(ast, (n) => {
+    if (n.type === "CommandSubstitution" || n.type === "ProcessSubstitution") walk(n.body, (m) => { if (m.type === "Pipeline") inSubst.add(m); });
+  });
   walk(ast, (n) => {
     if (n.type !== "Pipeline") return;
+    if (inSubst.has(n)) { for (const c of (n.commands as AnyNode[]) ?? []) { const nm = c.type === "SimpleCommand" && c.name ? wordText(c.name) : null; if (nm) ok.set(nm, false); } return; }
     const cmds = (n.commands as AnyNode[]) ?? [];
     cmds.forEach((c, i) => {
       const name = c.type === "SimpleCommand" && c.name ? wordText(c.name) : null;
@@ -984,7 +1103,6 @@ function terminalNames(ast: unknown): Set<string> {
       ok.set(name, (ok.get(name) ?? true) && i === cmds.length - 1 && !redirected);
     });
   });
-  // `$(ls)` is seen as a pipeline of its own, last in it — a rare case, ignored
   return new Set([...ok].filter(([, v]) => v).map(([k]) => k));
 }
 

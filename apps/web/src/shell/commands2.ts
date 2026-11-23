@@ -15,6 +15,45 @@ const sq = (v: string) => (/^[\w@%+=:,./-]+$/.test(v) ? v : `'${v.replace(/'/g, 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const MARK = /\x01([TL])(\d+)\x02/g;
+/**
+ * The output of a script run with markers (engine.markScript): the markers are removed, «bash: » at the start of a
+ * line becomes «file: line N: », and stdout and stderr are interleaved statement by statement.
+ */
+export function unmark(stdout: string, stderr: string, file: string): { fd: 1 | 2; text: string }[] {
+  let line = 1;
+  // the interpreter's own words for a missing Python: in a script (no command-not-found hint) bash just says «command not found»
+  const fixPy = (t: string) => t.replace(/^bash: (python3?): command not available in browser environments\.[^\n]*\n/gm, "bash: $1: command not found\n");
+  const stream = (text: string) => {
+    const segs: string[] = [""];
+    let atStart = true;
+    let at = 0;
+    const add = (t0: string) => {
+      if (!t0) return;
+      const t = fixPy(t0);
+      const done = t.replace(/(^|\n)bash: /g, (m, pre: string, off: number) => (off === 0 && pre === "" && !atStart ? m : `${pre}${file}: line ${line}: `));
+      segs[segs.length - 1] += done;
+      atStart = t.endsWith("\n");
+    };
+    for (const m of text.matchAll(MARK)) {
+      add(text.slice(at, m.index));
+      at = m.index! + m[0].length;
+      line = Number(m[2]);
+      if (m[1] === "T") segs.push("");
+    }
+    add(text.slice(at));
+    return segs;
+  };
+  const o = stream(stdout);
+  line = 1;
+  const e = stream(stderr);
+  const out: { fd: 1 | 2; text: string }[] = [];
+  // inside one statement the errors (and the trace) come first, as in a pipeline
+  if (o.length === e.length) for (let i = 0; i < o.length; i++) { if (e[i]) out.push({ fd: 2, text: e[i] }); if (o[i]) out.push({ fd: 1, text: o[i] }); }
+  else { if (o.join("")) out.push({ fd: 1, text: o.join("") }); if (e.join("")) out.push({ fd: 2, text: e.join("") }); }
+  return out;
+}
+
 export function makeCommands2(s: ShellSession): Command[] {
   const { def } = makeDef(s);
   const isRoot = () => s.euid === "root";
@@ -468,8 +507,11 @@ export function makeCommands2(s: ShellSession): Command[] {
     }
     const mark = s.segments.length;
     const r = await io.ctx.exec!(["bash", shown, ...rest].map(sq).join(" "), { cwd: io.ctx.cwd, stdin: io.ctx.stdinProvided ? io.stdinText() : undefined });
-    s.segments.length = mark;
-    io.out(r.stdout); io.err(r.stderr);
+    // the script's own output keeps the order it came in (stdout and stderr interleaved)
+    const inner = s.segments.splice(mark);
+    const joined = (fd: 1 | 2) => inner.filter((x) => x.fd === fd).map((x) => x.text).join("");
+    if (joined(1) === r.stdout && joined(2) === r.stderr) for (const x of inner) (x.fd === 1 ? io.out : io.err)(x.text);
+    else { io.out(r.stdout); io.err(r.stderr); }
     return r.exitCode;
   }
 
@@ -481,7 +523,19 @@ export function makeCommands2(s: ShellSession): Command[] {
     const c = await probe(io, file);
     if (c !== "ok") { io.err(`${name}: ${file}: ${REASON[c]}\n`); return c === "ENOENT" ? 127 : 126; }
     const text = await s.fs.readFile(io.path(file));
-    if (!text.includes("\r")) { const r = await io.ctx.origCommand!(args); io.out(r.stdout); io.err(r.stderr); return r.exitCode; }
+    if (!text.includes("\r")) {
+      // line markers: «bash: …» becomes «file: line N: …», stdout and stderr keep their order
+      const isX = (f: string) => /^-[a-zA-Z]*x/.test(f);
+      const xtrace = args.slice(0, fileIdx).some(isX);
+      const flags = args.slice(0, fileIdx).map((f) => (isX(f) ? f.replace(/x/g, "") : f)).filter((f) => f !== "-");
+      const marked = s.markScript(text, xtrace);
+      if (marked === null) { const r = await io.ctx.origCommand!([...flags, ...args.slice(fileIdx)]); io.out(r.stdout); io.err(r.stderr); return r.exitCode; }
+      const mark = s.segments.length;
+      const r = await io.ctx.origCommand!([...flags, "-c", marked, file, ...args.slice(fileIdx + 1)]);
+      s.segments.length = mark; // what our commands printed inside is re-emitted below in the right order
+      for (const c of unmark(r.stdout, r.stderr, file)) (c.fd === 1 ? io.out : io.err)(c.text);
+      return r.exitCode;
+    }
     const lines = text.split("\n");
     const body = lines.map((l, i) => (/^\s*\r$/.test(l) ? `__cr ${i + 1} ${sq(file)}` : l)).join("\n");
     const r = await io.ctx.origCommand!([...args.slice(0, fileIdx), "-c", body, file, ...args.slice(fileIdx + 1)]);
@@ -491,6 +545,25 @@ export function makeCommands2(s: ShellSession): Command[] {
       return `${file}: line ${n || "?"}: ${cmd}: $'${word}\\r': ${msg}`;
     }).replace(/^bash: (.*)\r: command not found$/gm, (_m, w: string) => `${file}: line ${lines.findIndex((l) => l.startsWith(w + "\r")) + 1}: $'${w}\\r': command not found`);
     io.out(r.stdout); io.err(err);
+    return r.exitCode;
+  }
+
+  /** `[` and `test`: the interpreter's builtin does the work; bash's wording of the errors and the integer check are ours. */
+  async function testCommand(io: IO, name: string, args0: string[]) {
+    let args = args0;
+    if (name === "[") {
+      if (args[args.length - 1] !== "]") { io.err("bash: [: missing `]'\n"); return 2; }
+      args = args.slice(0, -1);
+    }
+    for (let i = 1; i < args.length - 1; i++) {
+      if (!/^-(eq|ne|lt|le|gt|ge)$/.test(args[i])) continue;
+      for (const v of [args[i - 1], args[i + 1]]) {
+        if (!/^\s*[-+]?\d+\s*$/.test(v)) { io.err(`bash: ${name}: ${v}: integer expression expected\n`); return 2; }
+      }
+    }
+    const r = await io.ctx.exec!(["test", ...args].map(sq).join(" "), { cwd: io.ctx.cwd });
+    io.out(r.stdout);
+    io.err(r.stderr.replace(/^test: /gm, `bash: ${name}: `));
     return r.exitCode;
   }
 
@@ -564,6 +637,20 @@ export function makeCommands2(s: ShellSession): Command[] {
     def("__exec", execPath),
     def("bash", (io, a) => bashScript("bash", io, a)),
     def("sh", (io, a) => bashScript("sh", io, a)),
+    // line markers of scripts (engine.markScript): T — top level, written to both streams to keep their order; L — stderr only
+    s.lib.defineCommand("__ln", async (a) => {
+      const m = `\x01${a[0]}${a[1]}\x02`;
+      return { stdout: a[0] === "T" ? m : "", stderr: m, exitCode: 0 };
+    }),
+    // bash -x: «+ words» (engine.xtraceNodes); a word is quoted the way bash quotes it
+    s.lib.defineCommand("__xt", async (a) => {
+      const q1 = (w: string) => (w === "" ? "''" : /[^\w%+,./:=@^-]/.test(w) ? `'${w.replace(/'/g, "'\\''")}'` : w);
+      const word = (w: string) => { if (w.charCodeAt(0) !== 3) return q1(w); const i = w.indexOf("=") + 1; return w.slice(1, i) + q1(w.slice(i)); };
+      return { stdout: "", stderr: `+ ${a.map(word).join(" ")}\n`, exitCode: 0 };
+    }),
+    def("__test", async (io, a) => testCommand(io, a[0], a.slice(1))),
+    def("[", async (io, a) => testCommand(io, "[", a)),
+    def("test", async (io, a) => testCommand(io, "test", a)),
     def("__cr", async (io, a) => { io.err(`${a[1]}: line ${a[0]}: $'\\r': command not found\n`); return 127; }),
     def("__deny", async (io, a) => { const t = a.join(" "); io.err(`bash: ${t}\n`); return !t.startsWith("cd:") && t.endsWith(": Permission denied") ? 126 : 1; }),
   ];
