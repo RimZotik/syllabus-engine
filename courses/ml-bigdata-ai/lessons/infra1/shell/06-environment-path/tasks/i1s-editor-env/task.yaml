@@ -1,0 +1,42 @@
+id: i1s-editor-env
+title: Пусть Git открывает nano
+sandbox: shell
+difficulty: 2
+concepts: [VISUAL, EDITOR, "~/.bashrc", export]
+statement: |
+  **Сделайте `nano` редактором по умолчанию: в каждом новом окне и в этом окне переменные окружения `VISUAL` и `EDITOR` должны быть равны `nano`.**
+
+  Программы вроде Git — дочерние процессы оболочки — должны видеть обе переменные.
+
+  Пример
+  ```text
+  student@forge:~$ printenv VISUAL EDITOR
+  nano
+  nano
+  ```
+
+  Ограничения: прежнее содержимое `~/.bashrc` должно остаться.
+setup:
+  cwd: /home/student
+  files:
+    project/README.md: "# Магазин\n"
+solution:
+  - echo 'export VISUAL=nano' >> ~/.bashrc
+  - echo 'export EDITOR=nano' >> ~/.bashrc
+  - source ~/.bashrc
+tests:
+  checks:
+    - {name: Прежние настройки ~/.bashrc на месте, fs_content: {path: .bashrc, contains: ["alias ll='ls -alF'", "HISTCONTROL=ignoreboth"]}}
+    - name: Новое окно задаёт обе переменные для программ
+      run: unset VISUAL EDITOR; source /home/student/.bashrc; bash -c 'echo "$VISUAL $EDITOR"'
+      stdout: "nano nano\n"
+      message: "После чтения ~/.bashrc дочерний процесс не видит VISUAL и EDITOR со значением nano: нет строки или нет export."
+    - name: В этом окне обе переменные заданы
+      run: printenv VISUAL EDITOR
+      stdout: "nano\nnano\n"
+      message: "В этом окне VISUAL и EDITOR не равны nano: файл ~/.bashrc уже открытое окно само не перечитывает."
+hints:
+  - level: 1
+    text: "Переменная без `export` живёт только в оболочке — запущенная программа её не увидит."
+  - level: 2
+    text: "Чтобы правка `~/.bashrc` подействовала в уже открытом окне, файл нужно выполнить в этой оболочке."

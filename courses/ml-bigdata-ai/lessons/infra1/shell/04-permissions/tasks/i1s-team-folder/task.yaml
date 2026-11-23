@@ -1,0 +1,45 @@
+id: i1s-team-folder
+title: Общая папка для команды
+sandbox: shell
+difficulty: 3
+concepts: [chown, chmod -R, группы, sudo]
+statement: |
+  **Передайте папку `/srv/reports` со всем содержимым группе `team`: участники группы читают и меняют файлы и создают новые, остальные — ничего.**
+
+  Владельцем всего остаётся `root`. Пароль для `sudo` — `forge`.
+
+  Пример
+  ```text
+  было:   drwxr-xr-x root root  /srv/reports
+          -rw-r--r-- root root  /srv/reports/q3.csv
+          -rw-r--r-- root root  /srv/reports/q4.csv
+  стало:  drwxrwx--- root team  /srv/reports
+          -rw-rw---- root team  /srv/reports/q3.csv
+          -rw-rw---- root team  /srv/reports/q4.csv
+  ```
+
+  Ограничения: никаких битов x у файлов; `777` и `666` не годятся — остальным доступа нет.
+setup:
+  cwd: /home/student
+  files:
+    /srv/reports/q3.csv: {content: "month,revenue\n2026-07,120\n2026-08,135\n2026-09,128\n", mode: "644", owner: root, group: root}
+    /srv/reports/q4.csv: {content: "month,revenue\n2026-10,141\n", mode: "644", owner: root, group: root}
+  dirs:
+    - {path: /srv/reports, mode: "755", owner: root, group: root}
+solution:
+  - {cmd: "sudo chown -R root:team /srv/reports", input: ["forge"]}
+  - sudo chmod -R g+w,o= /srv/reports
+tests:
+  checks:
+    - {name: "Папка — root:team", fs_owner: {path: /srv/reports, owner: root, group: team}}
+    - {name: "q3.csv — root:team", fs_owner: {path: /srv/reports/q3.csv, owner: root, group: team}}
+    - {name: "q4.csv — root:team", fs_owner: {path: /srv/reports/q4.csv, owner: root, group: team}}
+    - {name: "Папка — rwxrwx---", fs_mode: {path: /srv/reports, mode: "770"}}
+    - {name: "q3.csv — rw-rw----", fs_mode: {path: /srv/reports/q3.csv, mode: "660"}}
+    - {name: "q4.csv — rw-rw----", fs_mode: {path: /srv/reports/q4.csv, mode: "660"}}
+    - {name: Данные не тронуты, fs_content: {path: /srv/reports/q4.csv, equals: "month,revenue\n2026-10,141\n"}, hidden: true}
+hints:
+  - level: 1
+    text: "Это две отдельные правки: сменить группу (её меняет та же команда, что и владельца, — через двоеточие) и поменять права. Обе — для папки и всего внутри."
+  - level: 2
+    text: "У папки и у файлов разные итоговые права, но изменение одно и то же: группе добавить w, у остальных забрать всё. Символьная запись меняет только названное, поэтому подходит обоим."

@@ -1,0 +1,49 @@
+id: i1s-path-bashrc
+title: Свои скрипты — по имени, навсегда
+sandbox: shell
+difficulty: 3
+concepts: [PATH, "~/.bashrc", source, кавычки]
+statement: |
+  **Добавьте папку `~/bin` в `PATH` через `~/.bashrc`, чтобы скрипт `backup-db` из неё запускался по имени в каждом новом окне терминала — и в этом окне тоже.**
+
+  Последней командой запустите `backup-db` по имени.
+
+  Пример
+  ```text
+  student@forge:~$ backup-db
+  резервная копия готова
+  ```
+
+  Ограничения: прежнее содержимое `~/.bashrc` должно остаться. Строка в `~/.bashrc` должна опираться на значение `PATH` в момент запуска окна, а не хранить сегодняшний список папок.
+setup:
+  cwd: /home/student
+  files:
+    bin/backup-db: {content: "#!/bin/bash\necho 'резервная копия готова'\n", mode: "755"}
+    notes.txt: "бэкап базы — каждую пятницу\n"
+solution:
+  - echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+  - source ~/.bashrc
+  - backup-db
+tests:
+  checks:
+    - {name: Прежние настройки ~/.bashrc на месте, fs_content: {path: .bashrc, contains: ["alias ll='ls -alF'", "HISTCONTROL=ignoreboth"]}}
+    - name: Новое окно находит backup-db
+      run: PATH=/usr/bin:/bin; source ~/.bashrc; which backup-db
+      stdout: "/home/student/bin/backup-db\n"
+      message: "После чтения ~/.bashrc папки ~/bin в PATH нет."
+    - name: Новое окно находит и системные команды
+      run: PATH=/usr/bin:/bin; source ~/.bashrc; which ls
+      stdout: "/usr/bin/ls\n"
+      message: "После чтения ~/.bashrc пропали системные папки: строка заменяет PATH, а не дополняет его."
+    - {name: В ~/.bashrc нет застывшей копии PATH, fs_content: {path: .bashrc, not_contains: "/usr/local/games"}, message: "В ~/.bashrc записан сегодняшний список папок, а не сам текст $PATH: строку подставили до записи в файл."}
+    - name: В этом окне backup-db находится по имени
+      run: which backup-db
+      stdout: "/home/student/bin/backup-db\n"
+      message: "В этом окне ~/bin в PATH нет: уже открытое окно ~/.bashrc само не перечитывает."
+    - {name: Запущен по имени, command_used: backup-db}
+    - {name: Последней — вывод backup-db, last_output_contains: "резервная копия готова"}
+hints:
+  - level: 1
+    text: "Строку дописывают в конец файла — одной стрелкой файл затирается. Её можно дописать и в nano."
+  - level: 2
+    text: "Если строку для `~/.bashrc` пишет `echo`, проверьте кавычки: в двойных `$PATH` подставится сразу, в одинарных останется текстом. Уже открытое окно файл сам не перечитает."

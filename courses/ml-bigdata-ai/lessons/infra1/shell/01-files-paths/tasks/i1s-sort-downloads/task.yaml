@@ -1,0 +1,89 @@
+id: i1s-sort-downloads
+title: Разобрать загрузки
+sandbox: shell
+difficulty: 1
+concepts: [mkdir, mv, шаблоны, регистр в именах]
+statement: |
+  **Разложите файлы из `downloads` по папкам по типу: документы `.pdf` — в `docs`, картинки `.jpg` — в `images`, таблицы `.csv` — в `tables`.**
+
+  Папки `docs`, `images` и `tables` создайте внутри `downloads`. Картинки — все файлы `.jpg`, в том числе с расширением заглавными буквами (`.JPG`). Файлы переносите, а не копируйте. Остальные файлы, в том числе скрытые, остаются в `downloads` на своих местах.
+
+  Пример
+
+  Было:
+  ```text
+  downloads/
+  ├── .cache.pdf
+  ├── IMG_0042.JPG
+  ├── cat.jpg
+  ├── install.sh
+  ├── notes.txt
+  ├── sales-2026.csv
+  ├── users.csv
+  ├── договор аренды.pdf
+  └── лекция-3.pdf
+  ```
+
+  Стало:
+  ```text
+  downloads/
+  ├── .cache.pdf
+  ├── docs/
+  │   ├── договор аренды.pdf
+  │   └── лекция-3.pdf
+  ├── images/
+  │   ├── IMG_0042.JPG
+  │   └── cat.jpg
+  ├── install.sh
+  ├── notes.txt
+  └── tables/
+      ├── sales-2026.csv
+      └── users.csv
+  ```
+
+  Ограничения: без `cp`.
+setup:
+  cwd: /home/student
+  files:
+    downloads/договор аренды.pdf: "%PDF-1.7 договор\n"
+    downloads/лекция-3.pdf: "%PDF-1.7 лекция\n"
+    downloads/.cache.pdf: "%PDF-1.7 кэш\n"
+    downloads/cat.jpg: "JPEG cat\n"
+    downloads/IMG_0042.JPG: "JPEG 0042\n"
+    downloads/sales-2026.csv: "month,amount\n2026-01,120\n"
+    downloads/users.csv: "id,name\n1,Анна\n"
+    downloads/install.sh: "#!/bin/bash\necho install\n"
+    downloads/notes.txt: "сверить счёт\n"
+solution:
+  - mkdir downloads/docs downloads/images downloads/tables
+  - mv downloads/*.pdf downloads/docs/
+  - mv downloads/*.jpg downloads/*.JPG downloads/images/
+  - mv downloads/*.csv downloads/tables/
+tests:
+  checks:
+    - name: Документы — в docs
+      run: ls downloads/docs
+      stdout: "договор аренды.pdf\nлекция-3.pdf\n"
+    - name: Картинка .jpg — в images
+      fs_exists: downloads/images/cat.jpg
+      type: file
+    - name: Картинка .JPG — тоже в images
+      fs_exists: downloads/images/IMG_0042.JPG
+      type: file
+    - name: Таблицы — в tables
+      run: ls downloads/tables
+      stdout: "sales-2026.csv\nusers.csv\n"
+    - name: Таблица не изменилась при переносе
+      fs_content: {path: downloads/tables/users.csv, equals: "id,name\n1,Анна\n"}
+    - name: В downloads остались только папки и прочие файлы
+      run: ls -A downloads
+      stdout: ".cache.pdf\ndocs\nimages\ninstall.sh\nnotes.txt\ntables\n"
+    - name: Перенос, а не копирование
+      forbid_commands: [cp]
+hints:
+  - level: 1
+    text: "Одна команда `mv` может перенести сразу все файлы, подходящие под шаблон, — имя с пробелом шаблон тоже выберет целиком."
+  - level: 2
+    text: "Регистр в именах важен: проверьте через `echo`, какие файлы выбирает ваш шаблон для картинок. Шаблонов в одной команде может быть несколько."
+  - level: 3
+    text: "Скрытые файлы `*` не выбирает — значит, `.cache.pdf` останется на месте сам."

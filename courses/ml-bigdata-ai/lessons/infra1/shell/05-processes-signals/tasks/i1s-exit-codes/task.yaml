@@ -1,0 +1,40 @@
+id: i1s-exit-codes
+title: Коды возврата в файл
+sandbox: shell
+difficulty: 2
+concepts: [код возврата, "$?", конвейер]
+statement: |
+  **Выполните по очереди четыре команды и запишите в `codes.txt` их коды возврата — по одному в строке, в том же порядке.**
+
+  ```text
+  grep -c ERROR app.log
+  cat nope.txt | wc -l
+  nosuchcmd
+  ls nope.txt
+  ```
+
+  Перед каждой командой предскажите код, потом проверьте. В файле — только числа.
+
+  Пример (другие команды)
+  ```text
+  команды:   ls app.log      grep -q INFO app.log
+  codes.txt: 0
+             0
+  ```
+setup:
+  cwd: /home/student
+  files:
+    app.log: "09:00 INFO start\n09:05 INFO export done\n09:10 WARN slow query\n"
+solution:
+  - grep -c ERROR app.log; echo $? > codes.txt
+  - cat nope.txt | wc -l; echo $? >> codes.txt
+  - nosuchcmd; echo $? >> codes.txt
+  - ls nope.txt; echo $? >> codes.txt
+tests:
+  checks:
+    - {name: В codes.txt — четыре кода по порядку, fs_content: {path: codes.txt, equals: "1\n0\n127\n2\n"}}
+hints:
+  - level: 1
+    text: "`$?` хранит код последней выполненной команды — поэтому `echo $?` пишут сразу после неё, в той же строке через `;`. Дописывать в файл — `>>`."
+  - level: 2
+    text: "Вывод команды и её код — разные вещи: `grep -c` может напечатать число и при этом вернуть не 0. У конвейера код — код его последней команды."

@@ -1,0 +1,64 @@
+id: i1s-backup-copy
+title: Резервная копия отчётов
+sandbox: shell
+difficulty: 2
+concepts: [mkdir -p, cp -r, правило цели, rm -r]
+statement: |
+  **Сделайте резервную копию папки `reports` со всем содержимым: копия должна лежать по пути `backup/2026-11-20/reports`. В копии удалите черновики — папку `drafts`.**
+
+  Папки `backup` пока нет. Исходная папка `reports` не меняется: её черновики остаются на месте. Лишних вложенных папок в копии быть не должно.
+
+  Пример
+
+  Было:
+  ```text
+  reports/
+  ├── 2026-09.csv
+  ├── 2026-10.csv
+  ├── 2026-11.csv
+  └── drafts/
+      └── idea.txt
+  ```
+
+  Стало (`reports` — как было):
+  ```text
+  backup/
+  └── 2026-11-20/
+      └── reports/
+          ├── 2026-09.csv
+          ├── 2026-10.csv
+          └── 2026-11.csv
+  ```
+setup:
+  cwd: /home/student
+  files:
+    reports/2026-09.csv: "city,amount\nОмск,10\n"
+    reports/2026-10.csv: "city,amount\nКазань,20\n"
+    reports/2026-11.csv: "city,amount\nТверь,5\nОмск,7\n"
+    reports/drafts/idea.txt: "сравнить с прошлым годом\n"
+solution:
+  - mkdir -p backup/2026-11-20
+  - cp -r reports backup/2026-11-20/
+  - rm -r backup/2026-11-20/reports/drafts
+tests:
+  checks:
+    - name: Копия на месте и со всеми таблицами
+      run: ls backup/2026-11-20/reports
+      stdout: "2026-09.csv\n2026-10.csv\n2026-11.csv\n"
+    - name: Таблица скопирована без изменений
+      fs_content: {path: backup/2026-11-20/reports/2026-11.csv, equals: "city,amount\nТверь,5\nОмск,7\n"}
+    - name: В backup/2026-11-20 только папка reports
+      run: ls backup/2026-11-20
+      stdout: "reports\n"
+    - name: Исходные черновики на месте
+      fs_content: {path: reports/drafts/idea.txt, equals: "сравнить с прошлым годом\n"}
+    - name: Исходные таблицы на месте
+      run: ls reports
+      stdout: "2026-09.csv\n2026-10.csv\n2026-11.csv\ndrafts\n"
+hints:
+  - level: 1
+    text: "Цепочку папок, которых ещё нет, создаёт одна команда — вспомните её флаг."
+  - level: 2
+    text: "Куда ляжет копия, зависит от того, существует ли цель. Подумайте, что сделает `cp -r reports X`, если папка `X` уже есть, и что — если её нет."
+  - level: 3
+    text: "Перед `rm -r` выполните `ls` с тем же путём и убедитесь, что это копия, а не исходная папка."

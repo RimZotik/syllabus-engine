@@ -1,0 +1,46 @@
+id: i1s-week-log
+title: Журнал за неделю и пропавшие дни
+sandbox: shell
+difficulty: 3
+concepts: [cat, перенаправление, stderr, 2>]
+statement: |
+  **Склейте журналы за неделю в `week.log` в порядке дней: `mon.log`, `tue.log`, `wed.log`, `thu.log`, `fri.log`, `sat.log`, `sun.log`. Части файлов нет — сообщения об этом сохраните в `missing.txt`.**
+
+  В `week.log` — только строки журналов, без сообщений об ошибках. В `missing.txt` — сообщения `cat` о каждом отсутствующем файле и ничего больше.
+
+  Пример
+
+  Есть `mon.log` (строка `mon ok`) и `wed.log` (строка `wed ok`), нет `tue.log`; склеить `mon.log`, `tue.log`, `wed.log`.
+
+  `week.log`:
+  ```text
+  mon ok
+  wed ok
+  ```
+  `missing.txt`:
+  ```text
+  cat: tue.log: No such file or directory
+  ```
+setup:
+  cwd: /home/student/logs
+  files:
+    mon.log: "mon 09:00 backup ok\n"
+    tue.log: "tue 09:00 backup ok\ntue 09:30 cleanup ok\n"
+    thu.log: "thu 09:00 backup failed\n"
+    fri.log: "fri 09:00 backup ok\n"
+    sun.log: "sun 09:00 backup ok\n"
+solution:
+  - cat mon.log tue.log wed.log thu.log fri.log sat.log sun.log > week.log 2> missing.txt
+tests:
+  checks:
+    - name: В week.log — строки журналов по дням недели
+      fs_content: {path: week.log, equals: "mon 09:00 backup ok\ntue 09:00 backup ok\ntue 09:30 cleanup ok\nthu 09:00 backup failed\nfri 09:00 backup ok\nsun 09:00 backup ok\n"}
+    - name: В missing.txt — оба пропавших дня
+      fs_content: {path: missing.txt, contains: ["wed.log: No such file or directory", "sat.log: No such file or directory"]}
+    - name: В missing.txt — только сообщения об ошибках
+      fs_content: {path: missing.txt, not_contains: ["backup"]}
+hints:
+  - level: 1
+    text: "Шаблон `*.log` выберет файлы по алфавиту, а не по дням недели — имена придётся перечислить."
+  - level: 2
+    text: "Сообщения `cat` об ошибках идут не в тот поток, что строки файлов. У каждого потока свой номер."

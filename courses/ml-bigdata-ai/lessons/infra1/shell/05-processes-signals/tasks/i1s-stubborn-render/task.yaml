@@ -1,0 +1,37 @@
+id: i1s-stubborn-render
+title: Процесс не слушается
+sandbox: shell
+difficulty: 2
+concepts: [kill, SIGTERM, SIGKILL, pgrep]
+statement: |
+  **Остановите зависший процесс `render`: сначала вежливо, а если он не завершится — принудительно.**
+
+  Процесс `render-queue` работает правильно — его не трогайте.
+
+  Пример
+  ```text
+  до:     render и render-queue работают
+  после:  render нет, render-queue работает
+  ```
+
+  Ограничения: принудительный сигнал — только после того, как вежливый не помог.
+setup:
+  cwd: /home/student
+  processes:
+    - {name: render-queue, behavior: idle, cpu: 0.4}
+    - {name: render, behavior: ignore_term, cpu: 0.0}
+solution:
+  - pgrep -l render
+  - kill 3002
+  - pgrep -l render
+  - kill -9 3002
+tests:
+  checks:
+    - {name: render остановлен, process_absent: render}
+    - {name: "render: сначала TERM, потом KILL", signal_sent: {to: render, signal: KILL, after: TERM}}
+    - {name: render-queue работает, process_alive: render-queue}
+hints:
+  - level: 1
+    text: "`pgrep -l render` найдёт оба процесса: имя `render` — часть имени `render-queue`. Смотрите на номер и полное имя."
+  - level: 2
+    text: "Если после вежливого сигнала процесс всё ещё в списке `pgrep`, он его проигнорировал. Один сигнал проигнорировать нельзя."

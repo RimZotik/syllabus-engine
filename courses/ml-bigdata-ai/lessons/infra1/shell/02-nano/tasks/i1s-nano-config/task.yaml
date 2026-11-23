@@ -1,0 +1,48 @@
+id: i1s-nano-config
+title: Поправить настройки выгрузки
+sandbox: shell
+difficulty: 1
+concepts: [nano, сохранение]
+statement: |
+  **В `config.ini` поменяйте формат выгрузки на `xlsx`, лимит — на `100` и допишите в конец строку `encoding=utf-8`. Правьте в nano.**
+
+  Остальные строки не меняются, порядок строк — тоже.
+
+  Пример
+
+  Было (`config.ini`):
+  ```text
+  [export]
+  format=csv
+  limit=10
+  path=/srv/reports
+  ```
+
+  Стало:
+  ```text
+  [export]
+  format=xlsx
+  limit=100
+  path=/srv/reports
+  encoding=utf-8
+  ```
+setup:
+  cwd: /home/student
+  files:
+    config.ini: "[export]\nformat=csv\nlimit=10\npath=/srv/reports\n"
+solution:
+  - cmd: nano config.ini
+    keys: [Down, End, Backspace, Backspace, Backspace, x, l, s, x, Down, End, "0", Down, End, Enter, e, n, c, o, d, i, n, g, "=", u, t, f, "-", "8", C-x, y, Enter]
+tests:
+  checks:
+    - name: Настройки исправлены
+      fs_content: {path: config.ini, equals: "[export]\nformat=xlsx\nlimit=100\npath=/srv/reports\nencoding=utf-8\n"}
+    - name: Правка в nano
+      command_used: [nano]
+hints:
+  - level: 1
+    text: "Стрелки двигают курсор, End ставит его в конец строки, Backspace стирает символ перед курсором."
+  - level: 2
+    text: "Пока не сохранили, правки живут только в памяти nano. Выход с сохранением — три нажатия; что ответить на вопрос «Save modified buffer?»"
+  - level: 3
+    text: "Проверьте результат командой `cat config.ini` после выхода."

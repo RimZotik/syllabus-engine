@@ -1,0 +1,37 @@
+id: i1s-env-one-run
+title: Переменная для одного запуска
+sandbox: shell
+difficulty: 1
+concepts: [переменные окружения, ИМЯ=значение команда]
+statement: |
+  **Запустите `./report.sh` так, чтобы он увидел переменную окружения `REPORT_MONTH` со значением `2026-10`, а в вашей оболочке после запуска этой переменной не было.**
+
+  Скрипт пишет в `report.txt` строку `отчёт за <значение REPORT_MONTH>`.
+
+  Пример
+  ```text
+  report.txt:  отчёт за 2026-10
+  student@forge:~$ echo "[$REPORT_MONTH]"
+  []
+  ```
+
+  Ограничения: `report.sh` не меняйте.
+setup:
+  cwd: /home/student
+  files:
+    report.sh: {content: "#!/bin/bash\necho \"отчёт за $REPORT_MONTH\" > report.txt\n", mode: "755"}
+solution:
+  - REPORT_MONTH=2026-10 ./report.sh
+tests:
+  checks:
+    - {name: Скрипт увидел месяц, fs_content: {path: report.txt, equals: "отчёт за 2026-10\n"}}
+    - name: В оболочке переменной нет
+      run: echo "[$REPORT_MONTH]"
+      stdout: "[]\n"
+      message: "REPORT_MONTH осталась в вашей оболочке: задайте её только для одной команды."
+    - {name: report.sh не изменён, fs_content: {path: report.sh, equals: "#!/bin/bash\necho \"отчёт за $REPORT_MONTH\" > report.txt\n"}, hidden: true}
+hints:
+  - level: 1
+    text: "Переменная, заданная отдельной строкой, остаётся в оболочке, а без `export` скрипт её ещё и не увидит."
+  - level: 2
+    text: "Присваивание можно написать в той же строке, прямо перед именем команды, — тогда оно действует только на эту команду."

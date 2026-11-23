@@ -749,10 +749,11 @@ export class ShellSession {
         const fn = args.includes("-f");
         for (const a of args) if (a && !a.startsWith("-")) { if (fn) delete this.functions[a]; else { this.exported.delete(a); delete this.env[a]; if (!args.includes("-v")) delete this.functions[a]; } }
       } else if (name === "source" || name === ".") {
-        const file = args[0];
+        const file = wordExpanded((c.args as unknown[])?.[0], this.env, this.env.HOME ?? this.home);
         if (!file) continue;
-        const text = await this.asRoot(() => this.fs.readFile(joinPath(this.cwd, file.replace(/^~(?=\/|$)/, this.env.HOME ?? this.home)))).catch(() => "");
-        for (const m of text.matchAll(/^\s*export\s+([A-Za-z_][A-Za-z0-9_]*)/gm)) this.exported.add(m[1]);
+        const text = await this.asRoot(() => this.fs.readFile(joinPath(this.cwd, file))).catch(() => "");
+        for (const m of text.matchAll(/^\s*(?:export|declare\s+-[a-zA-Z]*x[a-zA-Z]*)\s+(.*)$/gm))
+          for (const t of m[1].match(/(?:[^\s"'#;]|"[^"]*"|'[^']*')+/g) ?? []) if (!t.startsWith("-")) { const k = t.split("=")[0].replace(/\+$/, ""); if (isVarName(k)) this.exported.add(k); }
         for (const m of text.matchAll(/^\s*([A-Za-z_][\w-]*)\s*\(\)\s*\{[\s\S]*?^\}/gm)) this.functions[m[1]] = m[0];
       }
     }
@@ -772,6 +773,22 @@ export class ShellSession {
       if (name && name.includes("/") && !name.startsWith("/usr/bin/__")) {
         (c.args as unknown[]).unshift(c.name);
         c.name = literalWord("/usr/bin/__exec");
+      } else if (name && isBuiltin(name) && name !== "cd" && !(name in this.functions) && /^[\w.+@-]+$/.test(name)) {
+        // a builtin never goes through PATH: when the interpreter would look it up there (our own commands) and PATH is broken, call it by its path
+        let onPath = false;
+        for (const d of (this.env.PATH ?? "").split(":")) if (await this.fs.exists(joinPath(this.cwd, `${d || "."}/${name}`))) { onPath = true; break; }
+        if (!onPath && await this.fs.exists(`/usr/bin/${name}`)) c.name = literalWord(`/usr/bin/${name}`);
+      } else if (name && !name.includes("/") && !isBuiltin(name) && !(name in this.aliases) && !(name in this.functions) && /^[\w.+@-]+$/.test(name)) {
+        // a file of that name on PATH without the x bit: bash says «Permission denied» (126), not «command not found»
+        let noExec = false;
+        for (const d of (this.env.PATH ?? "").split(":")) {
+          const p = joinPath(this.cwd, `${d || "."}/${name}`);
+          const st = await this.fs.stat(p).catch(() => null);
+          if (!st || st.isDirectory) continue;
+          if (await this.fs.can(p, 1)) { noExec = false; break; }
+          noExec = true;
+        }
+        if (noExec) { c.name = literalWord("/usr/bin/__deny"); c.args = [literalWord(`${name}: Permission denied`)]; }
       } else if (name === "cd") {
         const args = ((c.args as unknown[]) ?? []).map((a) => wordText(a));
         const target = args[0] === undefined ? this.env.HOME ?? this.home : args[0] === "-" ? this.env.OLDPWD : args[0];
@@ -935,6 +952,20 @@ export function wordText(w: unknown): string | null {
   for (const p of parts) {
     if (p.type === "Literal" || p.type === "SingleQuoted" || p.type === "Escaped") s += p.value ?? "";
     else if (p.type === "DoubleQuoted") { const t = wordText(p); if (t === null) return null; s += t; }
+    else return null;
+  }
+  return s;
+}
+
+/** Text of a word with `~`, `$HOME`/`$VAR` (plain parameter expansions) resolved from env; null for anything else dynamic. */
+export function wordExpanded(w: unknown, env: Record<string, string>, home: string): string | null {
+  const parts = (w as { parts?: { type: string; value?: string; parameter?: string; operation?: unknown; user?: string | null; parts?: unknown[] }[] })?.parts ?? [];
+  let s = "";
+  for (const p of parts) {
+    if (p.type === "Literal" || p.type === "SingleQuoted" || p.type === "Escaped") s += p.value ?? "";
+    else if (p.type === "TildeExpansion" && !p.user) s += home;
+    else if (p.type === "ParameterExpansion" && !p.operation && p.parameter) s += p.parameter === "HOME" ? env.HOME ?? home : env[p.parameter] ?? "";
+    else if (p.type === "DoubleQuoted") { const t = wordExpanded(p, env, home); if (t === null) return null; s += t; }
     else return null;
   }
   return s;

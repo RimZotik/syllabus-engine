@@ -1384,3 +1384,237 @@
   short: Как в файле отмечен конец строки текста. Программы Windows обычно пишут два байта \r\n (CRLF), Linux и macOS — один
     \n (LF).
   introduced_in: infra1.machine.4
+
+# ── infra1.shell
+
+- id: terminal
+  term: терминал
+  en: terminal, terminal emulator
+  short: Окно, которое показывает текст и передаёт нажатые клавиши программе внутри него. Команд сам не понимает — их читает
+    оболочка.
+  example: Windows Terminal, приложение «Терминал» в Ubuntu.
+  introduced_in: infra1.shell.1
+
+- id: shell
+  term: оболочка
+  en: shell
+  short: Интерпретатор команд — программа, которая читает набранную строку, делит её на имя команды и аргументы и запускает
+    нужную программу. В Linux обычно bash.
+  example: bash, PowerShell, zsh.
+  introduced_in: infra1.shell.1
+
+- id: prompt
+  term: приглашение
+  en: prompt, shell prompt
+  short: Текст перед курсором, которым оболочка показывает, что готова принять команду; обычно в нём пользователь, компьютер
+    и текущая папка.
+  example: student@forge:~$
+  introduced_in: infra1.shell.1
+
+- id: command-argument
+  term: аргумент команды
+  en: command-line argument
+  short: Слово командной строки после имени команды. Оболочка делит строку по пробелам и передаёт программе аргументы как
+    строки.
+  example: В ls -l reports аргументы — -l и reports.
+  introduced_in: infra1.shell.1
+
+- id: command-option
+  term: флаг (ключ, опция)
+  en: option, flag
+  short: Аргумент команды, начинающийся с минуса, который меняет её поведение. Короткие флаги можно склеивать, у многих есть
+    длинная форма с двумя минусами.
+  example: ls -la — то же, что ls -l -a; ls --all — то же, что ls -a.
+  introduced_in: infra1.shell.1
+
+- id: home-directory
+  term: домашняя папка
+  en: home directory
+  short: Личная папка пользователя, /home/имя в Linux; оболочка понимает ~ как её путь.
+  example: cd ~ и cd без аргументов ведут в /home/student.
+  introduced_in: infra1.shell.1
+
+- id: path
+  term: путь
+  en: path, pathname
+  short: Строка, указывающая на файл или папку в дереве файловой системы, — имена, разделённые символом /.
+  example: /home/student/reports/2026-05.csv
+  introduced_in: infra1.shell.1
+
+- id: absolute-path
+  term: абсолютный путь
+  en: absolute path
+  short: Путь, который начинается с / и читается от корня файловой системы; указывает на одно и то же место, откуда бы его
+    ни использовали.
+  example: /etc/hosts
+  introduced_in: infra1.shell.1
+
+- id: relative-path
+  term: относительный путь
+  en: relative path
+  short: Путь, который не начинается с / и отсчитывается от текущей папки процесса; . — сама эта папка, .. — папка выше.
+  example: Из /home/student путь ../anna ведёт в /home/anna.
+  introduced_in: infra1.shell.1
+
+- id: working-directory
+  term: текущая папка
+  en: working directory, current directory
+  short: Папка, связанная с процессом, от которой отсчитываются относительные пути. У каждого процесса своя; запущенная программа
+    получает её от оболочки. Показывает pwd, меняет cd.
+  example: open("marks.txt") ищет файл в текущей папке, а не рядом с .py.
+  introduced_in: infra1.shell.1
+
+- id: hidden-file
+  term: скрытый файл
+  en: hidden file, dotfile
+  short: Файл или папка, чьё имя начинается с точки. ls без -a их не показывает, шаблон * их не выбирает; так обычно хранят
+    настройки.
+  example: .bashrc, .gitignore, .env
+  introduced_in: infra1.shell.1
+
+- id: glob
+  term: шаблон имён файлов
+  en: glob, wildcard
+  short: Слово с * (любые символы), ? (один символ), которое оболочка до запуска команды заменяет списком подходящих имён
+    по алфавиту. Без совпадений шаблон остаётся как есть.
+  example: rm *.csv — rm получает уже готовый список CSV-файлов.
+  introduced_in: infra1.shell.1
+
+- id: quoting
+  term: кавычки в оболочке
+  en: quoting
+  short: Способ передать слово команде как есть. Двойные кавычки собирают его в один аргумент и отключают шаблоны, но оставляют
+    $; одинарные отключают всё; \ отключает особый смысл одного символа.
+  example: cat "отчёт за май.txt" — один аргумент, а не три.
+  introduced_in: infra1.shell.1
+
+- id: text-editor
+  term: текстовый редактор
+  en: text editor
+  short: Программа, которая меняет содержимое текстового файла и сохраняет ровно набранные символы, без оформления. В терминале
+    — nano, vim.
+  example: nano config.ini
+  introduced_in: infra1.shell.2
+
+- id: standard-stream
+  term: стандартные потоки
+  en: standard streams (stdin, stdout, stderr)
+  short: Три потока данных, которые процесс получает при запуске — ввод (stdin, 0), вывод (stdout, 1) и поток ошибок (stderr,
+    2). В терминале все подключены к клавиатуре и экрану. Не путать с потоком выполнения (thread).
+  example: print пишет в stdout, трассировка Python — в stderr.
+  introduced_in: infra1.shell.3
+
+- id: redirection
+  term: перенаправление
+  en: redirection
+  short: Подключение стандартного потока команды к файлу вместо терминала; его готовит оболочка до запуска команды. > сначала
+    очищает файл, >> дописывает, < читает из файла, 2> — ошибки.
+  example: python -m pip freeze > requirements.txt
+  introduced_in: infra1.shell.3
+
+- id: pipeline
+  term: конвейер
+  en: pipeline, pipe
+  short: Цепочка команд через |, где stdout каждой подключён к stdin следующей. Команды работают одновременно, каждая своим
+    процессом; ошибки в трубу не попадают.
+  example: grep ERROR app.log | wc -l
+  introduced_in: infra1.shell.3
+
+- id: filter
+  term: фильтр
+  en: filter
+  short: Команда, которая читает текст (из файла или stdin), преобразует его и печатает текст в stdout; поэтому её можно ставить
+    в конвейер.
+  example: grep, sort, uniq, wc, head, tail
+  introduced_in: infra1.shell.3
+
+# ── infra1.shell
+
+- id: user-group
+  term: группа
+  en: group
+  short: Именованный набор пользователей Linux. Через группу файл открывают сразу нескольким людям; у каждого пользователя
+    есть основная группа и, возможно, дополнительные.
+  example: id → groups=1000(student),27(sudo)
+  introduced_in: infra1.shell.4
+
+- id: file-permissions
+  term: права доступа
+  en: file permissions
+  short: Девять битов rwx у файла или папки — чтение, запись, выполнение отдельно для владельца, группы и остальных. Процесс
+    получает ровно одну тройку — первого подходящего класса.
+  example: -rw-r----- (640) — владелец читает и меняет, группа читает, остальным нельзя
+  introduced_in: infra1.shell.4
+
+- id: file-owner
+  term: владелец файла
+  en: file owner
+  short: Пользователь, которому принадлежит файл; к нему применяется первая тройка прав, и только он (или root) меняет права
+    файла. Сменить владельца может только root — командой chown.
+  example: sudo chown anna notes.txt
+  introduced_in: infra1.shell.4
+
+- id: root-user
+  term: суперпользователь
+  en: root, superuser
+  synonyms:
+  - root
+  - рут
+  short: Администратор Linux с номером пользователя 0, для которого проверки прав доступа к файлам не действуют.
+  introduced_in: infra1.shell.4
+
+- id: sudo
+  term: sudo
+  en: sudo (substitute user do)
+  short: Команда, которая выполняет одну команду от имени root (или другого пользователя), если это разрешено. Спрашивает
+    пароль того, кто её вызвал, а не root.
+  example: echo port=8080 | sudo tee /etc/app.conf
+  introduced_in: infra1.shell.4
+
+- id: signal
+  term: сигнал
+  en: signal
+  short: Уведомление процесса о событии, которое доставляет ОС. Процесс может обработать или игнорировать сигнал — кроме SIGKILL
+    и SIGSTOP.
+  example: Ctrl+C — SIGINT, kill PID — SIGTERM, kill -9 PID — SIGKILL
+  introduced_in: infra1.shell.5
+
+- id: background-job
+  term: фоновое задание
+  en: background job
+  short: Команда, запущенная из оболочки со знаком & в конце, — оболочка не ждёт её окончания. Задания окна показывает jobs,
+    возвращает на передний план fg.
+  example: sleep 300 & → [1] 4100
+  introduced_in: infra1.shell.5
+
+- id: exit-status
+  term: код возврата
+  en: exit status, exit code
+  short: Число 0–255, которым процесс при завершении сообщает родителю итог. 0 — успех, остальное — неудача; смерть от сигнала
+    N даёт 128 + N. В bash код последней команды — $?.
+  example: ls nope.txt; echo $? → 2
+  introduced_in: infra1.shell.5
+
+- id: shell-variable
+  term: переменная оболочки
+  en: shell variable
+  short: Переменная, которая живёт только внутри процесса bash. Запущенные программы её не видят, пока она не помечена export
+    и не стала переменной окружения.
+  example: MODE=test (оболочка видит), export MODE (видят и дочерние процессы)
+  introduced_in: infra1.shell.6
+
+- id: path-variable
+  term: PATH
+  en: PATH
+  short: Переменная окружения со списком папок через двоеточие. Команду без косой черты в имени оболочка ищет в этих папках
+    слева направо и запускает первую находку.
+  example: export PATH="$HOME/tools/bin:$PATH"
+  introduced_in: infra1.shell.6
+
+- id: bashrc
+  term: ~/.bashrc
+  en: .bashrc
+  short: Скрытый файл в домашней папке, который bash выполняет при старте каждого окна терминала. Туда записывают постоянные
+    настройки — export и сокращения команд.
+  example: source ~/.bashrc — применить правку в уже открытом окне
+  introduced_in: infra1.shell.6

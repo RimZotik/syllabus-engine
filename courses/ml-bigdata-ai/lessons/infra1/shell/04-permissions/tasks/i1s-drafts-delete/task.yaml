@@ -1,0 +1,39 @@
+id: i1s-drafts-delete
+title: Черновик не удаляется
+sandbox: shell
+difficulty: 2
+concepts: [права папки, rm, chmod]
+statement: |
+  **Удалите из папки `drafts` файл `old-plan.txt`; остальные файлы должны остаться.**
+
+  Сейчас `rm` отвечает `Permission denied`. Добавьте ровно то право, которого не хватает для удаления, — и только там, где оно нужно. Добавленное право после удаления оставьте.
+
+  Пример
+  ```text
+  было:   drafts/                  стало:  drafts/
+          ├── old-plan.txt                 └── plan.txt
+          └── plan.txt
+  ```
+
+  Ограничения: права `plan.txt` не меняйте; группе и остальным папку не открывайте — они по-прежнему только смотрят список и входят.
+setup:
+  cwd: /home/student
+  files:
+    drafts/old-plan.txt: {content: "план на прошлый месяц\n", mode: "444"}
+    drafts/plan.txt: {content: "план на ноябрь\n", mode: "444"}
+  dirs:
+    - {path: drafts, mode: "555"}
+solution:
+  - chmod u+w drafts
+  - {cmd: "rm drafts/old-plan.txt", input: ["y"]}
+tests:
+  checks:
+    - {name: old-plan.txt удалён, fs_absent: drafts/old-plan.txt}
+    - {name: plan.txt на месте, fs_content: {path: drafts/plan.txt, equals: "план на ноябрь\n"}}
+    - {name: "Права plan.txt — r--r--r--", fs_mode: {path: drafts/plan.txt, mode: "444"}}
+    - {name: "Папке добавлено только w для владельца: rwxr-xr-x", fs_mode: {path: drafts, mode: "755"}}
+hints:
+  - level: 1
+    text: "Удалить файл — значит вычеркнуть его имя из списка папки. Сравните `ls -l drafts` и `ls -ld drafts`: чьи права решают?"
+  - level: 2
+    text: "Если `rm` спросит `remove write-protected regular file?`, это вопрос о самом файле — ответьте `y`."

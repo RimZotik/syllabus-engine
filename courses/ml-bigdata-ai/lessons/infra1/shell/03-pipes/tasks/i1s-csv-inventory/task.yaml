@@ -1,0 +1,66 @@
+id: i1s-csv-inventory
+title: Опись CSV в проекте
+sandbox: shell
+difficulty: 2
+concepts: [find, sort, grep -v, wc -l, конвейер, перенаправление]
+statement: |
+  **Составьте опись таблиц проекта: в `csv_list.txt` — пути ко всем файлам `.csv` во всём дереве, по алфавиту; в `rows_2026.txt` — сколько строк данных во всех CSV папки `data/2026`, без строк-заголовков.**
+
+  Текущая папка — корень проекта `/home/student/project`. Пути в `csv_list.txt` — от текущей папки, как их печатает `find .` (с `./` в начале), по одному в строке, упорядочены командой `sort` с настройками Ubuntu по умолчанию (C.UTF-8): по кодам символов, поэтому заглавные буквы идут раньше строчных, а `-` — раньше `/`. Заголовок каждой таблицы — первая строка `date,city,amount`. В `rows_2026.txt` — только число.
+
+  Пример
+
+  Проект:
+  ```text
+  ./
+  ├── data/
+  │   └── 2026/
+  │       ├── feb.csv     заголовок и 2 строки данных
+  │       └── jan.csv     заголовок и 3 строки данных
+  ├── docs/
+  │   └── readme.md
+  └── sales.csv
+  ```
+
+  `csv_list.txt`:
+  ```text
+  ./data/2026/feb.csv
+  ./data/2026/jan.csv
+  ./sales.csv
+  ```
+
+  `rows_2026.txt`:
+  ```text
+  5
+  ```
+
+  В задаче дерево больше — посмотрите его сами.
+setup:
+  cwd: /home/student/project
+  files:
+    sales.csv: "date,city,amount\n2026-01-03,Омск,10\n"
+    data/2026/jan.csv: "date,city,amount\n2026-01-05,Омск,12\n2026-01-09,Казань,7\n2026-01-20,Тверь,3\n"
+    data/2026/feb.csv: "date,city,amount\n2026-02-02,Омск,4\n2026-02-14,Казань,11\n"
+    data/2026/mar.csv: "date,city,amount\n2026-03-01,Тверь,8\n2026-03-08,Омск,15\n2026-03-15,Казань,2\n2026-03-30,Омск,6\n"
+    data/2026/notes.txt: "март — без 31-го\n"
+    data/archive/2025-12.csv: "date,city,amount\n2025-12-30,Омск,9\n"
+    data/archive/old/2025-11.csv: "date,city,amount\n2025-11-11,Тверь,1\n"
+    docs/readme.md: "# Продажи\n"
+    Totals.csv: "date,city,amount\n2026-03-31,все,138\n"
+    data-2025.csv: "date,city,amount\n2025-12-31,все,412\n"
+solution:
+  - find . -name '*.csv' | sort > csv_list.txt
+  - cat data/2026/*.csv | grep -v '^date,city,amount$' | wc -l > rows_2026.txt
+tests:
+  checks:
+    - name: В csv_list.txt — все 8 таблиц по алфавиту
+      fs_content: {path: csv_list.txt, equals: "./Totals.csv\n./data-2025.csv\n./data/2026/feb.csv\n./data/2026/jan.csv\n./data/2026/mar.csv\n./data/archive/2025-12.csv\n./data/archive/old/2025-11.csv\n./sales.csv\n"}
+    - name: В rows_2026.txt — число строк данных
+      fs_content: {path: rows_2026.txt, regex: "^\\s*9\\s*$"}
+hints:
+  - level: 1
+    text: "Файлы во всём дереве ищет `find`, а не шаблон оболочки: `*.csv` смотрит только в одну папку. Шаблон для `-name` — в кавычках."
+  - level: 2
+    text: "`find` печатает файлы в порядке обхода. Его вывод можно передать по конвейеру команде, которая упорядочит строки."
+  - level: 3
+    text: "Строки всех таблиц папки можно склеить в один поток; заголовки из него убирает `grep` с флагом, который оставляет строки *без* образца."

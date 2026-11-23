@@ -1,0 +1,38 @@
+id: i1s-stop-resize
+title: Кто съел процессор
+sandbox: shell
+difficulty: 1
+concepts: [ps, top, kill, SIGTERM]
+statement: |
+  **Найдите ваш процесс, который занял процессор почти на 100 %, и остановите его так, чтобы он успел сохранить свою работу.**
+
+  Эта программа, если её вежливо попросить завершиться, записывает в `resize.state`, на каком месте остановилась. Остальные процессы не трогайте.
+
+  Пример
+  ```text
+  до:     процесс, занявший ядро, работает; resize.state нет
+  после:  процесса нет; resize.state: saved
+  ```
+setup:
+  cwd: /home/student
+  files:
+    photos/IMG_0001.jpg: "jpg\n"
+    photos/IMG_0002.jpg: "jpg\n"
+  processes:
+    - {name: backup, behavior: idle, cpu: 2.1}
+    - {name: resize, behavior: cleanup, file: resize.state, cpu: 99.6, cmd: "resize --width 800 photos"}
+    - {name: collector, user: root, behavior: logger, file: /var/log/collector.log}
+solution:
+  - ps aux
+  - kill 3002
+tests:
+  checks:
+    - {name: Процесс resize остановлен, process_absent: resize}
+    - {name: resize успел сохранить работу, fs_content: {path: resize.state, equals: "saved\n"}, message: "В resize.state нет отметки: процесс сняли, не дав ему сохраниться. Нажмите «Сбросить» и попросите его завершиться вежливо."}
+    - {name: backup работает, process_alive: backup}
+    - {name: collector работает, process_alive: collector}
+hints:
+  - level: 1
+    text: "`ps aux` или `top` покажут столбец `%CPU`; номер нужного процесса — в столбце `PID`."
+  - level: 2
+    text: "Какой сигнал программа может обработать и успеть что-то записать, а какой снимает её сразу?"

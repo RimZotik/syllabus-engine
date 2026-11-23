@@ -101,7 +101,7 @@ export function makeCommands(s: ShellSession): Command[] {
     def("touch", (io, a) => touch(s, io, a)),
     def("tee", tee),
     def("uniq", uniq),
-    wrap("sort", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^sort: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return c === "EISDIR" ? `sort: read failed: ${m[1]}: Is a directory` : `sort: cannot read: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) })),
+    def("sort", sort),
     wrap("cut", async (_io, _a, r) => ({ ...r, stderr: await rewriteLines(r.stderr, /^cut: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `cut: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) })),
     wrap("find", async (_io, a, r) => {
       let stderr = await rewriteLines(r.stderr, /^find: (.+): No such file or directory$/, async (m) => `find: ${qc(m[1].replace(/^[‘']|[’']$/g, ""))}: No such file or directory`);
@@ -111,7 +111,7 @@ export function makeCommands(s: ShellSession): Command[] {
       return { ...r, stderr };
     }),
     wrap("file", async (_io, _a, r) => ({ ...r, stdout: r.stdout.replace(/^(.+): cannot open \(No such file or directory\)$/gm, "$1: cannot open `$1' (No such file or directory)") })),
-    wrap("tree", async (_io, _a, r) => ({ ...r, stdout: r.stdout.replace(/^((?:\|   |    )*)(\|--|`--) /gm, (_m, pre: string, b: string) => pre.replace(/\|   /g, "│   ") + (b === "|--" ? "├── " : "└── ")) })),
+    def("tree", (io, a) => tree(s, io, a)),
     wrap("grep", async (_io, a, r0) => {
       const r = { ...r0, stderr: await rewriteLines(r0.stderr, /^grep: (.+): No such file or directory$/, async (m) => { const c = await probe(_io, m[1]); return `grep: ${m[1]}: ${REASON[c === "ok" ? "ENOENT" : c]}`; }) };
       // GNU prints «./dir/file:line» for an explicit «.» operand
@@ -181,7 +181,7 @@ export function makeCommands(s: ShellSession): Command[] {
           const code = (e as { code?: string }).code;
           return code === "EISDIR" ? "Is a directory" : code === "ENOTDIR" ? "Not a directory" : code === "EACCES" ? "Permission denied" : "No such file or directory";
         }
-      });
+      }, (file) => s.fs.exists(io.path(file)));
       await s.ui.screen(nano);
       return 0;
     }),
@@ -800,4 +800,122 @@ async function uniq(io: IO, args: string[]) {
   }
   if (outp) await io.ctx.fs.writeFile(io.path(outp), out); else io.out(out);
   return 0;
+}
+
+// ---------------------------------------------------------------------------------------------- sort, tree (C.UTF-8)
+
+/**
+ * sort as GNU sort under LANG=C.UTF-8 (Ubuntu 24.04 in WSL and on servers): byte order — digits, then
+ * capitals, then small letters; -f folds case; equal keys are broken by the whole line (unless -s or -u).
+ */
+async function sort(io: IO, args: string[]) {
+  const o = parse(args, "nrufbshcMV", "tko", { "--numeric-sort": "n", "--reverse": "r", "--unique": "u", "--ignore-case": "f", "--ignore-leading-blanks": "b", "--stable": "s", "--human-numeric-sort": "h", "--check": "c", "--key": "k", "--field-separator": "t", "--output": "o" });
+  if (o.bad) { usage(io, "sort", o.bad); return 2; }
+  const f = o.flags;
+  const keys: { from: number; to: number | null; n: boolean; r: boolean; f: boolean; h: boolean; b: boolean }[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    let spec: string | null = null;
+    if (a === "-k" || a === "--key") spec = args[i + 1] ?? "";
+    else if (/^-k./.test(a)) spec = a.slice(2);
+    else if (a.startsWith("--key=")) spec = a.slice(6);
+    if (spec === null) continue;
+    const m = /^(\d+)(?:\.\d+)?([bfhnr]*)(?:,(\d+)(?:\.\d+)?([bfhnr]*))?$/.exec(spec);
+    if (!m || Number(m[1]) < 1) { io.err(`sort: invalid number at field start: invalid count at start of ${qc(spec)}\n`); return 2; }
+    const opts = (m[2] ?? "") + (m[4] ?? "");
+    const own = opts.length > 0;
+    keys.push({ from: Number(m[1]), to: m[3] ? Number(m[3]) : null, n: own ? opts.includes("n") : f.has("n"), r: own ? opts.includes("r") : false, f: own ? opts.includes("f") : f.has("f"), h: own ? opts.includes("h") : f.has("h"), b: own ? opts.includes("b") : f.has("b") });
+  }
+  const sep = o.vals.get("t");
+  if (sep !== undefined && [...sep].length !== 1) { io.err(`sort: multi-character tab ${qc(sep)}\n`); return 2; }
+  let text = "";
+  for (const op of o.ops.length ? o.ops : ["-"]) {
+    const r = await readOp(io, op);
+    if ("error" in r) { io.err(r.error === "EISDIR" ? `sort: read failed: ${op}: Is a directory\n` : `sort: cannot read: ${op}: ${REASON[r.error]}\n`); return 2; }
+    text += r.text && !r.text.endsWith("\n") ? r.text + "\n" : r.text;
+  }
+  const rows = splitLines(text);
+  const fields = (line: string): string[] => {
+    if (sep !== undefined) return line.split(sep);
+    // without -t a field is a run of blanks followed by non-blanks: the blanks belong to the field
+    return line.match(/[ \t]*[^ \t]+|[ \t]+$/g) ?? [""];
+  };
+  const keyOf = (line: string, k: (typeof keys)[number]) => {
+    const fs = fields(line);
+    const part = fs.slice(k.from - 1, k.to === null ? undefined : k.to).join(sep ?? "");
+    return k.b || k.n || k.h ? part.replace(/^[ \t]+/, "") : part;
+  };
+  const num = (t: string) => { const m = /^\s*(-?\d*\.?\d+)/.exec(t); return m ? Number(m[1]) : 0; };
+  const hum = (t: string) => { const m = /^\s*(-?\d*\.?\d+)([KMGTPE]?)/i.exec(t); return m ? Number(m[1]) * 1024 ** " KMGTPE".indexOf((m[2] || " ").toUpperCase()) : 0; };
+  const bytes = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  const cmpKey = (a: string, b: string, k: { n: boolean; f: boolean; h: boolean }) => {
+    if (k.n) return num(a) - num(b) || 0;
+    if (k.h) return hum(a) - hum(b) || 0;
+    return k.f ? bytes(a.toUpperCase(), b.toUpperCase()) : bytes(a, b);
+  };
+  const whole = { from: 1, to: null, n: f.has("n"), r: false, f: f.has("f"), h: f.has("h"), b: f.has("b") };
+  const useKeys = keys.length ? keys : [whole];
+  const cmpKeys = (a: string, b: string) => {
+    for (const k of useKeys) {
+      const c = keys.length ? cmpKey(keyOf(a, k), keyOf(b, k), k) : cmpKey(k.b ? a.replace(/^[ \t]+/, "") : a, k.b ? b.replace(/^[ \t]+/, "") : b, k);
+      if (c) return k.r ? -c : c;
+    }
+    return 0;
+  };
+  const cmp = (a: string, b: string) => {
+    const c = cmpKeys(a, b);
+    if (c || f.has("s") || f.has("u")) return f.has("r") ? -c : c;
+    // last resort: the whole line, byte by byte
+    const l = bytes(a, b);
+    return f.has("r") ? -l : l;
+  };
+  if (f.has("c")) {
+    for (let i = 1; i < rows.length; i++) if (cmp(rows[i - 1], rows[i]) > 0 || (f.has("u") && cmp(rows[i - 1], rows[i]) === 0)) { io.err(`sort: ${o.ops[0] ?? "-"}:${i + 1}: disorder: ${rows[i]}\n`); return 1; }
+    return 0;
+  }
+  const sorted = rows.map((l, i) => [l, i] as const).sort((x, y) => cmp(x[0], y[0]) || x[1] - y[1]).map((x) => x[0]);
+  const out = f.has("u") ? sorted.filter((l, i) => i === 0 || cmpKeys(sorted[i - 1], l) !== 0) : sorted;
+  const result = out.map((l) => l + "\n").join("");
+  const dest = o.vals.get("o");
+  if (dest !== undefined) {
+    try { await io.ctx.fs.writeFile(io.path(dest), result); } catch (e) { io.err(`sort: open failed: ${dest}: ${why(e)}\n`); return 2; }
+  } else io.out(result);
+  return 0;
+}
+
+/** tree, sorted in C.UTF-8 byte order, with the box-drawing characters of a UTF-8 terminal. */
+async function tree(s: ShellSession, io: IO, args: string[]) {
+  const o = parse(args, "adfi", "L", { "--dirsfirst": "D" });
+  if (o.bad) { usage(io, "tree", o.bad); return 2; }
+  const max = o.vals.has("L") ? Number(o.vals.get("L")) : Infinity;
+  let dirs = 0, files = 0;
+  let out = "";
+  const walk = async (p: string, prefix: string, depth: number) => {
+    let names: string[];
+    try { names = (await s.fs.readdir(p)).filter((n) => o.flags.has("a") || !n.startsWith(".")).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)); }
+    catch (e) { out += `${prefix}[error opening dir]\n`; void e; return; }
+    const ents: { n: string; dir: boolean }[] = [];
+    for (const n of names) {
+      const st = await s.fs.stat(joinPath(p, n)).catch(() => null);
+      if (o.flags.has("d") && !st?.isDirectory) continue;
+      ents.push({ n, dir: !!st?.isDirectory });
+    }
+    for (let i = 0; i < ents.length; i++) {
+      const last = i === ents.length - 1;
+      out += `${prefix}${last ? "└── " : "├── "}${ents[i].n}\n`;
+      if (ents[i].dir) { dirs++; if (depth + 1 < max) await walk(joinPath(p, ents[i].n), prefix + (last ? "    " : "│   "), depth + 1); }
+      else files++;
+    }
+  };
+  const roots = o.ops.length ? o.ops : ["."];
+  let code = 0;
+  for (const r of roots) {
+    const st = await s.fs.stat(io.path(r)).catch(() => null);
+    if (!st?.isDirectory) { out += `${r}  [error opening dir]\n`; code = 2; continue; }
+    out += r + "\n";
+    await walk(io.path(r), "", 0);
+  }
+  out += `\n${dirs} director${dirs === 1 ? "y" : "ies"}${o.flags.has("d") ? "" : `, ${files} file${files === 1 ? "" : "s"}`}\n`;
+  io.out(out);
+  return code;
 }

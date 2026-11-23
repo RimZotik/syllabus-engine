@@ -79,7 +79,7 @@ describe("nano", () => {
     await keys(n, ["M-g", "3", "Enter"]);
     expect(n.row).toBe(2);
     await n.key("C-c");
-    expect(screen(n)[21]).toContain("line 3/3");
+    expect(screen(n)[21]).toContain("line 3/4");
   });
   it("runs as a command: the file is written into the session's file system", async () => {
     const s = await ShellSession.create({});

@@ -1,0 +1,41 @@
+id: i1s-sudo-append
+title: ИИ дописывает строку в системный файл
+sandbox: shell
+difficulty: 3
+concepts: [sudo, tee, перенаправление]
+statement: |
+  **ИИ-ассистент предложил дописать настройку командой ниже, но она отвечает `Permission denied`. Найдите ошибку и допишите строку `max_rows=500` в конец `/etc/forge/app.conf`.**
+
+  ```text
+  sudo echo 'max_rows=500' >> /etc/forge/app.conf
+  ```
+
+  Прежние строки файла должны остаться. Пароль для `sudo` — `forge`.
+
+  Пример
+  ```text
+  было:   [export]            стало:  [export]
+          format=csv                  format=csv
+                                      max_rows=500
+  ```
+
+  Ограничения: владелец файла — по-прежнему `root`, права — `rw-r--r--`.
+setup:
+  cwd: /home/student
+  files:
+    /etc/forge/app.conf: {content: "[export]\nformat=csv\n", mode: "644", owner: root, group: root}
+  dirs:
+    - {path: /etc/forge, mode: "755", owner: root, group: root}
+solution:
+  - {cmd: "echo 'max_rows=500' | sudo tee -a /etc/forge/app.conf", input: ["forge"]}
+tests:
+  checks:
+    - {name: "Строка дописана в конец, прежние на месте", fs_content: {path: /etc/forge/app.conf, equals: "[export]\nformat=csv\nmax_rows=500\n"}}
+    - {name: Владелец — root, fs_owner: {path: /etc/forge/app.conf, owner: root, group: root}}
+    - {name: "Права — rw-r--r--", fs_mode: {path: /etc/forge/app.conf, mode: "644"}}
+    - {name: Правка через sudo, command_used: sudo, hidden: true}
+hints:
+  - level: 1
+    text: "Кто открывает файл для `>>` — программа после `sudo` или ваша оболочка? И когда — до запуска команды или после?"
+  - level: 2
+    text: "Писать в файл должна программа, запущенная через `sudo`. Есть программа, которая пишет пришедшее на вход в файл, а дописать в конец ей велит флаг — как `>>` у оболочки."

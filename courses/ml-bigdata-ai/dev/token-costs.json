@@ -1,6 +1,6 @@
 {
  "package": "ml-bigdata-ai",
- "date": "2026-11-22",
+ "date": "2026-11-23",
  "sessions": 1,
  "weights": {
   "input": 1.0,
@@ -11,56 +11,56 @@
  },
  "topics": {
   "program": 421,
-  "written": 56
+  "written": 57
  },
  "stages": {
   "platform": {
    "title": "Платформа и документация",
-   "agents": 9,
-   "input": 4436,
-   "cache_write_5m": 695198,
-   "cache_write_1h": 8979217,
-   "cache_read": 749953251,
-   "output": 1875763,
-   "weighted": 103206007,
-   "main": 101312292,
-   "subagents": 1893715,
+   "agents": 11,
+   "input": 5056,
+   "cache_write_5m": 937139,
+   "cache_write_1h": 9556983,
+   "cache_read": 798554580,
+   "output": 2033064,
+   "weighted": 110311222,
+   "main": 106636449,
+   "subagents": 3674772,
    "models": {
-    "claude-opus-5-5": 102132036,
+    "claude-opus-5-5": 108415418,
     "<synthetic>": 0,
-    "claude-sonnet-5-5": 920710,
+    "claude-sonnet-5-5": 1742543,
     "claude-haiku-5-5": 153261
    }
   },
   "theory": {
    "title": "Теория: написание",
-   "agents": 17,
-   "input": 3039,
-   "cache_write_5m": 7226830,
-   "cache_write_1h": 855054,
-   "cache_read": 307142597,
-   "output": 1764276,
-   "weighted": 50282324,
-   "main": 11128745,
-   "subagents": 39153579,
+   "agents": 19,
+   "input": 3220,
+   "cache_write_5m": 7538421,
+   "cache_write_1h": 875850,
+   "cache_read": 318516520,
+   "output": 1822970,
+   "weighted": 52144449,
+   "main": 11432458,
+   "subagents": 40711991,
    "models": {
-    "claude-opus-5-5": 50282324,
+    "claude-opus-5-5": 52144449,
     "<synthetic>": 0
    }
   },
   "tests": {
    "title": "Тесты: написание и экзаменатор",
-   "agents": 54,
-   "input": 3470,
-   "cache_write_5m": 7688226,
-   "cache_write_1h": 384379,
-   "cache_read": 239991875,
-   "output": 2189902,
-   "weighted": 45331210,
-   "main": 6694321,
-   "subagents": 38636890,
+   "agents": 58,
+   "input": 3912,
+   "cache_write_5m": 8418334,
+   "cache_write_1h": 461802,
+   "cache_read": 272469436,
+   "output": 2454635,
+   "weighted": 50970551,
+   "main": 7031619,
+   "subagents": 43938932,
    "models": {
-    "claude-opus-5-5": 43672017,
+    "claude-opus-5-5": 49311357,
     "<synthetic>": 0,
     "claude-sonnet-5-5": 1659194
    }
@@ -68,83 +68,83 @@
   "discussion": {
    "title": "Обсуждение с пользователем",
    "agents": 0,
-   "input": 234,
+   "input": 240,
    "cache_write_5m": 0,
-   "cache_write_1h": 385600,
-   "cache_read": 22818436,
-   "output": 35767,
-   "weighted": 3232113,
-   "main": 3232113,
+   "cache_write_1h": 385900,
+   "cache_read": 23355847,
+   "output": 36354,
+   "weighted": 3289395,
+   "main": 3289395,
    "subagents": 0,
    "models": {
-    "claude-opus-5-5": 3232113,
+    "claude-opus-5-5": 3289395,
     "<synthetic>": 0
    }
   },
   "tasks": {
    "title": "Задачи песочницы: написание и проверка",
    "agents": 14,
-   "input": 840,
+   "input": 842,
    "cache_write_5m": 2195322,
-   "cache_write_1h": 160447,
-   "cache_read": 52027675,
-   "output": 567515,
-   "weighted": 11106229,
-   "main": 1345882,
+   "cache_write_1h": 163524,
+   "cache_read": 52344642,
+   "output": 567605,
+   "weighted": 11144530,
+   "main": 1384183,
    "subagents": 9760347,
    "models": {
-    "claude-opus-5-5": 9103887,
+    "claude-opus-5-5": 9142188,
     "<synthetic>": 0,
     "claude-sonnet-5-5": 2002342
    }
   },
   "design": {
    "title": "Проектирование: источники, план, деревья предпосылок",
-   "agents": 15,
-   "input": 840,
-   "cache_write_5m": 1914747,
-   "cache_write_1h": 612140,
-   "cache_read": 75123089,
-   "output": 434448,
-   "weighted": 13303105,
-   "main": 7850613,
-   "subagents": 5452491,
+   "agents": 18,
+   "input": 988,
+   "cache_write_5m": 2161158,
+   "cache_write_1h": 668127,
+   "cache_read": 82765436,
+   "output": 477479,
+   "weighted": 14702626,
+   "main": 8581534,
+   "subagents": 6121092,
    "models": {
-    "claude-opus-5-5": 11444473,
+    "claude-opus-5-5": 12843994,
     "<synthetic>": 0,
     "claude-sonnet-5-5": 1858632
    }
   },
   "theory-review": {
    "title": "Теория: проверка (методист, ученик, редактор)",
-   "agents": 58,
-   "input": 1630,
-   "cache_write_5m": 6141478,
+   "agents": 59,
+   "input": 1820,
+   "cache_write_5m": 6539480,
    "cache_write_1h": 0,
-   "cache_read": 57475324,
-   "output": 989778,
-   "weighted": 18374900,
+   "cache_read": 73419464,
+   "output": 1126745,
+   "weighted": 21151841,
    "main": 0,
-   "subagents": 18374900,
+   "subagents": 21151841,
    "models": {
     "claude-sonnet-5-5": 4230567,
-    "claude-opus-5-5": 14144333,
+    "claude-opus-5-5": 16921274,
     "<synthetic>": 0
    }
   },
   "facts": {
    "title": "Определения, факты и цитаты: фактчек",
    "agents": 17,
-   "input": 612,
-   "cache_write_5m": 1781210,
+   "input": 622,
+   "cache_write_5m": 1815730,
    "cache_write_1h": 0,
-   "cache_read": 24930749,
-   "output": 281805,
-   "weighted": 6129224,
+   "cache_read": 25339376,
+   "output": 294614,
+   "weighted": 6277292,
    "main": 0,
-   "subagents": 6129224,
+   "subagents": 6277292,
    "models": {
-    "claude-sonnet-5-5": 3450810,
+    "claude-sonnet-5-5": 3598878,
     "claude-opus-5-5": 2678414,
     "<synthetic>": 0
    }
@@ -166,18 +166,19 @@
   },
   "other": {
    "title": "Прочее",
-   "agents": 7,
-   "input": 1044,
-   "cache_write_5m": 2071297,
+   "agents": 8,
+   "input": 1234,
+   "cache_write_5m": 4866628,
    "cache_write_1h": 0,
-   "cache_read": 122392999,
-   "output": 722662,
-   "weighted": 18442775,
+   "cache_read": 166039681,
+   "output": 862965,
+   "weighted": 27003312,
    "main": 0,
-   "subagents": 18442775,
+   "subagents": 27003312,
    "models": {
-    "claude-opus-5-5": 18442775,
-    "<synthetic>": 0
+    "claude-opus-5-5": 26805492,
+    "<synthetic>": 0,
+    "claude-sonnet-5-5": 197820
    }
   }
  }

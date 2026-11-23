@@ -1,0 +1,49 @@
+id: i1s-nano-save-as
+title: Настройки для тестов — рядом с боевыми
+sandbox: shell
+difficulty: 2
+concepts: [nano, сохранить под другим именем]
+statement: |
+  **Создайте `settings.test.ini` — копию `settings.ini`, где `host` — `localhost`, а `debug` — `true`. Сам `settings.ini` не меняется.**
+
+  Сделайте это в nano: откройте `settings.ini`, поправьте строки и сохраните результат под новым именем.
+
+  Пример
+
+  `settings.ini` (было и осталось):
+  ```text
+  host=db.prod.local
+  port=5432
+  debug=false
+  ```
+
+  `settings.test.ini`:
+  ```text
+  host=localhost
+  port=5432
+  debug=true
+  ```
+
+  Ограничения: без `cp`.
+setup:
+  cwd: /home/student
+  files:
+    settings.ini: "host=db.prod.local\nport=5432\ndebug=false\n"
+solution:
+  - cmd: nano settings.ini
+    keys: [End, Backspace, Backspace, Backspace, Backspace, Backspace, Backspace, Backspace, Backspace, Backspace, Backspace, Backspace, Backspace, Backspace, l, o, c, a, l, h, o, s, t, Down, Down, End, Backspace, Backspace, Backspace, Backspace, Backspace, t, r, u, e, C-o, Backspace, Backspace, Backspace, Backspace, ., t, e, s, t, ., i, n, i, Enter, y, C-x]
+tests:
+  checks:
+    - name: settings.ini не изменился
+      fs_content: {path: settings.ini, equals: "host=db.prod.local\nport=5432\ndebug=false\n"}
+    - name: В settings.test.ini — настройки для тестов
+      fs_content: {path: settings.test.ini, equals: "host=localhost\nport=5432\ndebug=true\n"}
+    - name: Правка в nano
+      command_used: [nano]
+    - name: Без копирования командой
+      forbid_commands: [cp]
+hints:
+  - level: 1
+    text: "Одно из сочетаний для записи спрашивает имя файла, а другое — нет. Какое вам нужно?"
+  - level: 2
+    text: "В строке «File Name to Write» имя можно стереть и набрать новое — тогда исходный файл на диске останется прежним."

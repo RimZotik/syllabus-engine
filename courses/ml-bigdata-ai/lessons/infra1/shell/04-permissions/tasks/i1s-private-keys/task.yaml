@@ -1,0 +1,42 @@
+id: i1s-private-keys
+title: Закрыть секреты от чужих глаз
+sandbox: shell
+difficulty: 2
+concepts: [chmod, восьмеричная запись, права папки]
+statement: |
+  **Сделайте так, чтобы файл `.env` и папку `keys` могли открыть только вы.**
+
+  `.env` — читать и менять только владельцу. В папку `keys` входить, смотреть список и создавать файлы — только владельцу. Файлы внутри `keys` и другие файлы проекта не трогайте.
+
+  Пример
+  ```text
+  было:   -rw-r--r--  .env
+          drwxr-xr-x  keys/
+          -rw-r--r--  keys/api_token
+  стало:  -rw-------  .env
+          drwx------  keys/
+          -rw-r--r--  keys/api_token
+  ```
+
+  Ограничения: файл `.env` не должен стать исполняемым.
+setup:
+  cwd: /home/student/shop
+  files:
+    .env: "DB_PASSWORD=Qw7-moloko\nAPI_URL=https://api.shop.local\n"
+    keys/api_token: "tok_51f0c2e9a7\n"
+    app.py: "print('магазин')\n"
+solution:
+  - chmod 600 .env
+  - chmod 700 keys
+tests:
+  checks:
+    - {name: ".env — rw-------", fs_mode: {path: .env, mode: "600"}}
+    - {name: "keys — rwx------", fs_mode: {path: keys, mode: "700"}}
+    - {name: Файл в keys не тронут, fs_mode: {path: keys/api_token, mode: "644"}}
+    - {name: Секрет на месте, fs_content: {path: .env, equals: "DB_PASSWORD=Qw7-moloko\nAPI_URL=https://api.shop.local\n"}}
+    - {name: app.py не тронут, fs_mode: {path: app.py, mode: "644"}, hidden: true}
+hints:
+  - level: 1
+    text: "`ls -la` покажет права скрытого `.env`; `ls -ld keys` — права самой папки, а не её содержимого."
+  - level: 2
+    text: "Бит r весит 4, w — 2, x — 1. Для папки без x не войти и не открыть файл внутри, поэтому владельцу папки нужны все три."

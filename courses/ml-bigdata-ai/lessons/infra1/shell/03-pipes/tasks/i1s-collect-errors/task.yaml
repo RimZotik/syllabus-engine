@@ -1,0 +1,55 @@
+id: i1s-collect-errors
+title: Ошибки из всех журналов
+sandbox: shell
+difficulty: 2
+concepts: [grep, cat, шаблоны, конвейер, перенаправление, wc -l]
+statement: |
+  **Соберите в `errors.txt` все строки с уровнем `ERROR` из журналов `logs/*.log`, а в `errors_count.txt` запишите, сколько их.**
+
+  Уровень — второе слово строки, `ERROR` пишется заглавными; строки, где «error» встречается только в тексте сообщения строчными, не нужны. Строки в `errors.txt` — точно такие, как в журналах, без имён файлов; порядок — журналы по алфавиту, внутри журнала — как в нём. В `errors_count.txt` — только число. Журналы из `logs/old` не нужны.
+
+  Пример
+
+  `logs/a.log`:
+  ```text
+  09:00 INFO start
+  09:01 ERROR db timeout
+  ```
+  `logs/b.log`:
+  ```text
+  10:00 ERROR disk full
+  10:02 INFO retry after error
+  ```
+
+  `errors.txt`:
+  ```text
+  09:01 ERROR db timeout
+  10:00 ERROR disk full
+  ```
+  `errors_count.txt`:
+  ```text
+  2
+  ```
+setup:
+  cwd: /home/student
+  files:
+    logs/api.log: "09:00 INFO start\n09:02 ERROR token expired\n09:03 INFO login anna\n09:07 ERROR rate limit\n09:09 INFO retry after error\n"
+    logs/db.log: "09:00 INFO connected\n09:04 WARN slow query\n09:05 ERROR deadlock\n"
+    logs/web.log: "09:00 INFO listen 8080\n09:06 INFO GET /error-page 200\n09:08 ERROR upstream timeout\n09:10 ERROR upstream timeout\n"
+    logs/old/2026-11-19.log: "23:59 ERROR disk full\n"
+solution:
+  - cat logs/*.log | grep ERROR > errors.txt
+  - wc -l < errors.txt > errors_count.txt
+tests:
+  checks:
+    - name: В errors.txt — все строки ERROR, без имён файлов
+      fs_content: {path: errors.txt, equals: "09:02 ERROR token expired\n09:07 ERROR rate limit\n09:05 ERROR deadlock\n09:08 ERROR upstream timeout\n09:10 ERROR upstream timeout\n"}
+    - name: В errors_count.txt — число строк
+      fs_content: {path: errors_count.txt, regex: "^\\s*5\\s*$"}
+hints:
+  - level: 1
+    text: "Посмотрите, как `grep` печатает найденное, если файлов в аргументах несколько."
+  - level: 2
+    text: "Если сначала склеить журналы в один поток, `grep` получит текст из stdin и не будет знать имён файлов."
+  - level: 3
+    text: "Только число, без имени файла, `wc -l` печатает, когда читает stdin."

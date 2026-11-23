@@ -1,0 +1,46 @@
+id: i1s-vim-way-out
+title: Выбраться из vim
+sandbox: shell
+difficulty: 1
+concepts: [vim, nano]
+statement: |
+  **Откройте `vim todo.txt` и наберите `hello`, как в обычном редакторе. Выйдите из vim так, чтобы файл не изменился, а потом допишите в конец файла строку `позвонить в банк` — уже в nano.**
+
+  Так бывает, когда редактор вместо вас выбрала другая программа: нажатые буквы vim понимает как команды. Остальные строки `todo.txt` не меняются.
+
+  Пример
+
+  Было (`todo.txt`):
+  ```text
+  купить молоко
+  сдать отчёт
+  ```
+
+  Стало:
+  ```text
+  купить молоко
+  сдать отчёт
+  позвонить в банк
+  ```
+setup:
+  cwd: /home/student
+  files:
+    todo.txt: "купить молоко\nсдать отчёт\n"
+solution:
+  - cmd: vim todo.txt
+    keys: [h, e, l, l, o, Escape, ":", q, Enter, ":", q, "!", Enter]
+  - cmd: nano todo.txt
+    keys: [Down, End, Enter, п, о, з, в, о, н, и, т, ь, " ", в, " ", б, а, н, к, C-x, y, Enter]
+tests:
+  checks:
+    - name: В todo.txt — прежние строки и новая
+      fs_content: {path: todo.txt, equals: "купить молоко\nсдать отчёт\nпозвонить в банк\n"}
+    - name: Файл открывали в vim
+      command_used: [vim]
+    - name: Строку дописали в nano
+      command_used: [nano]
+hints:
+  - level: 1
+    text: "Если внизу vim появилось `E37: No write since last change`, vim заметил правку и не выходит без вашего решения. Что делает `!` в команде выхода?"
+  - level: 2
+    text: "Команды выхода набираются после двоеточия; если вы в режиме вставки (внизу `-- INSERT --`), двоеточие станет просто текстом — сначала вернитесь в командный режим."

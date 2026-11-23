@@ -204,6 +204,12 @@ export function makeCommands2(s: ShellSession): Command[] {
     if (reset) { s.sudoUntil = 0; if (!argv.length) return 0; }
     if (!userOf(target)) { io.err(`sudo: unknown user ${target}\nsudo: error initializing audit plugin sudoers_audit\n`); return 1; }
     if (!argv.length && !login && !shell && !list && !validate) { io.err("usage: sudo -h | -K | -k | -V\nusage: sudo -v [-ABkNnS] [-g group] [-h host] [-p prompt] [-u user]\nusage: sudo -l [-ABkNnS] [-g group] [-h host] [-p prompt] [-U user]\n            [-u user] [command [arg ...]]\nusage: sudo [-ABbEHkNnPS] [-C num] [-D directory]\n            [-g group] [-h host] [-p prompt] [-R directory] [-T timeout]\n            [-u user] [VAR=value] [-i | -s] [command [arg ...]]\n"); return 1; }
+    // a path that is not an executable file: sudo's own lookup fails before the password is asked
+    if (argv[0]?.includes("/")) {
+      const p = io.path(argv[0].replace(/^~(?=\/|$)/, io.ctx.env.get("HOME") ?? s.home));
+      const st = await s.asRoot(() => s.fs.stat(p)).catch(() => null);
+      if (!st || st.isDirectory || !(st.mode & 0o111)) { io.err(`sudo: ${argv[0]}: command not found\n`); return 1; }
+    }
     if (!(await authenticate(io, s.euid))) return 1;
     if (s.euid !== "root" && !s.users.inGroup(s.euid, "sudo")) { io.err(`${s.euid} is not in the sudoers file.\n`); return 1; }
     if (validate) return 0;
@@ -559,7 +565,7 @@ export function makeCommands2(s: ShellSession): Command[] {
     def("bash", (io, a) => bashScript("bash", io, a)),
     def("sh", (io, a) => bashScript("sh", io, a)),
     def("__cr", async (io, a) => { io.err(`${a[1]}: line ${a[0]}: $'\\r': command not found\n`); return 127; }),
-    def("__deny", async (io, a) => { io.err(`bash: ${a.join(" ")}\n`); return 1; }),
+    def("__deny", async (io, a) => { const t = a.join(" "); io.err(`bash: ${t}\n`); return !t.startsWith("cd:") && t.endsWith(": Permission denied") ? 126 : 1; }),
   ];
 }
 

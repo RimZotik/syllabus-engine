@@ -1,0 +1,182 @@
+title: Проверка темы
+pass: 0.85
+minutes: 25
+questions:
+- id: shell-var-vs-export
+  type: single
+  q: |
+    Что напечатает последняя строка?
+    ```
+    student@forge:~$ A=1
+    student@forge:~$ export B=2
+    student@forge:~$ bash -c 'echo "[$A][$B]"'
+    ```
+  options:
+  - '`[][2]`'
+  - '`[1][2]`'
+  - '`[][]`'
+  - '`[$A][$B]`'
+  answer: 0
+  explain: '`bash -c` запускает новый процесс bash, и он получает только окружение — переменные, помеченные `export`. `A` осталась переменной вашей оболочки. Одинарные кавычки здесь защищают строку от вашей оболочки, а подставляет переменные уже запущенный bash — внутри неё двойные кавычки.'
+- id: script-cannot-export-up
+  type: single
+  q: |
+    Файл `setenv.sh` с правами `rwxr-xr-x`:
+    ```
+    #!/bin/bash
+    export API_URL=https://api.shop.local
+    ```
+    Как сделать, чтобы `API_URL` появилась в окружении этого окна?
+  options:
+  - '`source setenv.sh`'
+  - '`./setenv.sh`'
+  - '`bash setenv.sh`'
+  - '`export ./setenv.sh`'
+  answer: 0
+  explain: '`./setenv.sh` и `bash setenv.sh` выполняют файл в дочернем процессе: `export` меняет его копию окружения, и она исчезает вместе с ним. `source` выполняет файл в текущей оболочке. `export ./setenv.sh` пытается пометить для экспорта переменную с невозможным именем и выдаёт ошибку.'
+- id: run-system-python
+  type: single
+  q: '`PATH=/opt/tools/bin:/usr/bin`, и `python3` есть в обеих папках. Как запустить системный `/usr/bin/python3` в этом окне, ничего не меняя и не повышая прав?'
+  options:
+  - '`/usr/bin/python3 app.py`'
+  - '`sudo python3 app.py`'
+  - '`cd /usr/bin && python3 ~/app.py`'
+  - '`which python3 app.py`'
+  answer: 0
+  explain: 'Имя с косой чертой поиск по PATH не проходит: запускается ровно этот файл. `sudo` использует свой PATH и найдёт системный Python, но запустит его от имени root — это повышение прав. Текущей папки в PATH нет, поэтому `cd /usr/bin` ничего не меняет: найдётся снова `/opt/tools/bin/python3`, а ещё сменилась папка окна. `which` ничего не запускает, а только называет, какой файл найдёт поиск по PATH.'
+- id: broken-path
+  type: multi
+  q: 'В окне терминала выполнили `export PATH=$HOME/bin`. Что теперь верно для этого окна?'
+  options:
+  - '`ls` отвечает `command not found`'
+  - '`/usr/bin/ls` по-прежнему работает'
+  - '`cd ..` по-прежнему работает'
+  - '`echo $PATH` печатает `/home/student/bin`'
+  - 'Файлы программ из `/usr/bin` удалены'
+  - 'В уже открытом втором окне `ls` тоже перестал находиться'
+  answer: [0, 1, 2, 3]
+  explain: 'PATH теперь — одна папка, и `ls` там нет. По полному пути поиск не нужен, поэтому `/usr/bin/ls` работает. `cd` и `echo` — встроенные команды, их оболочка находит без PATH. Файлы на диске никто не трогал, а PATH — переменная процесса bash этого окна: другое окно её не видит.'
+- id: bashrc-overwrite
+  type: single
+  q: 'Вместо `>>` набрали `echo ''export EDITOR=nano'' > ~/.bashrc`. Что будет в новых окнах терминала?'
+  options:
+  - '`EDITOR` будет задан, но пропадут прежние настройки из `~/.bashrc`, например псевдоним `ll`'
+  - 'Всё как надо: bash читает из `~/.bashrc` только последнюю строку'
+  - '`EDITOR` не задастся: файл перезаписан, и bash его больше не читает'
+  - 'Новое окно не откроется, пока не выполнить `source ~/.bashrc`'
+  answer: 0
+  explain: '`>` сначала очищает файл, поэтому в `~/.bashrc` осталась одна строка. Новое окно её выполнит — EDITOR будет nano, — но остальных настроек, таких как `alias ll=…`, больше нет. Уже открытое окно не изменится: файл читается при старте.'
+- id: double-quotes-freeze
+  type: single
+  q: |
+    В `~/.bashrc` дописали строку командой
+    ```
+    echo "export PATH=$HOME/tools:$PATH" >> ~/.bashrc
+    ```
+    Что попало в файл?
+  options:
+  - 'Строка с готовым списком папок: `export PATH=/home/student/tools:/usr/local/sbin:…` — сегодняшний PATH целиком'
+  - 'Строка `export PATH=$HOME/tools:$PATH`, как набрано'
+  - 'Ничего: двойные кавычки внутри `echo` не разрешены'
+  - 'Строка `export PATH=/home/student/tools:$PATH`: подставляется только `$HOME`'
+  answer: 0
+  explain: 'В двойных кавычках оболочка подставляет все переменные до запуска `echo`, и в файл уходит текущее значение PATH. Теперь каждое новое окно будет получать этот застывший список, даже если система поменяет свой PATH. В одинарных кавычках в файл попал бы сам текст `$PATH`.'
+- id: which-builtin
+  type: single
+  q: '`which cd` ничего не печатает и возвращает код 1, а `cd /tmp` работает. Почему?'
+  options:
+  - '`cd` — встроенная команда bash, а `which` ищет только файлы в папках PATH'
+  - '`cd` лежит в папке, которой нет в PATH, но bash знает её путь'
+  - '`which` не умеет искать команды из двух букв'
+  - '`cd` запрещено показывать обычному пользователю'
+  answer: 0
+  explain: '`which` проходит папки PATH и называет найденный файл. Программы `cd` нет — это встроенная команда: оболочка обязана сменить папку себе, а не дочернему процессу. Обо всём, включая встроенные, знает `type`: `cd is a shell builtin`.'
+- id: current-dir-not-in-path
+  type: single
+  q: 'В общей папке `/tmp` кто-то оставил исполняемый файл с именем `ls`. Вы перешли в `/tmp` и набрали `ls`. Что запустится?'
+  options:
+  - 'Системный `/usr/bin/ls`: текущей папки в PATH нет'
+  - 'Файл `/tmp/ls`: сначала оболочка ищет в текущей папке'
+  - 'Файл `/tmp/ls`, если у вас есть право его читать'
+  - 'Ни один: найдя два `ls`, оболочка спросит, какой запустить'
+  answer: 0
+  explain: 'Имя без косой черты оболочка ищет только по папкам PATH, а текущей папки в нём нет: `/tmp/ls` запустился бы лишь по пути `./ls`. Её и не добавляют в PATH, чтобы в чужой папке вместо системной команды не выполнился подложенный файл. Права на чтение здесь ничего не решают, а выбирать между находками оболочка не спрашивает — берёт первую по PATH.'
+- id: code-write-resolve
+  type: code
+  q: |
+    **Напишите `resolve(name, path, files)`: какой файл запустит оболочка по команде `name` — вернуть полный путь или `None`, если команда не найдена.**
+    `path` — значение PATH: папки через двоеточие, без косой черты на конце. `files` — множество полных путей исполняемых файлов. Если в `name` есть косая черта, поиска по PATH нет: вернуть `name`, если такой файл есть в `files` (пути в этом случае абсолютные), иначе `None`.
+    ```input
+    resolve("csvstat", "/home/student/tools/bin:/usr/local/bin:/usr/bin", {"/usr/local/bin/csvstat", "/usr/bin/csvstat", "/home/student/tools/bin/report"})
+    resolve("report", "/home/student/tools/bin:/usr/local/bin:/usr/bin", {"/usr/local/bin/csvstat", "/usr/bin/csvstat", "/home/student/tools/bin/report"})
+    ```
+    ```output
+    /usr/local/bin/csvstat
+    /home/student/tools/bin/report
+    ```
+  starter: |
+    def resolve(name, path, files):
+        pass
+
+
+    print(resolve("csvstat", "/home/student/tools/bin:/usr/local/bin:/usr/bin", {"/usr/local/bin/csvstat", "/usr/bin/csvstat", "/home/student/tools/bin/report"}))
+  solution: |
+    def resolve(name, path, files):
+        if "/" in name:
+            return name if name in files else None
+        for folder in path.split(":"):
+            candidate = folder + "/" + name
+            if candidate in files:
+                return candidate
+        return None
+
+
+    print(resolve("csvstat", "/home/student/tools/bin:/usr/local/bin:/usr/bin", {"/usr/local/bin/csvstat", "/usr/bin/csvstat", "/home/student/tools/bin/report"}))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        files = {"/usr/local/bin/csvstat", "/usr/bin/csvstat", "/home/student/tools/bin/report"}
+        p = "/home/student/tools/bin:/usr/local/bin:/usr/bin"
+        for name, want in [("csvstat", "/usr/local/bin/csvstat"), ("report", "/home/student/tools/bin/report")]:
+            got = resolve(name, p, files)
+            assert got == want, f"resolve({name!r}, {p!r}, …) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Порядок папок решает
+      code: |
+        files = {"/usr/local/bin/csvstat", "/home/student/tools/bin/csvstat"}
+        for p, want in [("/home/student/tools/bin:/usr/local/bin:/usr/bin", "/home/student/tools/bin/csvstat"), ("/usr/local/bin:/usr/bin:/home/student/tools/bin", "/usr/local/bin/csvstat")]:
+            got = resolve("csvstat", p, files)
+            assert got == want, f"PATH={p}: должна вернуть {want!r}, а вернула {got!r}"
+    - name: Не найдено
+      code: |
+        got = resolve("nano", "/home/student/bin", {"/usr/bin/nano", "/home/student/bin/report"})
+        assert got is None, f"nano нет в /home/student/bin — нужно None, а вернулось {got!r}"
+        got = resolve("bin", "/usr/bin", {"/usr/bin/binx", "/usr/bin/bin2"})
+        assert got is None, f"Файла /usr/bin/bin нет — нужно None, а вернулось {got!r}"
+    - name: Имя файла совпадает целиком
+      code: |
+        files = {"/usr/bin/csvreport", "/home/student/bin/report", "/usr/binx/report"}
+        got = resolve("report", "/usr/bin:/home/student/bin", files)
+        assert got == "/home/student/bin/report", f"В /usr/bin есть только csvreport, а не report — нужно '/home/student/bin/report', а вернулось {got!r}"
+        got = resolve("report", "/usr/bin", files)
+        assert got is None, f"/usr/binx — другая папка, не /usr/bin; нужно None, а вернулось {got!r}"
+    - name: Имя с косой чертой — без поиска
+      code: |
+        files = {"/home/student/tools/bin/report", "/usr/bin/report"}
+        got = resolve("/home/student/tools/bin/report", "/usr/bin", files)
+        assert got == "/home/student/tools/bin/report", f"Путь с косой чертой запускается как есть, а вернулось {got!r}"
+        got = resolve("/opt/report", "/usr/bin", files)
+        assert got is None, f"Файла /opt/report нет — нужно None, даже если report есть в PATH; вернулось {got!r}"
+  explain: 'Папки берутся по порядку из `path.split(":")`, и первая находка сразу возвращается — дальше поиск не идёт. Имя с косой чертой — это путь: его проверяют как есть, PATH не смотрят, поэтому `/opt/report` не превращается в `/usr/bin/report`.'
+- id: open-venv-one-window
+  type: open
+  q: 'Почему виртуальное окружение, включённое командой `source .venv/bin/activate`, действует только в этом окне терминала? И почему его не включить, запустив `activate` как обычный скрипт?'
+  rubric:
+  - 'Активация меняет PATH (ставит `.venv/bin` в начало), а PATH — переменная процесса bash этого окна; у другого окна свой процесс и своё окружение'
+  - 'Запущенный скрипт работает в дочернем процессе и меняет только свою копию окружения, которая пропадает с его завершением; `source` выполняет файл в текущей оболочке, поэтому меняет её PATH'
+  wrong_answers:
+  - activate записывает путь к Python в файл, который читает только это окно
+  - Без source скрипт activate не запустится, потому что у него нет бита x
+  - Окружение действует везде, просто другие окна нужно перезагрузить
+  followups:
+  - Как запустить `app.py` Python-ом из `.venv`, не активируя окружение?

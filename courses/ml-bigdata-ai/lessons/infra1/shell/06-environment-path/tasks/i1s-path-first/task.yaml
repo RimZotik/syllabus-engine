@@ -1,0 +1,45 @@
+id: i1s-path-first
+title: Какая из двух программ запустится
+sandbox: shell
+difficulty: 2
+concepts: [PATH, which, порядок поиска]
+statement: |
+  **Сделайте так, чтобы в этом окне по имени `csvstat` запускалась новая версия из `~/tools/bin`, а не старая из `/usr/local/bin`.**
+
+  Меняйте порядок поиска, а не имя: `which csvstat` должна показывать новую версию. Остальные команды (`ls`, `nano`, `grep`…) должны находиться как раньше. Последней командой запустите `csvstat sales.csv`.
+
+  Пример
+  ```text
+  student@forge:~$ which csvstat
+  /home/student/tools/bin/csvstat
+  student@forge:~$ csvstat sales.csv
+  csvstat 2.0: 3 строки
+  ```
+
+  Ограничения: файлы программ не переименовывайте, не удаляйте и не меняйте.
+setup:
+  cwd: /home/student
+  files:
+    /usr/local/bin/csvstat: {content: "#!/bin/bash\necho 'csvstat 1.0: не умею считать'\n", mode: "755", owner: root, group: root}
+    tools/bin/csvstat: {content: "#!/bin/bash\necho \"csvstat 2.0: $(wc -l < \"$1\") строки\"\n", mode: "755"}
+    sales.csv: "city,amount\nОмск,10\nКазань,20\n"
+solution:
+  - which csvstat
+  - export PATH="$HOME/tools/bin:$PATH"
+  - csvstat sales.csv
+tests:
+  checks:
+    - name: Находится новая версия
+      run: which csvstat
+      stdout: "/home/student/tools/bin/csvstat\n"
+    - name: Системные команды на месте
+      run: which ls
+      stdout: "/usr/bin/ls\n"
+    - {name: Последней запущена новая версия, last_output_contains: "csvstat 2.0: 3 строки"}
+    - {name: Старая версия не тронута, fs_content: {path: /usr/local/bin/csvstat, equals: "#!/bin/bash\necho 'csvstat 1.0: не умею считать'\n"}, hidden: true}
+    - {name: Новая версия на месте, fs_exists: tools/bin/csvstat, type: file, hidden: true}
+hints:
+  - level: 1
+    text: "`echo $PATH` покажет папки поиска. Поиск идёт слева направо и останавливается на первой находке."
+  - level: 2
+    text: "Новый список PATH собирают из новой папки и старого значения `$PATH`; где окажется новая папка — в начале или в конце — решает, чья версия победит."

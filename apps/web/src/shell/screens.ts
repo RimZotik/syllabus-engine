@@ -72,28 +72,39 @@ export class Nano implements ScreenApp {
   done = false;
   file: string;
   status: string | null;
-  mode: "edit" | "save?" | "name" | "search" | "goto" | "help" = "edit";
+  mode: "edit" | "save?" | "diff?" | "over?" | "name" | "search" | "goto" | "help" = "edit";
   input = "";
   exitAfterWrite = false;
+  /** «Save file under DIFFERENT NAME?» was answered Y once: nano does not ask again in this write-out */
+  diffOk = false;
   lastSearch = "";
   cutBuf: string[] = [];
   lastWasCut = false;
   helpTop = 0;
   private save: SaveFn;
+  private exists?: (file: string) => Promise<boolean>;
   private height = 20;
 
   /** the file had Windows line ends: nano converts them on reading and writes them back (M-D toggles at the name prompt) */
   dos = false;
 
-  constructor(text: string, file: string, notice: string, save: SaveFn) {
+  constructor(text: string, file: string, notice: string, save: SaveFn, exists?: (file: string) => Promise<boolean>) {
+    this.exists = exists;
     if (text.includes("\r\n")) { this.dos = true; text = text.replace(/\r\n/g, "\n"); }
-    this.lines = text.replace(/\n$/, "").split("\n");
+    // as in nano: after the last newline there is an empty line the cursor can go to and type on
+    this.lines = text.split("\n");
     this.file = file;
     this.status = notice;
     this.save = save;
   }
 
-  get text() { const t = this.lines.join(this.dos ? "\r\n" : "\n"); return t ? t + (this.dos ? "\r\n" : "\n") : ""; }
+  /** what is saved: the lines, and one final newline (nano adds it when the last line has text) */
+  get text() {
+    const nl = this.dos ? "\r\n" : "\n";
+    const t = this.lines.join(nl);
+    if (t === "") return "";
+    return this.lines[this.lines.length - 1] === "" ? t : t + nl;
+  }
 
   render(cols: number, rows: number) {
     this.height = Math.max(1, rows - 4);
@@ -134,12 +145,14 @@ export class Nano implements ScreenApp {
     // the status / prompt line
     const prompts: Record<string, string> = {
       "save?": "Save modified buffer? ",
+      "diff?": "Save file under DIFFERENT NAME? ",
+      "over?": `File "${this.input}" exists; OVERWRITE? `,
       name: this.dos ? "File Name to Write [DOS Format]: " : "File Name to Write: ",
       search: this.lastSearch ? `Search [${this.lastSearch}]: ` : "Search: ",
       goto: "Enter line number, column number: ",
     };
     if (prompts[this.mode]) {
-      const p = prompts[this.mode] + (this.mode === "save?" ? "" : this.input);
+      const p = prompts[this.mode] + (this.mode === "save?" || this.mode === "diff?" || this.mode === "over?" ? "" : this.input);
       out.push(INV + fit(p, cols) + OFF);
       cursor = [rows - 3, Math.min(cols - 1, p.length)];
     } else if (this.status) {
@@ -147,7 +160,7 @@ export class Nano implements ScreenApp {
       const pad = Math.max(0, Math.floor((cols - s.length) / 2));
       out.push(" ".repeat(pad) + INV + s + OFF);
     } else out.push("");
-    const keys = this.mode === "save?" ? SAVE_KEYS : this.mode === "name" ? NAME_KEYS : this.mode === "search" || this.mode === "goto" ? SEARCH_KEYS : EDIT_KEYS;
+    const keys = this.mode === "save?" || this.mode === "diff?" || this.mode === "over?" ? SAVE_KEYS : this.mode === "name" ? NAME_KEYS : this.mode === "search" || this.mode === "goto" ? SEARCH_KEYS : EDIT_KEYS;
     out.push(...shortcutRows(keys, cols));
     return { lines: out, cursor };
   }
@@ -157,10 +170,25 @@ export class Nano implements ScreenApp {
       if (k === "C-x" || k === "q" || k === "C-c" || k === "Escape") this.mode = "edit";
       else if (k === "Down" || k === "C-n") this.helpTop = Math.min(this.helpTop + 1, NANO_HELP.split("\n").length - 1);
       else if (k === "Up" || k === "C-p") this.helpTop = Math.max(0, this.helpTop - 1);
+      else if (k === "M-\\") this.helpTop = 0;
+      else if (k === "M-/") this.helpTop = Math.max(0, NANO_HELP.split("\n").length - this.height);
+      return;
+    }
+    if (this.mode === "diff?") {
+      // nano 7.2 do_writeout(): the buffer has a name and the typed one differs
+      if (k === "y" || k === "Y") { this.diffOk = true; this.mode = "edit"; await this.afterDiff(); }
+      else if (k === "n" || k === "N") this.mode = "name";
+      else if (k === "C-c") { this.mode = "edit"; this.status = "Cancelled"; this.exitAfterWrite = false; }
+      return;
+    }
+    if (this.mode === "over?") {
+      if (k === "y" || k === "Y") { this.mode = "edit"; await this.write(this.input, this.exitAfterWrite); }
+      else if (k === "n" || k === "N") this.mode = "name";
+      else if (k === "C-c") { this.mode = "edit"; this.status = "Cancelled"; this.exitAfterWrite = false; }
       return;
     }
     if (this.mode === "save?") {
-      if (k === "y" || k === "Y") { this.mode = "name"; this.input = this.file; this.exitAfterWrite = true; }
+      if (k === "y" || k === "Y") { this.diffOk = false; this.mode = "name"; this.input = this.file; this.exitAfterWrite = true; }
       else if (k === "n" || k === "N") this.done = true;
       else if (k === "C-c") { this.mode = "edit"; this.status = "Cancelled"; }
       return;
@@ -198,7 +226,7 @@ export class Nano implements ScreenApp {
         else if (this.row < this.lines.length - 1) { this.lines.splice(this.row, 2, line + this.lines[this.row + 1]); this.modified = true; }
         break;
       case "Tab": this.insert("\t"); break;
-      case "C-o": case "F3": this.mode = "name"; this.input = this.file; this.exitAfterWrite = false; break;
+      case "C-o": case "F3": this.diffOk = false; this.mode = "name"; this.input = this.file; this.exitAfterWrite = false; break;
       case "C-s":
         if (this.file) await this.write(this.file, false); else { this.mode = "name"; this.input = ""; this.exitAfterWrite = false; }
         break;
@@ -206,6 +234,8 @@ export class Nano implements ScreenApp {
         if (this.modified) this.mode = "save?"; else this.done = true;
         break;
       case "C-w": case "F6": this.mode = "search"; this.input = ""; break;
+      case "M-\\": this.row = 0; this.col = 0; break;
+      case "M-/": this.row = this.lines.length - 1; this.col = this.lines[this.row].length; break;
       case "M-w": case "F16": this.find(this.lastSearch); break;
       case "M-q": this.find(this.lastSearch, true); break;
       case "M-g": case "C-_": this.mode = "goto"; this.input = ""; break;
@@ -244,7 +274,8 @@ export class Nano implements ScreenApp {
   private async submit(mode: string) {
     if (mode === "name") {
       if (!this.input) { this.status = "Cancelled"; this.exitAfterWrite = false; return; }
-      await this.write(this.input, this.exitAfterWrite);
+      if (this.file && !this.diffOk && this.input !== this.file) { this.mode = "diff?"; return; }
+      await this.afterDiff();
     } else if (mode === "search") {
       const what = this.input || this.lastSearch;
       if (!what) { this.status = "Cancelled"; return; }
@@ -258,12 +289,19 @@ export class Nano implements ScreenApp {
     }
   }
 
+  /** nano 7.2 do_writeout(): a different name that already exists asks «File "x" exists; OVERWRITE?» */
+  private async afterDiff() {
+    const differs = this.file === "" || this.input !== this.file;
+    if (differs && this.exists && (await this.exists(this.input))) { this.mode = "over?"; return; }
+    await this.write(this.input, this.exitAfterWrite);
+  }
+
   private async write(file: string, exit: boolean) {
     const err = await this.save(file, this.text);
     if (err) { this.status = `Error writing ${file}: ${err}`; this.exitAfterWrite = false; return; }
     this.file = file;
     this.modified = false;
-    const n = this.text ? this.lines.length : 0;
+    const n = (this.text.match(/\n/g) ?? []).length;
     this.status = `Wrote ${n} line${n === 1 ? "" : "s"}`;
     if (exit) this.done = true;
   }

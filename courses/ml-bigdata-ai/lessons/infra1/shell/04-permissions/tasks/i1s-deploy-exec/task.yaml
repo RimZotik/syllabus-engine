@@ -1,0 +1,36 @@
+id: i1s-deploy-exec
+title: Скрипт выкладки не запускается
+sandbox: shell
+difficulty: 1
+concepts: [chmod, права доступа, бит x]
+statement: |
+  **Разрешите владельцу запускать `deploy.sh` и запустите его по пути `./deploy.sh`.**
+
+  Остальные права файла не меняйте: группа по-прежнему читает и меняет, остальные только читают. Скрипт при запуске пишет `deploy.log`.
+
+  Пример
+  ```text
+  было:   -rw-rw-r-- 1 student student  deploy.sh
+  стало:  -rwxrw-r-- 1 student student  deploy.sh
+          deploy.log: выкладка готова
+  ```
+
+  Ограничения: `bash deploy.sh` не годится — нужен запуск по пути.
+setup:
+  cwd: /home/student
+  files:
+    deploy.sh: {content: "#!/bin/bash\necho 'выкладка готова' > deploy.log\n", mode: "664"}
+    README.md: "# Сайт магазина\n"
+solution:
+  - chmod u+x deploy.sh
+  - ./deploy.sh
+tests:
+  checks:
+    - {name: "deploy.sh — rwxrw-r--", fs_mode: {path: deploy.sh, mode: "764"}}
+    - {name: Скрипт запущен, fs_content: {path: deploy.log, equals: "выкладка готова\n"}}
+    - {name: "Запуск по пути, а не через bash", forbid_commands: [bash, sh], hidden: true}
+hints:
+  - level: 1
+    text: "Строка `ls -l deploy.sh` покажет, чего не хватает: в тройке владельца нет одной буквы."
+  - level: 2
+    text: "Символьная запись `chmod` меняет только названные биты: кому (`u`), что сделать (`+`) и какой бит. Восьмеричная задаёт все девять сразу — тогда считайте цифры по тройкам."

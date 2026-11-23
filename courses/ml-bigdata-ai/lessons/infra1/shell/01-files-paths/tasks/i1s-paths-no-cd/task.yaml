@@ -1,0 +1,85 @@
+id: i1s-paths-no-cd
+title: Работа из чужой папки
+sandbox: shell
+difficulty: 2
+concepts: [абсолютный путь, относительный путь, .., ~, cp, mv, rm -r]
+statement: |
+  **Не меняя текущую папку (`/home/student/shop/src`), обновите настройки магазина и уберите старые журналы.**
+
+  1. Сохраните копию `shop/config/settings.ini` в той же папке под именем `settings.ini.bak`.
+  2. Перенесите новые настройки `~/downloads/settings-new.ini` на место `shop/config/settings.ini` — под именем `settings.ini`.
+  3. Удалите папку `shop/logs/old` со всем содержимым; остальные журналы оставьте.
+
+  Пути можно писать и относительные, и абсолютные.
+
+  Пример
+
+  Было:
+  ```text
+  /home/student/
+  ├── downloads/
+  │   └── settings-new.ini
+  └── shop/
+      ├── config/
+      │   └── settings.ini
+      ├── logs/
+      │   ├── app.log
+      │   └── old/
+      │       ├── 2026-09.log
+      │       └── 2026-10.log
+      └── src/          ← вы здесь
+          └── app.sh
+  ```
+
+  Стало:
+  ```text
+  /home/student/
+  ├── downloads/
+  └── shop/
+      ├── config/
+      │   ├── settings.ini       (новые настройки)
+      │   └── settings.ini.bak   (старые настройки)
+      ├── logs/
+      │   └── app.log
+      └── src/
+          └── app.sh
+  ```
+
+  Ограничения: без `cd`.
+setup:
+  cwd: /home/student/shop/src
+  files:
+    /home/student/shop/src/app.sh: "#!/bin/bash\necho shop\n"
+    /home/student/shop/config/settings.ini: "port=8000\ncurrency=RUB\n"
+    /home/student/downloads/settings-new.ini: "port=8080\ncurrency=RUB\n"
+    /home/student/shop/logs/app.log: "09:00 start\n"
+    /home/student/shop/logs/old/2026-09.log: "09:00 start\n"
+    /home/student/shop/logs/old/2026-10.log: "09:00 start\n"
+solution:
+  - cp ../config/settings.ini ../config/settings.ini.bak
+  - mv ~/downloads/settings-new.ini ../config/settings.ini
+  - rm -r ../logs/old
+tests:
+  checks:
+    - name: В settings.ini.bak — старые настройки
+      fs_content: {path: /home/student/shop/config/settings.ini.bak, equals: "port=8000\ncurrency=RUB\n"}
+    - name: В settings.ini — новые настройки
+      fs_content: {path: /home/student/shop/config/settings.ini, equals: "port=8080\ncurrency=RUB\n"}
+    - name: Новые настройки перенесены, а не скопированы
+      fs_absent: /home/student/downloads/settings-new.ini
+    - name: Старых журналов нет
+      fs_absent: /home/student/shop/logs/old
+    - name: Текущий журнал на месте
+      fs_content: {path: /home/student/shop/logs/app.log, equals: "09:00 start\n"}
+    - name: Лишних файлов не появилось
+      run: ls /home/student/shop/src /home/student/shop/config
+      stdout: "/home/student/shop/config:\nsettings.ini\nsettings.ini.bak\n\n/home/student/shop/src:\napp.sh\n"
+    - name: Без cd
+      forbid_commands: [cd, pushd]
+hints:
+  - level: 1
+    text: "`pwd` покажет, где вы. Относительный путь отсчитывается от этой папки: на сколько уровней нужно подняться, чтобы попасть в `shop`?"
+  - level: 2
+    text: "`~` — короткая запись домашней папки, её можно писать в начале любого пути."
+  - level: 3
+    text: "Перед `rm -r` выполните `ls` с тем же путём."

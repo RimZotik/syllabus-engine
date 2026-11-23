@@ -1,0 +1,281 @@
+title: Проверка темы
+pass: 0.85
+minutes: 25
+questions:
+- id: delete-not-read
+  type: single
+  q: |
+    Строки `ls -l`:
+    ```
+    drwxrwxr-x 2 anna team 4096 Nov 20 09:00 reports
+    -rw------- 1 anna anna  512 Nov 20 09:00 reports/salary.csv
+    ```
+    bob состоит в группе team. Что bob может сделать с `salary.csv`?
+  options:
+  - 'Удалить, но не прочитать'
+  - 'Ни прочитать, ни удалить: у файла всё закрыто для всех, кроме anna'
+  - 'Прочитать, но не удалить: группе team открыта папка'
+  - 'Прочитать и удалить: у группы папки есть все три права'
+  answer: 0
+  explain: 'Читать решают права файла: bob не владелец и не в группе anna, ему достаётся тройка остальных `---`. Удаление вычёркивает имя из списка папки, а к папке у bob как у участника team есть w и x. Права папки на чтение содержимого файлов не действуют.'
+- id: owner-gets-owner-triple
+  type: single
+  q: |
+    Строка `ls -l`:
+    ```
+    -r--rw-rw- 1 student team 120 Nov 20 09:00 notes.txt
+    ```
+    student состоит в группе team. Получится ли у него `echo 'купить хлеб' >> notes.txt`?
+  options:
+  - 'Нет: student — владелец, и проверяется только тройка r--'
+  - 'Да: student в группе team, а группе запись разрешена'
+  - 'Да: свой файл владелец может менять при любых битах'
+  - 'Нет: дописывать в файл с битами r-- может только root'
+  answer: 0
+  traps: [2]
+  explain: 'Класс выбирается один раз и первым подходящим: student — владелец, значит, смотрится тройка владельца, а в ней нет w. Что группе можно больше, не важно. Владелец может вернуть себе запись командой `chmod u+w`, но пока не вернул — писать нельзя. Ответ «только root» путает: root обходит проверки, но здесь это неверно — участник team, не владеющий файлом, дописать бы смог.'
+- id: dir-read-no-exec
+  type: multi
+  q: |
+    Папка и файл в ней:
+    ```
+    drwxr--r-- 2 anna anna 4096 Nov 20 09:00 /srv/archive
+    -rw-r--r-- 1 anna anna  900 Nov 20 09:00 /srv/archive/2025.csv
+    ```
+    Вы — student, в группу anna не входите. Что у вас получится?
+  options:
+  - 'Узнать через `ls /srv/archive`, что в папке есть файл с именем `2025.csv`'
+  - 'Прочитать таблицу командой `cat /srv/archive/2025.csv`'
+  - 'Перейти в папку командой `cd /srv/archive`'
+  - 'Скопировать таблицу к себе: `cp /srv/archive/2025.csv ~`'
+  - 'Создать в папке файл командой `touch /srv/archive/new.csv`'
+  - 'Увидеть строку самой папки через `ls -ld /srv/archive`'
+  answer: [0, 5]
+  explain: 'Вам достаётся тройка остальных `r--`: r у папки даёт прочитать список имён, а без x нельзя ни войти, ни обратиться к файлу внутри по имени — поэтому не работают `cat`, `cp` и `cd`, хотя у самого файла r для всех есть. Создать файл мешает отсутствие w и x. `ls -ld` читает строку папки из её родителя `/srv`, а туда вход открыт.'
+- id: chmod-exact
+  type: single
+  q: 'Скрипт `backup.sh` после чьей-то «починки» стал `-rwxrwxrwx`. Нужно: владелец — всё, группа — читать и запускать, остальные — ничего. Какая команда даёт ровно это?'
+  options:
+  - '`chmod 750 backup.sh`'
+  - '`chmod o-rwx backup.sh`'
+  - '`chmod go-w backup.sh`'
+  - '`chmod 740 backup.sh`'
+  answer: 0
+  explain: '750 — это `rwx` (4 + 2 + 1), `r-x` (4 + 1) и `---`. `o-rwx` закроет остальных, но оставит группе запись: `rwxrwx---`. `go-w` снимет только w — остальные смогут читать и запускать: `rwxr-xr-x`. 740 не даст группе запускать скрипт.'
+- id: symbolic-to-octal
+  type: single
+  q: 'У `report.csv` права `-rw-r-----`. Выполнили `chmod g+w,o+r report.csv`. Как теперь записать права одним восьмеричным числом?'
+  options:
+  - '664'
+  - '674'
+  - '640'
+  - '662'
+  answer: 0
+  explain: 'Символьная запись меняет только названные биты: группе добавили w — `rw-`, остальным r — `r--`, владелец не тронут: `rw-rw-r--`. По тройкам: 4 + 2 = 6, 4 + 2 = 6, 4. 640 — прежние права; 674 получится, если добавить группе x; 662 — если перепутать веса r и w.'
+- id: process-runs-as-user
+  type: single
+  q: 'Вы запустили свою программу `python3 sync.py`. Она пытается дописать строку в `/var/log/sync.log` с правами `-rw-r--r-- root root` и падает с `PermissionError`. Почему?'
+  options:
+  - 'Процесс работает от вашего имени, а менять файл может только его владелец root'
+  - 'Python не может писать в папку `/var/log` ни от чьего имени'
+  - 'У `sync.py` нет бита x, поэтому программа не может ничего записать'
+  - 'Владелец журнала — root, а программы запускает ОС, поэтому права у процесса минимальные'
+  answer: 0
+  explain: 'Файл открывает процесс, и ОС сверяет с правами файла пользователя, от имени которого процесс работает, — вас. Вы попадаете в класс остальных: `r--`. Бит x у `sync.py` тут ни при чём: его читает `python3`. Процесс, запущенный от root (например, через `sudo`), записать бы смог.'
+- id: x-is-not-protection
+  type: single
+  q: |
+    Файл в общей папке:
+    ```
+    -rw-r--r-- 1 anna anna 300 Nov 20 09:00 cleanup.sh
+    ```
+    Вы — student. Что ответят `./cleanup.sh` и `bash cleanup.sh`?
+  options:
+  - '`./cleanup.sh` — Permission denied, `bash cleanup.sh` выполнит скрипт'
+  - 'Обе выполнят скрипт: права r достаточно для запуска'
+  - 'Обе ответят Permission denied: ни у кого нет бита x'
+  - '`./cleanup.sh` выполнит скрипт от имени anna, `bash cleanup.sh` — от вашего'
+  answer: 0
+  explain: 'Запуск по пути требует x у вашего класса (остальных), а его нет. `bash cleanup.sh` запускает программу `bash`, и ей нужно только прочитать файл — r у остальных есть. Процесс в обоих случаях работает от вашего имени: владелец файла не передаёт процессу своих прав.'
+- id: tmp-sticky
+  type: single
+  q: |
+    ```
+    drwxrwxrwt 12 root root 4096 Nov 20 09:00 /tmp
+    -rw-r--r--  1 anna anna 2048 Nov 20 09:00 /tmp/cache.db
+    ```
+    Что вы, student, можете сделать с `/tmp/cache.db`?
+  options:
+  - 'Прочитать, но не удалить'
+  - 'Удалить, но не прочитать: в /tmp пишут все'
+  - 'Прочитать и удалить: у папки w есть у всех'
+  - 'Ни прочитать, ни удалить: файл принадлежит anna'
+  answer: 0
+  explain: 'Чтение решают права файла: остальным `r--` — читать можно. Удаление решают права папки: w у всех есть, но буква `t` (sticky-бит) разрешает удалять в `/tmp` только свои файлы.'
+- id: chown-not-owner
+  type: single
+  q: 'anna — владелец файла `report.csv` (`-rw-rw---- anna team`). Она хочет отдать файл bob и без `sudo` набирает `chown bob report.csv`. Что произойдёт?'
+  options:
+  - 'Отказ `Operation not permitted`: владельца меняет только root'
+  - 'Владельцем станет bob: свой файл владелец отдаёт кому хочет'
+  - 'Владельцем станет bob, а группа сменится на группу bob'
+  - '`chown` спросит пароль bob и после него сменит владельца'
+  answer: 0
+  explain: 'Сменить владельца может только root, даже если файл ваш: иначе любой мог бы выдать свой файл за чужой. `chown bob` без двоеточия группу и не меняет. Пароль спрашивает `sudo`, а не `chown`, и это пароль того, кто набирает команду.'
+- id: code-write-perm-to-octal
+  type: code
+  q: |
+    **Напишите `to_octal(perms)`: по девяти символам прав из `ls -l` вернуть их восьмеричную запись строкой из трёх цифр.**
+    `perms` — строка вида `rwxr-x---`: три тройки владельца, группы и остальных, на месте запрещённого права — `-`.
+    ```input
+    to_octal("rwxr-x---")
+    to_octal("rw-r--r--")
+    ```
+    ```output
+    750
+    644
+    ```
+  starter: |
+    def to_octal(perms):
+        pass
+
+
+    print(to_octal("rwxr-x---"))
+  solution: |
+    def to_octal(perms):
+        digits = ""
+        for i in range(0, 9, 3):
+            triple = perms[i:i + 3]
+            value = 0
+            if triple[0] == "r":
+                value += 4
+            if triple[1] == "w":
+                value += 2
+            if triple[2] == "x":
+                value += 1
+            digits += str(value)
+        return digits
+
+
+    print(to_octal("rwxr-x---"))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        for perms, want in [("rwxr-x---", "750"), ("rw-r--r--", "644")]:
+            got = to_octal(perms)
+            assert got == want, f"to_octal({perms!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Крайние случаи
+      code: |
+        for perms, want in [("---------", "000"), ("rwxrwxrwx", "777"), ("--x--x--x", "111"), ("-w--w--w-", "222")]:
+            got = to_octal(perms)
+            assert got == want, f"to_octal({perms!r}) должна вернуть {want!r}, а вернула {got!r}"
+    - name: Тройки не путаются местами
+      code: |
+        for perms, want in [("rw-------", "600"), ("------rwx", "007"), ("r----x-w-", "412"), ("-wxr--r-x", "345")]:
+            got = to_octal(perms)
+            assert got == want, f"to_octal({perms!r}) должна вернуть {want!r}, а вернула {got!r}"
+  explain: 'Каждая тройка — одна цифра: r весит 4, w — 2, x — 1, и цифра — сумма разрешённого. Важно смотреть на позицию в тройке, а не на любую букву: в `-wx` на первом месте прочерк, значит, 2 + 1 = 3. Нули нужно сохранить — поэтому ответ строка, а не число: `007` как `int` стал бы `7`.'
+- id: code-fix-allowed
+  type: code
+  q: |
+    **Исправьте `allowed(line, user, groups, action)`: по строке `ls -l` решить, разрешено ли пользователю действие `action` (`"r"`, `"w"` или `"x"`).**
+    `groups` — список групп пользователя. Правила — как в Linux: процесс попадает ровно в один класс — владелец, иначе участник группы файла, иначе остальные — и проверяется только его тройка. Пользователю `root` разрешены `r` и `w` всегда, а `x` — если бит x есть хотя бы у одного класса. Сейчас функция ошибается в двух местах.
+    ```input
+    allowed("----r--r-- 1 student student 2 Nov 20 09:00 memo.txt", "student", ["student"], "r")
+    allowed("-rw-r----- 1 anna team 1840 Nov 20 09:00 sales.csv", "bob", ["bob", "team"], "r")
+    allowed("-rw------- 1 anna anna 512 Nov 20 09:00 salary.csv", "root", ["root"], "r")
+    ```
+    ```output
+    False
+    True
+    True
+    ```
+  starter: |
+    def allowed(line, user, groups, action):
+        fields = line.split()
+        perms, owner, group = fields[0], fields[2], fields[3]
+        pos = "rwx".index(action)
+        owner_ok = user == owner and perms[1 + pos] == action
+        group_ok = group in groups and perms[4 + pos] == action
+        other_ok = perms[7 + pos] == action
+        return owner_ok or group_ok or other_ok
+
+
+    print(allowed("----r--r-- 1 student student 2 Nov 20 09:00 memo.txt", "student", ["student"], "r"))
+  solution: |
+    def allowed(line, user, groups, action):
+        fields = line.split()
+        perms, owner, group = fields[0], fields[2], fields[3]
+        pos = "rwx".index(action)
+        if user == "root":
+            if action == "x":
+                return "x" in (perms[3], perms[6], perms[9])
+            return True
+        if user == owner:
+            start = 1
+        elif group in groups:
+            start = 4
+        else:
+            start = 7
+        return perms[start + pos] == action
+
+
+    print(allowed("----r--r-- 1 student student 2 Nov 20 09:00 memo.txt", "student", ["student"], "r"))
+  tests:
+    asserts:
+    - name: Примеры из условия
+      code: |
+        cases = [
+            (("----r--r-- 1 student student 2 Nov 20 09:00 memo.txt", "student", ["student"], "r"), False),
+            (("-rw-r----- 1 anna team 1840 Nov 20 09:00 sales.csv", "bob", ["bob", "team"], "r"), True),
+            (("-rw------- 1 anna anna 512 Nov 20 09:00 salary.csv", "root", ["root"], "r"), True),
+        ]
+        for args, want in cases:
+            got = allowed(*args)
+            assert got is want, f"allowed{args[1:]} для строки {args[0]!r}: нужно {want}, а вернулось {got!r}"
+    - name: Владельцу — только тройка владельца
+      code: |
+        cases = [
+            (("-r--rw-rw- 1 student team 120 Nov 20 09:00 notes.txt", "student", ["student", "team"], "w"), False),
+            (("-rw-r----- 1 anna team 1840 Nov 20 09:00 sales.csv", "anna", ["anna", "team"], "w"), True),
+            (("-rwx------ 1 anna anna 300 Nov 20 09:00 run.sh", "anna", ["anna"], "x"), True),
+        ]
+        for args, want in cases:
+            got = allowed(*args)
+            assert got is want, f"allowed{args[1:]} для строки {args[0]!r}: нужно {want}, а вернулось {got!r}"
+    - name: Группе — только тройка группы
+      code: |
+        cases = [
+            (("-rw----rw- 1 anna team 50 Nov 20 09:00 a.txt", "bob", ["bob", "team"], "r"), False),
+            (("-rw-r----- 1 anna team 1840 Nov 20 09:00 sales.csv", "bob", ["bob", "team"], "w"), False),
+            (("-rw-r----- 1 anna team 1840 Nov 20 09:00 sales.csv", "student", ["student", "sudo"], "r"), False),
+            (("-rw-r--r-- 1 anna team 1840 Nov 20 09:00 sales.csv", "student", ["student", "sudo"], "r"), True),
+        ]
+        for args, want in cases:
+            got = allowed(*args)
+            assert got is want, f"allowed{args[1:]} для строки {args[0]!r}: нужно {want}, а вернулось {got!r}"
+    - name: root
+      code: |
+        cases = [
+            (("---------- 1 anna anna 10 Nov 20 09:00 secret", "root", ["root"], "w"), True),
+            (("-rw------- 1 anna anna 10 Nov 20 09:00 tool", "root", ["root"], "x"), False),
+            (("-rw-r--r-x 1 anna anna 10 Nov 20 09:00 tool", "root", ["root"], "x"), True),
+            (("drwx------ 2 anna anna 4096 Nov 20 09:00 private", "root", ["root"], "x"), True),
+        ]
+        for args, want in cases:
+            got = allowed(*args)
+            assert got is want, f"allowed{args[1:]} для строки {args[0]!r}: нужно {want}, а вернулось {got!r}"
+  explain: 'Первая ошибка — «или» по всем классам: так ОС ищет, где разрешений больше, а она берёт первый подходящий класс и смотрит только его тройку. Класс выбирается цепочкой `if user == owner … elif group in groups … else`. Вторая — нет правила для root: ему открыты чтение и запись, а выполнение — только если x есть хоть в одной из трёх троек.'
+- id: open-chmod-777
+  type: open
+  q: 'Коллега на сервере команды получил `Permission denied` при запуске `/srv/app/deploy.sh` и «починил» так: `sudo chmod -R 777 /srv/app`. Скрипт заработал. Чем опасно такое решение и как надо было поступить?'
+  rubric:
+  - 'Опасность: теперь любой пользователь и любая программа на сервере может менять и подменять все файлы приложения, в том числе сам скрипт, который потом запустят другие'
+  - 'Надо было понять, кому и какого права не хватает (судя по ошибке запуска — бита x у нужного класса), и добавить ровно его, например `chmod u+x` или `g+x` для скрипта, — принцип наименьших привилегий'
+  wrong_answers:
+  - Ничем не опасно, раз скрипт заработал, — ошибки больше нет
+  - Опасно только тем, что файлы станут исполняемыми и будут медленнее открываться
+  - Нужно было просто всегда запускать скрипт через sudo
+  followups:
+  - Почему для запуска `./deploy.sh` хватило бы одного бита x, а не всех девяти?

@@ -1,0 +1,68 @@
+id: i1s-ai-rm-logs
+title: "ИИ написал команду: удалить журналы"
+sandbox: shell
+difficulty: 2
+concepts: [шаблоны, rm, echo, скрытые файлы]
+statement: |
+  **ИИ-помощник предложил очистить папку `logs` от журналов командой `rm * .log`. Найдите в ней ошибку, проверьте исправленный шаблон через `echo` и удалите только файлы, имя которых оканчивается на `.log`.**
+
+  Текущая папка — `/home/student/server/logs`. Перед удалением выведите через `echo`, во что раскрывается ваш шаблон. Архивы `.log.1`, `.log.gz`, настройки и скрытые файлы остаются.
+
+  Пример
+
+  Было:
+  ```text
+  logs/
+  ├── .session.log
+  ├── app.log
+  ├── app.log.1
+  ├── app.log.2.gz
+  ├── db.log
+  ├── error.log
+  └── logrotate.conf
+  ```
+
+  Стало:
+  ```text
+  logs/
+  ├── .session.log
+  ├── app.log.1
+  ├── app.log.2.gz
+  └── logrotate.conf
+  ```
+
+  Ограничения: команду `rm * .log` в исходном виде не выполняйте — если всё-таки выполнили, нажмите «Сбросить».
+setup:
+  cwd: /home/student/server/logs
+  files:
+    app.log: "09:00 INFO start\n"
+    app.log.1: "08:00 INFO start\n"
+    app.log.2.gz: "gz\n"
+    db.log: "09:00 db ok\n"
+    error.log: "09:01 ERROR disk full\n"
+    logrotate.conf: "rotate 7\ncompress\n"
+    .session.log: "session 42\n"
+solution:
+  - echo *.log
+  - rm *.log
+tests:
+  checks:
+    - name: Журналы .log удалены
+      fs_absent: app.log
+    - name: db.log и error.log тоже удалены
+      run: ls db.log error.log
+      exit_code: 2
+    - name: Архивы, настройки и скрытый файл на месте
+      run: ls -A
+      stdout: ".session.log\napp.log.1\napp.log.2.gz\nlogrotate.conf\n"
+    - name: Настройки не тронуты
+      fs_content: {path: logrotate.conf, equals: "rotate 7\ncompress\n"}
+    - name: Шаблон проверен через echo
+      command_used: [echo]
+    - name: Удаление — командой rm
+      command_used: [rm]
+hints:
+  - level: 1
+    text: "Подставьте вместо `rm` команду `echo` и посмотрите, что получила бы `rm` от исходной строки. Сколько в ней слов?"
+  - level: 2
+    text: "`*` выбирает любые символы, в том числе ни одного. Шаблон должен описывать имя целиком — от начала до `.log` в самом конце."

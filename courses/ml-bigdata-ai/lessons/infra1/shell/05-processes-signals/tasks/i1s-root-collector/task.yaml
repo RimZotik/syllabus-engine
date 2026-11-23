@@ -1,0 +1,36 @@
+id: i1s-root-collector
+title: Журнал растёт на глазах
+sandbox: shell
+difficulty: 3
+concepts: [kill, sudo, владелец процесса]
+statement: |
+  **Процесс `collector` раз в секунду дописывает строку в `/var/log/collector.log` и забивает диск. Остановите его вежливым сигналом.**
+
+  Процесс запущен от имени `root`. Пароль для `sudo` — `forge`. Остальные процессы не трогайте.
+
+  Пример
+  ```text
+  до:     collector (root) и backup-agent (root) работают
+  после:  collector нет, backup-agent работает
+  ```
+
+  Ограничения: сигнал KILL не годится — collector должен успеть закрыть журнал.
+setup:
+  cwd: /home/student
+  processes:
+    - {name: backup-agent, user: root, behavior: idle, cpu: 0.2}
+    - {name: collector, user: root, behavior: logger, file: /var/log/collector.log, line: "{time} collected 512 metrics"}
+solution:
+  - ps aux
+  - {cmd: "sudo kill 3002", input: ["forge"]}
+tests:
+  checks:
+    - {name: collector остановлен, process_absent: collector}
+    - {name: collector получил TERM, signal_sent: {to: collector, signal: TERM}}
+    - {name: backup-agent работает, process_alive: backup-agent}
+    - {name: Чужой процесс — через sudo, command_used: sudo, hidden: true}
+hints:
+  - level: 1
+    text: "Столбец `USER` в `ps aux` говорит, от чьего имени работает процесс. Что ответит `kill`, если процесс не ваш?"
+  - level: 2
+    text: "Сигнал чужому процессу может послать только root — значит, нужна одна команда от его имени."

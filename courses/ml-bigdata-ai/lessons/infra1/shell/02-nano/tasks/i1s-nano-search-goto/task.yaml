@@ -1,0 +1,128 @@
+id: i1s-nano-search-goto
+title: Две опечатки в длинном конфиге
+sandbox: shell
+difficulty: 2
+concepts: [nano, поиск, переход к строке]
+statement: |
+  **Сервис заказов не запускается и пишет:**
+  ```text
+  orders.conf: line 31: unknown key 'retires'
+  orders.conf: unknown key 'timout'
+  ```
+  **Исправьте обе опечатки в `orders.conf` в nano: `retires` → `retries`, `timout` → `timeout`.**
+
+  В файле 40 строк. Значения и остальные строки не меняются.
+
+  Пример
+
+  Было (фрагменты `orders.conf`):
+  ```text
+  timout=30
+  ...
+  retires=3
+  ```
+
+  Стало:
+  ```text
+  timeout=30
+  ...
+  retries=3
+  ```
+setup:
+  cwd: /home/student
+  files:
+    orders.conf: |
+      # настройки сервиса заказов
+      # изменено: 2026-11-18
+
+      [service]
+      name=orders
+      host=0.0.0.0
+      port=8080
+      workers=4
+
+      [database]
+      host=db.local
+      port=5432
+      name=orders
+      user=orders_app
+      pool_size=10
+      connect_timeout=5
+      timout=30
+
+      [cache]
+      enabled=true
+      ttl=600
+      max_items=5000
+
+      [queue]
+      url=amqp://queue.local
+      prefetch=20
+
+      [retry]
+      # повторы при ошибке сети
+      enabled=true
+      retires=3
+      backoff=2
+
+      [log]
+      level=info
+      path=/var/log/orders.log
+      rotate=daily
+      keep=14
+      format=json
+solution:
+  - cmd: nano orders.conf
+    keys: [M-g, "3", "1", Enter, Delete, Delete, Delete, Delete, Delete, Delete, Delete, r, e, t, r, i, e, s, F6, t, i, m, o, u, t, Enter, Delete, Delete, Delete, Delete, Delete, Delete, t, i, m, e, o, u, t, C-x, y, Enter]
+tests:
+  checks:
+    - name: Обе опечатки исправлены, остальное не тронуто
+      fs_content:
+        path: orders.conf
+        equals: |
+          # настройки сервиса заказов
+          # изменено: 2026-11-18
+
+          [service]
+          name=orders
+          host=0.0.0.0
+          port=8080
+          workers=4
+
+          [database]
+          host=db.local
+          port=5432
+          name=orders
+          user=orders_app
+          pool_size=10
+          connect_timeout=5
+          timeout=30
+
+          [cache]
+          enabled=true
+          ttl=600
+          max_items=5000
+
+          [queue]
+          url=amqp://queue.local
+          prefetch=20
+
+          [retry]
+          # повторы при ошибке сети
+          enabled=true
+          retries=3
+          backoff=2
+
+          [log]
+          level=info
+          path=/var/log/orders.log
+          rotate=daily
+          keep=14
+          format=json
+    - name: Правка в nano
+      command_used: [nano]
+hints:
+  - level: 1
+    text: "Листать 40 строк не нужно: у nano есть переход к строке по номеру и поиск по тексту — найдите их в подсказках внизу экрана."
+  - level: 2
+    text: "В тренажёре поиск открывает клавиша F6 (Ctrl+W забирает браузер). К строке по номеру ведёт Alt+G."

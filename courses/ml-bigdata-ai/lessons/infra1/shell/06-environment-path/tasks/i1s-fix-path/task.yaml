@@ -1,0 +1,42 @@
+id: i1s-fix-path
+title: ИИ сломал PATH
+sandbox: shell
+difficulty: 3
+concepts: [PATH, export, полный путь]
+statement: |
+  **ИИ-ассистент посоветовал добавить папку с утилитами командой ниже, и теперь `ls` отвечает `command not found`. Почините `PATH` в этом окне: должны находиться и системные команды, и утилиты из `~/tools/bin`.**
+
+  ```text
+  export PATH=$HOME/tools/bin
+  ```
+
+  Новое окно не открывайте — чините это. Утилиты из `~/tools/bin` должны побеждать одноимённые системные.
+
+  Пример
+  ```text
+  student@forge:~$ which ls
+  /usr/bin/ls
+  student@forge:~$ which report
+  /home/student/tools/bin/report
+  ```
+setup:
+  cwd: /home/student
+  env: {PATH: /home/student/tools/bin}
+  files:
+    tools/bin/report: {content: "#!/bin/bash\necho 'отчёт готов'\n", mode: "755"}
+solution:
+  - export PATH="$HOME/tools/bin:/usr/local/bin:/usr/bin:/bin"
+  - which ls
+tests:
+  checks:
+    - {name: ls находится, run: ls tools/bin, stdout: "report\n"}
+    - {name: nano находится, run: "which nano > /dev/null; echo $?", stdout: "0\n"}
+    - {name: report находится, run: which report, stdout: "/home/student/tools/bin/report\n"}
+    - name: tools/bin — первой
+      run: echo "$PATH" | cut -d ':' -f 1
+      stdout: "/home/student/tools/bin\n"
+hints:
+  - level: 1
+    text: "Что стоит на месте `$PATH`, если в нём уже только одна папка? Дописать к испорченному списку недостаточно."
+  - level: 2
+    text: "Программы никуда не делись: `/usr/bin/ls` по полному пути работает. Стандартный список папок поиска показан в теме, начинать новый — с `~/tools/bin`."

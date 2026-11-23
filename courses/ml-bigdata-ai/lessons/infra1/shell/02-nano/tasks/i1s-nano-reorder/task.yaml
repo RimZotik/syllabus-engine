@@ -1,0 +1,55 @@
+id: i1s-nano-reorder
+title: Переставить шаги выкладки
+sandbox: shell
+difficulty: 2
+concepts: [nano, вырезать и вставить]
+statement: |
+  **В `deploy.sh` проверка сайта стоит раньше, чем сайт выложен. Перенесите две строки проверки сразу после `systemctl start shop` — в nano.**
+
+  Строки переносятся целиком и в том же порядке, текст строк не меняется. Остальные строки остаются в прежнем порядке.
+
+  Пример
+
+  Было (`deploy.sh`):
+  ```text
+  #!/bin/bash
+  echo "проверка: сайт открывается"
+  curl -s localhost:8080 > /dev/null
+  systemctl stop shop
+  cp -r build/* /srv/shop/
+  systemctl start shop
+  echo "выкладка закончена"
+  ```
+
+  Стало:
+  ```text
+  #!/bin/bash
+  systemctl stop shop
+  cp -r build/* /srv/shop/
+  systemctl start shop
+  echo "проверка: сайт открывается"
+  curl -s localhost:8080 > /dev/null
+  echo "выкладка закончена"
+  ```
+
+  Скрипт запускать не нужно.
+setup:
+  cwd: /home/student
+  files:
+    deploy.sh: "#!/bin/bash\necho \"проверка: сайт открывается\"\ncurl -s localhost:8080 > /dev/null\nsystemctl stop shop\ncp -r build/* /srv/shop/\nsystemctl start shop\necho \"выкладка закончена\"\n"
+solution:
+  - cmd: nano deploy.sh
+    keys: [Down, C-k, C-k, Down, Down, Down, C-u, C-x, y, Enter]
+tests:
+  checks:
+    - name: Строки проверки — после запуска сервиса, остальное по порядку
+      fs_content: {path: deploy.sh, equals: "#!/bin/bash\nsystemctl stop shop\ncp -r build/* /srv/shop/\nsystemctl start shop\necho \"проверка: сайт открывается\"\ncurl -s localhost:8080 > /dev/null\necho \"выкладка закончена\"\n"}
+    - name: Правка в nano
+      command_used: [nano]
+hints:
+  - level: 1
+    text: "Строку целиком вырезает одно сочетание клавиш, а вставляет другое — посмотрите в подсказках внизу экрана nano."
+  - level: 2
+    text: "Чтобы перенести две строки за раз, вырезайте их подряд, ничего не нажимая между вырезаниями."
+  - level: 3
+    text: "Вставка идёт над строкой, где стоит курсор. Куда его поставить, чтобы строки оказались сразу после запуска сервиса?"
