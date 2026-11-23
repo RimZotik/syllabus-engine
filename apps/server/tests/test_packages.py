@@ -373,3 +373,16 @@ def test_active_exams_lists_a_started_section_test(content):
     state.update(done=False, order=[{"id": "old", "perm": [0, 1]}])  # saved for an older version of the test
     c.put("/api/quiz-state/draw1.line", json={"state": state}, headers=h)
     assert c.get("/api/exams/active").json() == []
+
+
+def test_validator_checks_function_task_schema_and_statement_examples(tmp_path, monkeypatch):
+    b = load_build(monkeypatch, tmp_path)
+    sol = "def f(xs, k):\n    return len(xs) + k\n"
+    tests = {"function": "f", "calls": [{"args": [[1, 2], 1], "expect": 3}, {"args": [[], 0], "expect": 0, "hidden": True}]}
+    good = "Пример\n```call\nf([1, 2], 1)\n```\n```return\n3\n```\n"
+    assert b.calls_errors("t", tests, good, sol, "def f(xs, k):\n    return 0\n") == []
+    assert any("not one of the visible" in e for e in b.calls_errors("t", tests, good.replace("\n3\n", "\n4\n"), sol, None))
+    assert any("differ" in e for e in b.calls_errors("t", tests, "", sol, "def f(xs):\n    return 0\n"))
+    assert any("tests.function" in e for e in b.calls_errors("t", {"calls": tests["calls"]}, "", sol, None))
+    assert any("exactly one of expect" in e for e in b.calls_errors("t", {"function": "f", "calls": [{"args": [[], 1]}]}, "", sol, None))
+    assert any("args must be a list" in e for e in b.calls_errors("t", {"function": "f", "calls": [{"args": 5, "expect": 1}]}, "", sol, None))

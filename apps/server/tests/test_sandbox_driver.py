@@ -102,3 +102,87 @@ def test_each_run_starts_clean():
     gone = json.loads(d["run"]("import shop", "", "{}"))["error"]
     assert gone["type"] == "ModuleNotFoundError"
     assert json.loads(d["trace"]("print(open('sales.csv').read())", "", json.dumps(FILES)))["stdout"] == "a,1\nb,2\n\n"
+
+
+# ── function tasks: tests.calls ─────────────────────────────────────────────────────────────────
+FN = "def total(xs):\n    s = 0\n    for x in xs:\n        s += x\n        print('s =', s)\n    return s\nprint('demo', total([1]))\n"
+
+
+def calls(code: str, cases: list, **extra) -> dict:
+    return check(code, {"function": "total", "calls": cases, **extra})
+
+
+def test_calls_compare_the_return_value_and_keep_each_cases_print():
+    r = calls(FN, [{"args": [[1, 2]], "expect": 3}, {"args": [[5]], "expect": 6}])
+    ok, bad = r["results"]
+    assert ok["ok"] and ok["call"] == "total([1, 2])" and ok["expected"] == "3" and ok["got"] == "3"
+    assert ok["output"] == "s = 1\ns = 3\n"  # printed inside THIS call only
+    assert not bad["ok"] and bad["got"] == "5" and bad["output"] == "s = 5\n"
+    assert r["stdout"] == "s = 1\ndemo 1\n"  # top-level code ran, never part of the verdict
+
+
+def test_print_instead_of_return_gets_a_dedicated_hint():
+    r = calls("def total(xs):\n    print(sum(xs))\n", [{"args": [[1, 2]], "expect": 3}, {"args": [[]], "expect": 0, "hidden": True}])["results"]
+    assert r[0]["got"] == "None" and "напечатала «3»" in r[0]["message"] and "return" in r[0]["message"]
+    assert "call" not in r[1] and "output" not in r[1] and "None" in r[1]["message"]  # hidden: no data leaks
+    missing = calls("def total(xs):\n    if xs:\n        return 1\n", [{"args": [[]], "expect": 0}])["results"][0]
+    assert "на каждом пути" in missing["message"]
+
+
+def test_types_none_bool_float_and_list_vs_tuple():
+    r = calls("def total(xs):\n    return xs\n", [
+        {"args": ["450"], "expect": 450},
+        {"args": [True], "expect": 1},
+        {"args": [0.1 + 0.2], "expect": 0.3},
+        {"args_py": "((1, 2),)", "expect": [1, 2]},
+        {"args": [None], "expect": None},
+        {"args": [[3, 1, 2]], "expect": [1, 2, 3], "unordered": True},
+        {"args": [1.5], "expect": 2, "tol": 0.6},
+    ])["results"]
+    assert [x["ok"] for x in r] == [False, False, True, True, True, True, True]
+    assert r[0]["got_type"] == "строка" and "строку '450', а нужно число 450" in r[0]["message"]
+    strict = calls("def total(xs):\n    return xs\n", [{"args_py": "((1, 2),)", "expect": [1, 2]}], strict_types=True)["results"][0]
+    assert not strict["ok"]
+
+
+def test_fresh_namespace_and_deep_copied_args_per_case():
+    code = "seen = []\ndef total(xs):\n    seen.append(1)\n    xs.append(0)\n    return len(seen)\n"
+    r = calls(code, [{"args": [[1]], "expect": 1}, {"args": [[1]], "expect": 1}])["results"]
+    assert all(x["ok"] for x in r)  # globals don't leak from one case to the next
+    mut = calls(code, [{"args": [[1]], "expect": 1}], no_mutate=True)["results"][0]
+    assert not mut["ok"] and "был [1], стал [1, 0]" in mut["message"]
+    inplace = check("def total(xs):\n    xs.sort()\n", {"function": "total", "calls": [
+        {"args": [[2, 1]], "expect": None, "after": [[1, 2]]}, {"args": [[2, 1]], "expect": None, "after": [[2, 1]]}]})["results"]
+    assert [x["ok"] for x in inplace] == [True, False] and "должен стать [2, 1]" in inplace[1]["message"]
+
+
+def test_raises_errors_missing_function_wrong_arity_and_input():
+    code = "def total(xs):\n    if xs < 0:\n        raise ValueError('neg')\n    return 10 // xs\n"
+    r = calls(code, [{"args": [-1], "raises": "ValueError"}, {"args": [5], "raises": "ValueError"}, {"args": [0], "expect": 0}])["results"]
+    assert r[0]["ok"] and not r[1]["ok"] and "а функция вернула 2" in r[1]["message"]
+    assert r[2]["error"]["type"] == "ZeroDivisionError" and r[2]["error"]["line"] == 4 and "total(0)" in r[2]["message"]
+    typo = calls("def totl(xs):\n    return 1\n", [{"args": [[]], "expect": 0}])["results"][0]
+    assert "нет функции `total`" in typo["message"] and "`totl`" in typo["message"]
+    arity = calls("def total(xs, k):\n    return 1\n", [{"args": [[]], "expect": 0}])["results"][0]
+    assert "принимает 2 параметра (`xs`, `k`)" in arity["message"]
+    inp = calls("x = input()\ndef total(xs):\n    return 0\n", [{"args": [[]], "expect": 0}])["results"][0]
+    assert inp["error"]["type"] == "InputInFunctionTask" and "параметры функции" in inp["error"]["msg"]
+    crash = calls("1 / 0\ndef total(xs):\n    return 0\n", [{"args": [[]], "expect": 0}])["results"][0]
+    assert "Код вне функции упал в строке 1" in crash["message"]
+
+
+def test_calls_live_alongside_io_and_asserts_print_is_kept_per_assert():
+    r = check("def total(xs):\n    print('hi')\n    return sum(xs)\n", {"function": "total", "calls": [{"args": [[1]], "expect": 1}],
+                                                                   "asserts": [{"code": "assert total([2]) == 2"}]})["results"]
+    assert [x["ok"] for x in r] == [True, True] and r[1]["output"] == "hi\n"
+
+
+def test_trace_of_a_function_call_shows_only_the_call():
+    d = load_driver()
+    r = json.loads(d["trace"](FN, "", "{}", json.dumps({"function": "total", "text": "total([1, 2])"})))
+    assert r["call"] == "total([1, 2])" and r["returned"] == "3" and r["stdout"] == "s = 1\ns = 3\n"
+    assert all(s["frames"][0]["name"] == "total()" for s in r["steps"])  # the demo code at the top level is not traced
+    bad = json.loads(d["trace"](FN, "", "{}", json.dumps({"function": "total", "text": "__import__('os')"})))
+    assert bad["steps"] == [] and "Можно только вызов total" in bad["notice"]
+    none = json.loads(d["trace"]("x = 1\n", "", "{}", json.dumps({"function": "total", "text": "total([1])"})))
+    assert "нет функции" in none["notice"]

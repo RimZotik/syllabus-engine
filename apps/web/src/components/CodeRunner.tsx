@@ -5,6 +5,8 @@ import { Compartment } from "@codemirror/state";
 import { editorExtensions } from "./editorSetup";
 import type { Task } from "../content/registry";
 import { checkPython, explainError, Timeout, warmUp, type CheckResult, type PyError, type TestResult } from "../sandbox/runner";
+import { callCases } from "../sandbox/calls";
+import { RichText } from "./RichText";
 
 export type Tests = Task["tests"];
 
@@ -17,15 +19,15 @@ export function ErrorBox({ e }: { e: PyError }) {
   );
 }
 
-export function Block({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="sb-io"><span>{label}</span><pre>{children}</pre></div>;
+export function Block({ label, note, children }: { label: string; note?: string; children: ReactNode }) {
+  return <div className="sb-io"><span>{label}{note && <em className="sb-io-note">{note}</em>}</span><pre>{children}</pre></div>;
 }
 
 /** The cases as the learner sees them before the first check: visible examples with their data, hidden ones by name only. */
 function caseList(tests: Tests): TestResult[] {
   const io = (tests.io ?? []).map((c, i) => ({ name: c.name ?? `Пример ${i + 1}`, ok: false, stdin: c.stdin, expected: c.stdout, hidden: c.hidden }));
   const as = (tests.asserts ?? []).map((c, i) => ({ name: c.name ?? `Проверка ${i + 1}`, ok: false }));
-  return [...io, ...as];
+  return [...callCases(tests), ...io, ...as];
 }
 
 /**
@@ -136,17 +138,29 @@ export function CodeRunner({ initial, tests, timeoutMs = 5000, results, stdout, 
             <div className="tab-body">
               <div className="tab-name">{cur.name}{cur.hidden ? " · скрытый" : ""}</div>
               {cur.hidden && !results && <div className="faint">Данные скрытого теста не показываются — он проверяет граничные случаи из условия.</div>}
-              {!cur.hidden && cur.stdin ? <Block label="Ввод">{cur.stdin}</Block> : null}
-              {!cur.hidden && cur.expected !== undefined && <Block label="Ожидалось">{cur.expected}</Block>}
-              {results && !cur.hidden && cur.got !== undefined && <Block label="Получено">{cur.got || <span className="faint">(программа ничего не вывела)</span>}</Block>}
+              {cur.call !== undefined ? (
+                // a function-task case: the call, what it must return, what it returned, what it printed
+                <>
+                  <Block label="Вызов">{cur.call}</Block>
+                  {cur.expected !== undefined && <Block label="Должна вернуть">{cur.expected}</Block>}
+                  {results && cur.got !== undefined && <Block label="Вернула" note={cur.got_type && `тип: ${cur.got_type}`}>{cur.got}</Block>}
+                </>
+              ) : (
+                <>
+                  {!cur.hidden && cur.stdin ? <Block label="Ввод">{cur.stdin}</Block> : null}
+                  {!cur.hidden && cur.expected !== undefined && <Block label="Ожидалось">{cur.expected}</Block>}
+                  {results && !cur.hidden && cur.got !== undefined && <Block label="Получено">{cur.got || <span className="faint">(программа ничего не вывела)</span>}</Block>}
+                </>
+              )}
+              {results && !cur.hidden && cur.output ? <Block label="Вывод" note="не влияет на проверку">{cur.output}</Block> : null}
               {results && cur.ok && cur.got === undefined && <div className="faint">Проверка пройдена.</div>}
               {results && !cur.ok && cur.hidden && !cur.error && <div className="faint">Скрытый тест не пройден: проверьте граничные случаи из условия.</div>}
               {!results && !cur.hidden && cur.stdin === undefined && cur.expected === undefined && <div className="faint">Эта проверка вызывает вашу функцию с разными данными. Что именно не так, будет видно после «Проверить».</div>}
-              {results && cur.message && <div className="explain">{cur.message}</div>}
+              {results && cur.message && <div className="explain"><RichText text={cur.message} /></div>}
               {results && cur.error && <ErrorBox e={cur.error} />}
             </div>
           )}
-          {results && stdout ? <Block label="Что напечатала программа">{stdout}</Block> : null}
+          {results && stdout ? <Block label={tests.calls?.length ? "Вывод кода вне функции" : "Что напечатала программа"} note={tests.calls?.length ? "не влияет на проверку" : undefined}>{stdout}</Block> : null}
         </div>
       )}
     </div>

@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, Footprints, Lightbulb, RotateCcw } from "lucide-react";
+import { CheckCircle2, Footprints, Lightbulb, Play, RotateCcw } from "lucide-react";
 import { TraceView } from "./TraceView";
 import { RichText } from "./RichText";
 import { CodeRunner } from "./CodeRunner";
 import { api } from "../api";
 import { content, type Task } from "../content/registry";
 import type { TestResult } from "../sandbox/runner";
+import { traceCalls } from "../sandbox/calls";
 
 // the terminal (xterm.js + the bash interpreter) loads only on pages with a shell task
 const ShellTaskView = lazy(() => import("../shell/ShellTask"));
@@ -56,6 +57,8 @@ function TaskView({ task, intro }: { task: Task; intro?: ReactNode }) {
   const hints = task.hints ?? [];
   // input for the step-by-step view: the task's own, else the first example's
   const traceStdin = task.stdin ?? task.tests.io?.[0]?.stdin ?? task.tests.stdin ?? "";
+  // a function task is watched call by call: the first visible case, another case or the learner's own call
+  const fn = task.tests.calls?.length ? task.tests.function ?? "" : null;
 
   return (
     <div className="ws-outer">
@@ -92,7 +95,31 @@ function TaskView({ task, intro }: { task: Task; intro?: ReactNode }) {
       </div>
     </div>
     {/* below the two columns, so the sticky statement never covers it */}
-    {traceCode !== null && <div className="ws-trace"><TraceView code={traceCode} stdin={traceStdin} files={task.tests.files} /></div>}
+    {traceCode !== null && (fn !== null
+      ? <div className="ws-trace"><CallTrace code={traceCode} fn={fn} task={task} /></div>
+      : <div className="ws-trace"><TraceView code={traceCode} stdin={traceStdin} files={task.tests.files} /></div>)}
     </div>
+  );
+}
+
+/** «По шагам» for a function task: pick a visible case or type a call of your own, then the steps of that call. */
+function CallTrace({ code, fn, task }: { code: string; fn: string; task: Task }) {
+  const cases = traceCalls(task.tests);
+  const [text, setText] = useState(cases[0]?.text ?? `${fn}()`);
+  const [draft, setDraft] = useState(text);
+  const pick = (t: string) => { setDraft(t); setText(t); };
+  return (
+    <>
+      <div className="trace-call">
+        <span className="eyebrow">Вызов</span>
+        {cases.map((c, i) => (
+          <button key={i} className={`tab${c.text === text ? " on" : ""}`} title={c.text} onClick={() => pick(c.text)}>Тест {i + 1}</button>
+        ))}
+        <input value={draft} spellCheck={false} aria-label="Свой вызов функции" onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") setText(draft); }} />
+        <button className="btn soft sm" onClick={() => setText(draft)} disabled={draft === text}><Play size={16} />Показать</button>
+      </div>
+      <TraceView code={code} files={task.tests.files} call={{ function: fn, text }} />
+    </>
   );
 }

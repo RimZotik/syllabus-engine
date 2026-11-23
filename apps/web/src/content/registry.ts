@@ -31,7 +31,16 @@ export type QuizData = { title?: string; pass?: number; minutes?: number; questi
 
 /** `files` — this case's own files on top of the task's; `files_out` — files the program must leave (name → text). */
 export type IoCase = { name?: string; stdin?: string; stdout: string; hidden?: boolean; files?: Record<string, string>; files_out?: Record<string, string> };
-export type TaskTests = { io?: IoCase[]; asserts?: AssertCase[]; stdin?: string; forbid?: string[]; files?: Record<string, string> };
+/** A function-task case: the check calls `tests.function` with `args` (or the Python literal `args_py`) and compares the return value. */
+export type CallCase = {
+  name?: string; args?: unknown[]; args_py?: string; kwargs?: Record<string, unknown>; expect?: unknown; expect_py?: string;
+  hidden?: boolean; tol?: number; unordered?: boolean; after?: unknown[]; raises?: string;
+};
+export type TaskTests = {
+  io?: IoCase[]; asserts?: AssertCase[]; stdin?: string; forbid?: string[]; files?: Record<string, string>;
+  /** function tasks: the function the learner writes and the calls that check it */
+  function?: string; calls?: CallCase[]; no_mutate?: boolean; tol?: number; strict_types?: boolean;
+};
 export type AssertCase = { name?: string; code: string; message?: string };
 export type Task = {
   id: string; title: string; sandbox: "python-browser"; difficulty?: number; concepts?: string[];

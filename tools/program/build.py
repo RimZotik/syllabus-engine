@@ -433,8 +433,10 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
             elif q["type"] == "code":
                 # a code question is graded by its tests: the reference solution passes them all, the starter does not
                 tests = q.get("tests") or {}
-                if not (tests.get("io") or tests.get("asserts")) or not isinstance(q.get("solution"), str):
-                    errors.append(f"{where}: code question needs tests (io or asserts) and a solution")
+                if not (tests.get("io") or tests.get("asserts") or tests.get("calls")) or not isinstance(q.get("solution"), str):
+                    errors.append(f"{where}: code question needs tests (io, asserts or calls) and a solution")
+                elif (errs := calls_errors(where, tests, q.get("q") or "", q["solution"], q.get("starter"))):
+                    errors += errs
                 else:
                     res = run_task(q["solution"], tests)
                     if isinstance(res, str) or not res or not all(r["ok"] for r in res):
@@ -450,6 +452,88 @@ def check_content(data: dict) -> tuple[list[str], set[str]]:
                 errors.append(f"{where}: open question needs a rubric for the teacher")
     errors += check_tasks()
     return errors, authored
+
+
+CALL_KEYS = {"name", "args", "args_py", "kwargs", "expect", "expect_py", "hidden", "tol", "unordered", "after", "raises"}
+
+
+def _signature(code: str, fname: str) -> list[str] | None:
+    """Parameter names of `def fname(...)` in the code (None — no such function)."""
+    import ast
+    try:
+        tree = ast.parse(code or "")
+    except SyntaxError:
+        return None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == fname:
+            a = node.args
+            return [x.arg for x in a.posonlyargs + a.args + a.kwonlyargs] + ([f"*{a.vararg.arg}"] if a.vararg else []) + ([f"**{a.kwarg.arg}"] if a.kwarg else [])
+    return None
+
+
+def calls_errors(where, tests: dict, statement: str, solution: str, starter: str | None) -> list[str]:
+    """Schema of a function task (`tests.calls`): the function is named, every case has arguments and an
+    expected result, the solution and the starter define the function with the same parameters, and every
+    ```call / ```return example in the statement is one of the visible cases."""
+    import ast
+    calls = tests.get("calls")
+    if calls is None:
+        return []
+    errors: list[str] = []
+    fname = tests.get("function")
+    if not isinstance(fname, str) or not fname.isidentifier():
+        return [f"{where}: tests.calls needs tests.function — the name of the function the learner writes"]
+    if not isinstance(calls, list) or not calls:
+        return [f"{where}: tests.calls must be a non-empty list"]
+    visible = []
+    for i, c in enumerate(calls):
+        w = f"{where}: tests.calls[{i}]"
+        if not isinstance(c, dict):
+            errors.append(f"{w}: must be a mapping {{args, expect}}")
+            continue
+        extra = set(c) - CALL_KEYS
+        if extra:
+            errors.append(f"{w}: unknown keys {sorted(extra)} (allowed: {', '.join(sorted(CALL_KEYS))})")
+        if ("args" in c) == ("args_py" in c):
+            errors.append(f"{w}: give exactly one of args (a list) or args_py (a Python literal)")
+        if "args" in c and not isinstance(c["args"], list):
+            errors.append(f"{w}: args must be a list — one argument is [x]")
+        if sum(k in c for k in ("expect", "expect_py", "raises")) != 1:
+            errors.append(f"{w}: give exactly one of expect, expect_py or raises")
+        try:
+            args = list(ast.literal_eval(c["args_py"])) if "args_py" in c else c.get("args") or []
+            want = ast.literal_eval(c["expect_py"]) if "expect_py" in c else c.get("expect")
+        except (ValueError, SyntaxError, TypeError) as e:
+            errors.append(f"{w}: args_py / expect_py is not a Python literal: {e}")
+            continue
+        if not c.get("hidden") and not c.get("raises"):
+            visible.append((args, c.get("kwargs") or {}, want))
+    sig = _signature(solution, fname)
+    if sig is None:
+        errors.append(f"{where}: the solution has no def {fname}(...)")
+    if starter is not None:
+        st = _signature(starter, fname)
+        if st is None:
+            errors.append(f"{where}: the starter has no def {fname}(...) — the learner fills in its body")
+        elif sig is not None and st != sig:
+            errors.append(f"{where}: starter parameters {st} differ from the solution's {sig}")
+    # statement examples: ```call fname(...)``` followed by ```return value```
+    for m in re.finditer(r"```call[ \t]*\n(.*?)```\s*```return[ \t]*\n(.*?)```", statement or "", re.S):
+        text, ret = m.group(1).strip(), m.group(2).strip()
+        try:
+            node = ast.parse(text, mode="eval").body
+            assert isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == fname
+            args = [ast.literal_eval(a) for a in node.args]
+            kwargs = {k.arg: ast.literal_eval(k.value) for k in node.keywords}
+            value = ast.literal_eval(ret)
+        except (AssertionError, ValueError, SyntaxError, TypeError):
+            errors.append(f"{where}: statement example `{text}` → `{ret}` must be a call of {fname} with literal values and a literal result")
+            continue
+        if not any(a == args and k == kwargs and v == value for a, k, v in visible):
+            errors.append(f"{where}: statement example `{text}` → `{ret}` is not one of the visible tests.calls")
+    if re.search(r"```call", statement or "") and len(re.findall(r"```call", statement)) != len(re.findall(r"```return", statement)):
+        errors.append(f"{where}: every ```call block in the statement needs a ```return block right after it")
+    return errors
 
 
 def run_task(code: str, tests: dict) -> list[dict] | str:
@@ -599,8 +683,12 @@ def check_tasks() -> list[str]:
             errors.append(f"{where}: unknown sandbox {t['sandbox']!r} (python-browser or shell)")
             continue
         tests = t["tests"]
-        if not (tests.get("io") or tests.get("asserts")):
+        if not (tests.get("io") or tests.get("asserts") or tests.get("calls")):
             errors.append(f"{where}: no tests")
+            continue
+        errs = calls_errors(where, tests, t["statement"], t["solution"], t.get("starter"))
+        if errs:
+            errors += errs
             continue
         res = run_task(t["solution"], tests)
         if isinstance(res, str):

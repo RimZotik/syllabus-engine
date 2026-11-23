@@ -1,6 +1,7 @@
 import { Children, isValidElement, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CircleAlert, LoaderCircle } from "lucide-react";
-import { explainError, tracePython, type TraceResult, type TraceStep, type TraceVal } from "../sandbox/runner";
+import { explainError, tracePython, type TraceCall, type TraceResult, type TraceStep, type TraceVal } from "../sandbox/runner";
+import { RichText } from "./RichText";
 
 const TYPE_RU: Record<string, string> = { list: "список", tuple: "кортеж", dict: "словарь", set: "множество", frozenset: "множество" };
 const isRef = (v: TraceVal): v is { r: number } => "r" in v;
@@ -20,9 +21,11 @@ function Val({ v, heap }: { v: TraceVal; heap: TraceStep["heap"] }) {
  * Step-by-step run of a short program: which line runs next, which names exist in every function call,
  * and which values they point to. Names that point to the same list share its number and colour.
  * Used in topics as <Trace code={`...`} /> and in the sandbox («По шагам»).
+ * `call` — a function task: the program runs as is, and only this call of the function is shown step by step.
  */
-export function TraceView({ code, stdin = "", files }: { code: string; stdin?: string; files?: Record<string, string> }) {
+export function TraceView({ code, stdin = "", files, call }: { code: string; stdin?: string; files?: Record<string, string>; call?: TraceCall }) {
   const filesKey = JSON.stringify(files ?? {});
+  const callKey = call ? JSON.stringify(call) : "";
   const [res, setRes] = useState<TraceResult | null>(null);
   const [fail, setFail] = useState<string | null>(null);
   const [i, setI] = useState(0);
@@ -31,12 +34,13 @@ export function TraceView({ code, stdin = "", files }: { code: string; stdin?: s
   useEffect(() => {
     let alive = true;
     setRes(null); setFail(null); setI(0);
-    tracePython(code, stdin, 8000, JSON.parse(filesKey)).then((r) => alive && setRes(r)).catch((e) => alive && setFail(String(e)));
+    tracePython(code, stdin, 8000, JSON.parse(filesKey), callKey ? JSON.parse(callKey) : undefined).then((r) => alive && setRes(r)).catch((e) => alive && setFail(String(e)));
     return () => { alive = false; };
-  }, [code, stdin, filesKey]);
+  }, [code, stdin, filesKey, callKey]);
 
   if (fail) return <div className="verdict error"><CircleAlert size={22} /><div>Не удалось выполнить по шагам: {fail}</div></div>;
   if (!res) return <div className="grading"><LoaderCircle size={18} className="spin" />Готовлю пошаговое выполнение… Первый раз загружается Python — несколько секунд.</div>;
+  if (res.notice) return <div className="sb-error"><CircleAlert size={18} /><div><RichText text={res.notice} /></div></div>;
   if (!res.steps.length) {
     return res.error ? <div className="sb-error"><CircleAlert size={18} /><div><b>{res.error.type}{res.error.line ? ` в строке ${res.error.line}` : ""}:</b> {res.error.msg}<span>{explainError(res.error)}</span></div></div> : null;
   }
@@ -47,7 +51,7 @@ export function TraceView({ code, stdin = "", files }: { code: string; stdin?: s
   const finished = i === last;
   const top = s.frames[s.frames.length - 1];
   const caption = s.event === "return"
-    ? (s.frames.length > 1 ? <>Функция <b>{top.name}</b> заканчивается и возвращает {s.ret ? <Val v={s.ret} heap={s.heap} /> : null}</> : <>Программа выполнена до конца</>)
+    ? (top.name !== "Программа" ? <>Функция <b>{top.name}</b> заканчивается и возвращает {s.ret ? <Val v={s.ret} heap={s.heap} /> : null}</> : <>Программа выполнена до конца</>)
     : <>Сейчас выполнится строка <b>{s.line}</b></>;
   const prevVar = (frame: number, name: string) => prev?.frames[frame]?.vars.find(([k]) => k === name)?.[1];
   const objects = Object.entries(s.heap).filter(([, o]) => o).map(([n, o]) => [Number(n), o!] as const).sort((a, b) => a[0] - b[0]);
@@ -72,6 +76,7 @@ export function TraceView({ code, stdin = "", files }: { code: string; stdin?: s
             <span className="faint tnum">шаг {i + 1} из {res.steps.length}</span>
           </div>
           {res.truncated && <p className="faint tr-note">Показаны первые {res.steps.length} шагов — программа длинная или зациклилась.</p>}
+          {finished && res.returned !== undefined && <div className="sb-io"><span>Функция вернула</span><pre>{res.returned}</pre></div>}
           {(s.out || finished) && <div className="sb-io"><span>Вывод</span><pre>{(finished ? res.stdout : s.out) || <span className="faint">(пока ничего)</span>}</pre></div>}
           {finished && res.error && <div className="sb-error"><CircleAlert size={18} /><div><b>{res.error.type}{res.error.line ? ` в строке ${res.error.line}` : ""}:</b> {res.error.msg}<span>{explainError(res.error)}</span></div></div>}
         </div>

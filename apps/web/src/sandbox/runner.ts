@@ -3,7 +3,8 @@ import type { WorkerRequest } from "./py.worker";
 
 export type PyError = { type: string; line: number | null; msg: string };
 export type RunResult = { stdout: string; error: PyError | null };
-export type TestResult = { name: string; ok: boolean; error?: PyError; message?: string; stdin?: string; expected?: string; got?: string; hidden?: boolean };
+/** `call`/`output`/`got_type` — a function-task case (`tests.calls`): the call, what it printed, the returned value's type when it differs. */
+export type TestResult = { name: string; ok: boolean; error?: PyError; message?: string; stdin?: string; expected?: string; got?: string; hidden?: boolean; call?: string; output?: string; got_type?: string };
 export type CheckResult = { results: TestResult[]; stdout?: string | null };
 export class Timeout extends Error {}
 
@@ -51,10 +52,13 @@ export async function runPython(code: string, stdin: string, timeoutMs = 5000, f
 export type TraceVal = { p: string } | { r: number };
 export type TraceObj = { t: string; items: (TraceVal | [TraceVal, TraceVal])[]; more: boolean };
 export type TraceStep = { line: number; event: "line" | "return"; frames: { name: string; vars: [string, TraceVal][] }[]; heap: Record<string, TraceObj | null>; out: string; ret?: TraceVal };
-export type TraceResult = { steps: TraceStep[]; stdout: string; error: PyError | null; truncated: boolean };
+/** Function-task trace: `call` — the traced call, `returned` — repr of its result, `notice` — why nothing could be traced. */
+export type TraceResult = { steps: TraceStep[]; stdout: string; error: PyError | null; truncated: boolean; call?: string | null; returned?: string; notice?: string };
+/** Which call of a function task to trace: the function's name and the call as typed. */
+export type TraceCall = { function: string; text: string };
 
-export async function tracePython(code: string, stdin = "", timeoutMs = 8000, files?: Record<string, string>): Promise<TraceResult> {
-  const r = await call<TraceResult>({ kind: "trace", code, stdin, files }, budget(timeoutMs));
+export async function tracePython(code: string, stdin = "", timeoutMs = 8000, files?: Record<string, string>, fnCall?: TraceCall): Promise<TraceResult> {
+  const r = await call<TraceResult>({ kind: "trace", code, stdin, files, call: fnCall }, budget(timeoutMs));
   booted = true;
   return r;
 }
@@ -78,5 +82,6 @@ const ERRORS: Record<string, string> = {
   AttributeError: "У этого значения нет такого метода или свойства.",
   EOFError: "Программа ждала ещё одну строку ввода, а данные закончились.",
   RecursionError: "Слишком глубокая рекурсия: функция вызывает себя без остановки.",
+  InputInFunctionTask: "В задаче-функции input() не нужен: значения приходят в параметрах, функцию вызывает проверка.",
 };
 export const explainError = (e: PyError) => ERRORS[e.type] ?? "Во время работы программы произошла ошибка.";

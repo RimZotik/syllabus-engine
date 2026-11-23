@@ -26,7 +26,8 @@ function inline(line: string, key: string): ReactNode[] {
  * Plain text from YAML (questions, options, explanations, task statements) with a tiny bit of markup:
  * `code` inline, ``` fenced blocks ``` for multi-line code, line breaks kept, blank line = new paragraph.
  * Fence language: ```python — code; ```input — what the program reads («Ввод»);
- * ``` or ```output — what it prints («Вывод»).
+ * ``` or ```output — what it prints («Вывод»); ```call / ```return — a function task's example:
+ * the call and the value it must return («Вызов» / «Возвращает»).
  * `block` — paragraphs become <p> (task statements); otherwise everything stays inline-level.
  */
 export function RichText({ text, block = false }: { text: string; block?: boolean }) {
@@ -45,7 +46,7 @@ export function RichText({ text, block = false }: { text: string; block?: boolea
       const lang = parts[i + 1].toLowerCase();
       // ```input and ```output are labelled like an example on LeetCode; a plain fence right after an input is its output
       const afterInput = !lang && i >= 3 && parts[i - 2]?.toLowerCase() === "input" && !trimmed;
-      const label = lang === "input" ? "Ввод" : lang === "output" || afterInput ? "Вывод" : null;
+      const label = lang === "input" ? "Ввод" : lang === "output" || afterInput ? "Вывод" : lang === "call" ? "Вызов" : lang === "return" ? "Возвращает" : null;
       const pre = <pre key={`f${i}`} className="rt-pre"><code className={lang ? `language-${lang}` : undefined}>{parts[i + 2].replace(/\n$/, "")}</code></pre>;
       out.push(label ? <div key={`f${i}`} className="rt-io"><span>{label}</span>{pre}</div> : pre);
     }
