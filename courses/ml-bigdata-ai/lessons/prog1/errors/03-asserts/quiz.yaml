@@ -320,12 +320,16 @@ questions:
   type: code
   q: |
     Условие: «Скидка 10 % на заказы от 1000 ₽». ИИ-ассистент написал `order_total(total)` и набор `check_order_total(f)` — все проверки проходят. **Посчитайте ожидания по условию и исправьте набор, затем — функцию.**
-    ```input
+    ```call
     order_total(500)
+    ```
+    ```return
+    500
+    ```
+    ```call
     order_total(2000)
     ```
-    ```output
-    500
+    ```return
     1800.0
     ```
     - Добавьте проверки по обе стороны от границы скидки.
@@ -360,12 +364,27 @@ questions:
 
     check_order_total(order_total)
   tests:
+    function: order_total
+    calls:
+    - name: Исправленная функция — без скидки
+      args: [500]
+      expect: 500
+    - name: Исправленная функция — сразу до границы
+      args: [999]
+      expect: 999
+      hidden: true
+    - name: Исправленная функция — ровно 1000
+      args: [1000]
+      expect: 900
+      hidden: true
+    - name: Исправленная функция — со скидкой
+      args: [2000]
+      expect: 1800.0
+    - name: Исправленная функция — ноль
+      args: [0]
+      expect: 0
+      hidden: true
     asserts:
-    - name: Исправленная функция
-      code: |
-        for total, want in [(500, 500), (999, 999), (1000, 900), (2000, 1800), (0, 0)]:
-            r = order_total(total)
-            assert r == want, f"order_total({total}) должна вернуть {want}, а вернула {r!r}"
     - name: Верную функцию проверки пропускают
       code: |
         def _ok(total):

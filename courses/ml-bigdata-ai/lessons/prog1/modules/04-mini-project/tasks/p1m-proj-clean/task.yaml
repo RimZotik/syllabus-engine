@@ -12,22 +12,14 @@ statement: |
   В модуле нет `print`, `input` и работы с файлами: при `import main` он ничего не печатает.
 
   Пример 1
-  ```input
+  ```call
   parse_amount("1 250,50")
-  parse_row({"дата": "2024-05-03", "категория": " Продукты ", "сумма": "60"})
   ```
-  ```output
+  ```return
   1250.5
-  {'date': datetime.date(2024, 5, 3), 'category': 'продукты', 'amount': 60.0}
   ```
 
-  Пример 2
-  ```input
-  parse_amount("nan")
-  ```
-  ```output
-  ValueError: не число: nan
-  ```
+  Пример 2: `clean_category(" Продукты ")` возвращает `"продукты"`, `parse_row({"дата": "2024-05-03", "категория": " Продукты ", "сумма": "60"})` возвращает `{"date": date(2024, 5, 3), "category": "продукты", "amount": 60.0}`, а `parse_amount("nan")` выбрасывает `ValueError("не число: nan")`.
 starter: |
   """Разбор и очистка строк таблицы расходов."""
   import math
@@ -82,6 +74,39 @@ solution: |
           "amount": parse_amount(row["сумма"]),
       }
 tests:
+  function: parse_amount
+  calls:
+    - name: parse_amount — целое число
+      args: ["60"]
+      expect: 60.0
+    - name: parse_amount — пробел и запятая
+      args: ["1 250,50"]
+      expect: 1250.5
+    - name: parse_amount — неразрывный пробел
+      args: ["1\xa0250,50"]
+      expect: 1250.5
+    - name: parse_amount — пробелы по краям
+      args: [" 380 "]
+      expect: 380.0
+      hidden: true
+    - name: parse_amount — меньше рубля
+      args: ["0,5"]
+      expect: 0.5
+      hidden: true
+    - name: parse_amount — отрицательная сумма
+      args: ["-120"]
+      expect: -120.0
+      hidden: true
+    - name: parse_amount — пусто
+      args: [""]
+      raises: ValueError
+    - name: parse_amount — nan
+      args: ["nan"]
+      raises: ValueError
+    - name: parse_amount — не число
+      args: ["сто"]
+      raises: ValueError
+      hidden: true
   asserts:
     - name: При импорте модуль молчит
       code: |
@@ -90,12 +115,7 @@ tests:
         with _cl.redirect_stdout(_buf):
             import main
         assert _buf.getvalue() == "", f"При import main напечаталось {_buf.getvalue()!r}: в модуле разбора не должно быть print"
-    - name: parse_amount — обычные и граничные суммы
-      code: |
-        for text, want in [("60", 60.0), ("1 250,50", 1250.5), ("1\xa0250,50", 1250.5), (" 380 ", 380.0), ("0,5", 0.5), ("-120", -120.0)]:
-            r = parse_amount(text)
-            assert r == want, f"parse_amount({text!r}) должна вернуть {want}, а вернула {r!r}"
-    - name: parse_amount — «плохие» суммы
+    - name: parse_amount — сообщения исключений
       code: |
         for text, want_msg in [("", "пустая сумма"), ("   ", "пустая сумма"), ("nan", "не число: nan"), ("сто", None)]:
             msg = None

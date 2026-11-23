@@ -109,12 +109,16 @@ questions:
   type: code
   q: |
     Ассистент написал `has_duplicates(items)` — есть ли в списке повторы. На `[3, 3]` и `[1, 2, 3]` ответ верный, **а на список кодов скидок** `[1, 2, 1]` **ошибается** — возвращает `False`. Исправьте функцию.
-    ```input
+    ```call
     has_duplicates([1, 2, 1])
+    ```
+    ```return
+    True
+    ```
+    ```call
     has_duplicates([1, 2, 3])
     ```
-    ```output
-    True
+    ```return
     False
     ```
     - В пустом списке и в списке из одного элемента повторов нет.
@@ -134,35 +138,59 @@ questions:
 
     print(has_duplicates([1, 2, 1]))   # True
   tests:
-    asserts:
+    no_mutate: true
+    function: has_duplicates
+    calls:
     - name: Повтор не рядом
-      code: |
-        for items in [[1, 2, 1], ["а", "б", "а", "б"], [5, 4, 3, 2, 5]]:
-            r = has_duplicates(items)
-            assert r is True, f"has_duplicates({items}) должна вернуть True, а вернула {r!r}"
+      args: [[1, 2, 1]]
+      expect: true
+    - name: Два повтора не рядом
+      args: [["а", "б", "а", "б"]]
+      expect: true
+      hidden: true
+    - name: Повтор в начале и в конце
+      args: [[5, 4, 3, 2, 5]]
+      expect: true
+      hidden: true
     - name: Повтор рядом
-      code: |
-        for items in [[3, 3], [5, 5, 1], [1, 2, 2]]:
-            r = has_duplicates(items)
-            assert r is True, f"has_duplicates({items}) должна вернуть True, а вернула {r!r}"
+      args: [[3, 3]]
+      expect: true
+      hidden: true
+    - name: Повтор рядом в начале
+      args: [[5, 5, 1]]
+      expect: true
+      hidden: true
+    - name: Повтор рядом в конце
+      args: [[1, 2, 2]]
+      expect: true
+      hidden: true
     - name: Повторов нет
-      code: |
-        for items in [[], [7], [1, 2, 3], ["а", "б"]]:
-            r = has_duplicates(items)
-            assert r is False, f"has_duplicates({items}) должна вернуть False, а вернула {r!r}"
+      args: [[1, 2, 3]]
+      expect: false
+    - name: Пустой список
+      args: [[]]
+      expect: false
+      hidden: true
+    - name: Один элемент
+      args: [[7]]
+      expect: false
+      hidden: true
+    - name: Строки без повторов
+      args: [["а", "б"]]
+      expect: false
+      hidden: true
   explain: 'Функция сравнивает только соседей, поэтому повтор через элемент она не видит — самый короткий контрпример как раз `[1, 2, 1]`. Повтор может стоять где угодно: надёжнее сравнить число разных значений с длиной списка — множество хранит каждое значение один раз. Подойдёт и двойной цикл по парам индексов. Для пустого списка и одного элемента повторов нет — оба способа отвечают `False`.'
 - id: s-code-fix-silent-skip
   type: code
   q: |
     Итог продаж за день — 750 вместо 1950. Вы напечатали данные посередине пути: `lines` — `['450', '1 200', '300']`, а `parse(lines)` — `[450, 300]`. Исправьте `parse`: **цена с пробелами между разрядами — обычная запись, а по-настоящему неверная строка не должна пропадать молча.**
-    ```input
+    ```call
     parse(["450", "1 200", "300"])
-    parse(["450", "сто"])
     ```
-    ```output
+    ```return
     [450, 1200, 300]
-    ValueError: не цена: «сто»
     ```
+    - `parse(["450", "сто"])` выбрасывает `ValueError: не цена: «сто»`.
     - Пробелы между разрядами и по краям допустимы.
     - Неверная строка — `ValueError` с текстом `не цена: «<исходная строка>»`.
   starter: |
@@ -190,32 +218,54 @@ questions:
 
     print(sum(parse(["450", "1 200", "300"])))   # 1950
   tests:
-    asserts:
+    function: parse
+    calls:
     - name: Цены с пробелами между разрядами
-      code: |
-        for lines, want in [(["450", "1 200", "300"], [450, 1200, 300]), (["1 000 000"], [1000000]), ([" 15 "], [15]), ([], [])]:
-            r = parse(lines)
-            assert r == want, f"parse({lines}) должна вернуть {want}, а вернула {r!r}"
-    - name: Неверная строка — ValueError с текстом
+      args: [["450", "1 200", "300"]]
+      expect: [450, 1200, 300]
+    - name: Миллион
+      args: [["1 000 000"]]
+      expect: [1000000]
+      hidden: true
+    - name: Пробелы по краям
+      args: [[" 15 "]]
+      expect: [15]
+      hidden: true
+    - name: Пустой список
+      args: [[]]
+      expect: []
+      hidden: true
+    - name: Слово — ValueError
+      args: [["450", "сто"]]
+      raises: ValueError
+    - name: Дробная цена — ValueError
+      args: [["12,5"]]
+      raises: ValueError
+      hidden: true
+    - name: Пустая строка — ValueError
+      args: [["300", ""]]
+      raises: ValueError
+      hidden: true
+    asserts:
+    - name: Текст исключения
       code: |
         for lines, bad in [(["450", "сто"], "сто"), (["12,5"], "12,5"), (["300", ""], "")]:
             msg = None
             try:
-                r = parse(lines)
+                parse(lines)
             except ValueError as e:
                 msg = str(e)
-            assert msg is not None, f"parse({lines}) должна выбросить ValueError, а вернула {r!r}"
             assert msg == f"не цена: «{bad}»", f"Текст исключения для {lines}: «{msg}». Нужен: не цена: «{bad}»"
   explain: 'Данные до `parse` верны, после — без одной цены: ошибка между двумя `print`. `int` не принимает пробел внутри числа, а `except` с `continue` выбросил строку без следа — такой `except` прячет ошибку в данных. Пробелы убирают до `int`, а неверную строку не пропускают: `raise` внутри `except` заменяет непонятный текст `int` своим, с самой строкой. Пропускать её или останавливать отчёт, решит тот, кто вызвал `parse`.'
 - id: s-code-change-read-order
   type: code
   q: |
     `read_order(lines)` собирает заказ «товар → количество» из строк вида `чай 2`. Сейчас одна неверная строка роняет весь заказ: основная программа ловит `ValueError` и остаётся с пустым словарём. **Измените функцию: неверные строки пропускаются, а она возвращает пару — заказ и список пропущенных строк.** Основную программу поправьте под новую функцию.
-    ```input
+    ```call
     read_order(["чай 2", "сахар много", "мёд 1"])
     ```
-    ```output
-    ({'чай': 2, 'мёд': 1}, ['сахар много'])
+    ```return
+    ({"чай": 2, "мёд": 1}, ["сахар много"])
     ```
     - Неверная строка — та, на которой разбор выбрасывает `ValueError`: не два слова или количество не целое число.
     - Пропущенные строки — в том порядке, в каком встретились.
@@ -250,23 +300,23 @@ questions:
     print(order)
     print("пропущено:", skipped)
   tests:
-    asserts:
+    function: read_order
+    calls:
     - name: Неверное количество
-      code: |
-        r = read_order(["чай 2", "сахар много", "мёд 1"])
-        want = ({"чай": 2, "мёд": 1}, ["сахар много"])
-        assert r == want, f"Вернула {r!r}, а нужно {want!r}"
+      args: [["чай 2", "сахар много", "мёд 1"]]
+      expect_py: '({"чай": 2, "мёд": 1}, ["сахар много"])'
     - name: Не два слова в строке
-      code: |
-        r = read_order(["печенье", "хлеб 1", "сыр 1 2", "соль 2.5"])
-        want = ({"хлеб": 1}, ["печенье", "сыр 1 2", "соль 2.5"])
-        assert r == want, f"Вернула {r!r}, а нужно {want!r}"
-    - name: Все строки верные и пустой заказ
-      code: |
-        r = read_order(["вода 6", "сок 2"])
-        assert r == ({"вода": 6, "сок": 2}, []), f"Вернула {r!r}, а нужно ({{'вода': 6, 'сок': 2}}, [])"
-        r = read_order([])
-        assert r == ({}, []), f"read_order([]) должна вернуть ({{}}, []), а вернула {r!r}"
+      args: [["печенье", "хлеб 1", "сыр 1 2", "соль 2.5"]]
+      expect: [{"хлеб": 1}, ["печенье", "сыр 1 2", "соль 2.5"]]
+      hidden: true
+    - name: Все строки верные
+      args: [["вода 6", "сок 2"]]
+      expect: [{"вода": 6, "сок": 2}, []]
+      hidden: true
+    - name: Пустой заказ
+      args: [[]]
+      expect: [{}, []]
+      hidden: true
   explain: 'Исключение из `read_order` прерывало её целиком: словарь, собранный внутри, терялся, и основной программе оставалось только начать с пустого. Решение «пропустить строку» принимается там, где известно, что делать с одной строкой, — внутри цикла. Распаковка тоже в `try`: строка без пробела или из трёх слов выбрасывает тот же `ValueError`. Список пропущенных строк сохраняет следы: заказ не теряется молча, и можно сказать покупателю, что не разобрано.'
 - id: s-code-write-alarm
   type: code
@@ -454,7 +504,7 @@ questions:
   type: code
   q: |
     Учитель жалуется: для оценок `[5, 3, 4, 2]` программа говорит, что сдали двое, а сдали трое. Сдал — оценка 3 и выше. **Сначала превратите жалобу в набор проверок** `check_passed(f)`, **потом исправьте функцию.**
-    ```input
+    ```python
     passed([5, 3, 4, 2])
     ```
     ```output
@@ -532,14 +582,13 @@ questions:
   type: code
   q: |
     Ассистент написал `parse_seat(text)` — разбор места в кинозале — и набор проверок `check_parse_seat(f)`. Проверки проходят, **но в функции есть ошибки. Сначала исправьте набор, чтобы он их ловил, потом — функцию.**
-    ```input
+    ```call
     parse_seat("5-12")
-    parse_seat("11-5")
     ```
-    ```output
+    ```return
     (5, 12)
-    ValueError
     ```
+    - `parse_seat("11-5")` выбрасывает `ValueError`.
     - Текст вида `ряд-место`; ряды 1–10, места 1–20; ряд или место вне диапазона или не число — `ValueError`.
     - В наборе: края рядов и мест и по одному выходу за каждый край.
     - Исправленный набор молчит на верной функции и падает на неверной.
@@ -591,21 +640,43 @@ questions:
 
     check_parse_seat(parse_seat)
   tests:
+    function: parse_seat
+    calls:
+    - name: Исправленная функция — пример
+      args: ["5-12"]
+      expect_py: '(5, 12)'
+    - name: Исправленная функция — ряд и место по порядку
+      args: ["3-7"]
+      expect: [3, 7]
+      hidden: true
+    - name: Исправленная функция — первые ряд и место
+      args: ["1-1"]
+      expect: [1, 1]
+      hidden: true
+    - name: Исправленная функция — последние ряд и место
+      args: ["10-20"]
+      expect: [10, 20]
+      hidden: true
+    - name: Исправленная функция — ряд 0
+      args: ["0-5"]
+      raises: ValueError
+      hidden: true
+    - name: Исправленная функция — ряд 11
+      args: ["11-5"]
+      raises: ValueError
+    - name: Исправленная функция — место 0
+      args: ["5-0"]
+      raises: ValueError
+      hidden: true
+    - name: Исправленная функция — место 21
+      args: ["5-21"]
+      raises: ValueError
+      hidden: true
+    - name: Исправленная функция — ряд словом
+      args: ["пять-3"]
+      raises: ValueError
+      hidden: true
     asserts:
-    - name: Исправленная функция — верные места
-      code: |
-        for text, want in [("5-12", (5, 12)), ("3-7", (3, 7)), ("1-1", (1, 1)), ("10-20", (10, 20))]:
-            r = parse_seat(text)
-            assert r == want, f"parse_seat({text!r}) должна вернуть {want}, а вернула {r!r}"
-    - name: Исправленная функция — неверные места
-      code: |
-        for bad in ["0-5", "11-5", "5-0", "5-21", "пять-3"]:
-            raised = False
-            try:
-                parse_seat(bad)
-            except ValueError:
-                raised = True
-            assert raised, f"parse_seat({bad!r}) должна выбросить ValueError"
     - name: Верную функцию проверки пропускают
       code: |
         def _ok(text):

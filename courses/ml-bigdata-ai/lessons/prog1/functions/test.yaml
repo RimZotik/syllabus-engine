@@ -174,21 +174,21 @@ questions:
   q: |
     **Исправьте функцию `all_passed(marks)`: она должна возвращать `True`, только если у всех оценка 3 и выше.**
 
-    Если хотя бы одна оценка ниже 3, функция возвращает `False`; для пустого списка — `True`. Сейчас `all_passed([5, 2, 4])` возвращает `True`. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+    Если хотя бы одна оценка ниже 3, функция возвращает `False`; для пустого списка — `True`. Сейчас `all_passed([5, 2, 4])` возвращает `True`.
 
     Пример 1
-    ```input
+    ```call
     all_passed([5, 2, 4])
     ```
-    ```output
+    ```return
     False
     ```
 
     Пример 2
-    ```input
+    ```call
     all_passed([4, 5, 3])
     ```
-    ```output
+    ```return
     True
     ```
   starter: |
@@ -204,31 +204,26 @@ questions:
                 return False
         return True
   tests:
-    asserts:
+    function: all_passed
+    calls:
     - name: Двойка в середине
-      code: |
-        r = all_passed([5, 2, 4])
-        assert r is False, "all_passed([5, 2, 4]) должна вернуть False, а вернула " + repr(r)
+      args: [[5, 2, 4]]
+      expect: false
     - name: Все сдали
-      code: |
-        r = all_passed([4, 5, 3])
-        assert r is True, "all_passed([4, 5, 3]) должна вернуть True, а вернула " + repr(r)
+      args: [[4, 5, 3]]
+      expect: true
     - name: Двойка в конце
-      code: |
-        r = all_passed([5, 4, 2])
-        assert r is False, "all_passed([5, 4, 2]) должна вернуть False, а вернула " + repr(r)
+      args: [[5, 4, 2]]
+      expect: false
     - name: Двойка в начале
-      code: |
-        r = all_passed([2, 5])
-        assert r is False, "all_passed([2, 5]) должна вернуть False, а вернула " + repr(r)
+      args: [[2, 5]]
+      expect: false
     - name: Ровно тройка
-      code: |
-        r = all_passed([3])
-        assert r is True, "all_passed([3]) должна вернуть True, а вернула " + repr(r)
+      args: [[3]]
+      expect: true
     - name: Пустой список
-      code: |
-        r = all_passed([])
-        assert r is True, "all_passed([]) должна вернуть True, а вернула " + repr(r)
+      args: [[]]
+      expect: true
   explain: |
     Первый же `return True` завершал вызов: на оценке 5 функция отвечала «да», не посмотрев на двойку дальше. Так проверяют «хотя бы один сдал». Для «все ли» ищут контрпример: встретилась оценка ниже 3 — сразу `return False`, а `return True` стоит после цикла, когда просмотрены все оценки. Для пустого списка цикл не выполнится ни разу, и функция вернёт `True`.
 - id: s-sum-shadowed
@@ -305,21 +300,21 @@ questions:
   q: |
     **Напишите тело функции `rental_cost` так, чтобы она делала то, что обещает её строка документации.**
 
-    Заголовок и описание функции — в редакторе, их не меняйте. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+    Заголовок и описание функции — в редакторе, их не меняйте.
 
     Пример 1
-    ```input
+    ```call
     rental_cost(10)
     ```
-    ```output
+    ```return
     130
     ```
 
     Пример 2
-    ```input
+    ```call
     rental_cost(70)
     ```
-    ```output
+    ```return
     570
     ```
   starter: |
@@ -347,43 +342,37 @@ questions:
             return start + minutes * per_min
         return start + 60 * per_min + (minutes - 60) * (per_min // 2)
   tests:
-    asserts:
+    function: rental_cost
+    calls:
     - name: Пример из описания
-      code: |
-        r = rental_cost(10)
-        assert r == 130, "rental_cost(10) должна вернуть 130, а вернула " + repr(r)
+      args: [10]
+      expect: 130
     - name: Второй пример из описания
-      code: |
-        r = rental_cost(70)
-        assert r == 570, "rental_cost(70) должна вернуть 570, а вернула " + repr(r)
+      args: [70]
+      expect: 570
     - name: Самокат не поехал
-      code: |
-        r = rental_cost(0)
-        assert r == 0, "rental_cost(0) должна вернуть 0, а вернула " + repr(r)
+      args: [0]
+      expect: 0
     - name: Одна минута
-      code: |
-        r = rental_cost(1)
-        assert r == 58, "rental_cost(1) должна вернуть 58, а вернула " + repr(r)
+      args: [1]
+      expect: 58
     - name: Ровно час
-      code: |
-        r = rental_cost(60)
-        assert r == 530, "rental_cost(60) должна вернуть 530, а вернула " + repr(r)
+      args: [60]
+      expect: 530
     - name: Минута сверх часа
-      code: |
-        r = rental_cost(61)
-        assert r == 534, "rental_cost(61) должна вернуть 534, а вернула " + repr(r)
+      args: [61]
+      expect: 534
     - name: Своя цена минуты
-      code: |
-        r = rental_cost(10, per_min=5)
-        assert r == 100, "rental_cost(10, per_min=5) должна вернуть 100, а вернула " + repr(r)
+      args: [10]
+      kwargs: {"per_min": 5}
+      expect: 100
     - name: Без платы за старт
-      code: |
-        r = rental_cost(10, start=0)
-        assert r == 80, "rental_cost(10, start=0) должна вернуть 80, а вернула " + repr(r)
+      args: [10]
+      kwargs: {"start": 0}
+      expect: 80
     - name: Все аргументы, долгая поездка
-      code: |
-        r = rental_cost(61, 0, 10)
-        assert r == 605, "rental_cost(61, 0, 10) должна вернуть 605, а вернула " + repr(r)
+      args: [61, 0, 10]
+      expect: 605
   explain: |
     Описание — договор: по нему видно и крайние случаи (0 минут), и границу (ровно 60 минут — ещё по полной цене). Три случая — три `return`: бесплатно, не дольше часа, дольше часа. Во втором часе первые 60 минут всё равно стоят полную цену, дешевле только минуты сверх них. Параметры `start` и `per_min` нужно брать из аргументов, а не писать 50 и 8 числами: иначе вызовы со своими ценами вернут не то.
 - id: s-code-extend-discount

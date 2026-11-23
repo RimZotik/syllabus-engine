@@ -3,64 +3,77 @@ title: Дни рождения по месяцам
 sandbox: python-browser
 difficulty: 2
 statement: |
-  **Сгруппируйте дни рождения из `birthdays.csv` по месяцам и выведите, кто родился в каком месяце.**
+  **Напишите функцию `birthdays_by_month(path)`, которая читает CSV-файл с днями рождения и возвращает словарь «номер месяца → список имён».**
 
-  В файле — столбцы `имя` и `дата`, дата в ISO 8601 (`ГГГГ-ММ-ДД`). Вывод — по строке на каждый месяц, где есть дни рождения, месяцы по возрастанию: `ММ: имя, имя` (номер месяца двумя цифрами, имена через запятую с пробелом, в порядке файла). Входа нет.
+  `path` — путь к файлу. В файле — столбцы `имя` и `дата`, дата в ISO 8601 (`ГГГГ-ММ-ДД`). Ключ словаря — номер месяца целым числом, значение — имена родившихся в этом месяце в порядке файла. Месяцев без дней рождения в словаре нет. Файлы — на вкладках над редактором; в `birthdays.csv` — Аня (2010-05-14), Борис (2009-03-02), Вера (2011-05-30), Гоша (2010-11-07).
 
   Пример 1
-  ```input
-  (входа нет; birthdays.csv — на вкладке)
+  ```call
+  birthdays_by_month("birthdays.csv")
   ```
-  ```output
-  03: Борис
-  05: Аня, Вера
-  11: Гоша
+  ```return
+  {5: ["Аня", "Вера"], 3: ["Борис"], 11: ["Гоша"]}
+  ```
+
+  Пример 2 — в `empty.csv` только заголовок
+  ```call
+  birthdays_by_month("empty.csv")
+  ```
+  ```return
+  {}
   ```
 starter: |
   import csv
   from collections import defaultdict
   from datetime import date
 
-  # Прочитайте birthdays.csv через csv.DictReader
-  # и соберите имена по номеру месяца.
+
+  def birthdays_by_month(path):
+      # План:
+      # 1. Прочитать файл через csv.DictReader
+      # 2. Номер месяца — из даты, имя — в список своего месяца
+      # 3. Вернуть словарь
+      pass
+
+
+  print(birthdays_by_month("birthdays.csv"))
 solution: |
   import csv
   from collections import defaultdict
   from datetime import date
 
-  by_month = defaultdict(list)
-  with open("birthdays.csv", encoding="utf-8", newline="") as f:
-      for row in csv.DictReader(f):
-          month = date.fromisoformat(row["дата"]).month
-          by_month[month].append(row["имя"])
 
-  for month in sorted(by_month):
-      print(f"{month:02d}: {', '.join(by_month[month])}")
+  def birthdays_by_month(path):
+      by_month = defaultdict(list)
+      with open(path, encoding="utf-8", newline="") as f:
+          for row in csv.DictReader(f):
+              month = date.fromisoformat(row["дата"]).month
+              by_month[month].append(row["имя"])
+      return dict(by_month)
+
+
+  print(birthdays_by_month("birthdays.csv"))
 tests:
   files:
-    birthdays.csv: |
-      имя,дата
-      Аня,2010-05-14
-      Борис,2009-03-02
-      Вера,2011-05-30
-      Гоша,2010-11-07
-  io:
-    - name: Пример из условия
-      stdout: "03: Борис\n05: Аня, Вера\n11: Гоша"
+    birthdays.csv: "имя,дата\nАня,2010-05-14\nБорис,2009-03-02\nВера,2011-05-30\nГоша,2010-11-07\n"
+    class2.csv: "имя,дата\nЛиза,2010-12-31\nМарк,2010-01-01\nНина,2011-12-01\nОля,2009-10-10\nПетя,2010-01-20\n"
+    empty.csv: "имя,дата\n"
+  function: birthdays_by_month
+  calls:
+    - name: Пример 1
+      args: ["birthdays.csv"]
+      expect_py: '{5: ["Аня", "Вера"], 3: ["Борис"], 11: ["Гоша"]}'
+    - name: Пример 2 — пустой список
+      args: ["empty.csv"]
+      expect: {}
     - name: Другой класс
-      files:
-        birthdays.csv: "имя,дата\nЛиза,2010-12-31\nМарк,2010-01-01\nНина,2011-12-01\nОля,2009-10-10\nПетя,2010-01-20\n"
-      stdout: "01: Марк, Петя\n10: Оля\n12: Лиза, Нина"
-      hidden: true
-    - name: Пустой список
-      files:
-        birthdays.csv: "имя,дата\n"
-      stdout: ""
+      args: ["class2.csv"]
+      expect_py: '{12: ["Лиза", "Нина"], 1: ["Марк", "Петя"], 10: ["Оля"]}'
       hidden: true
 hints:
   - level: 1
     text: 'Какой ключ у группы и что в ней лежит? Ключ — номер месяца, значение — список имён в порядке файла.'
   - level: 2
-    text: '`defaultdict(list)` сам заведёт пустой список для нового месяца. Номер месяца даёт `date.fromisoformat(...).month`. Месяцы по возрастанию — `sorted` по ключам словаря.'
+    text: '`defaultdict(list)` сам заведёт пустой список для нового месяца. Номер месяца даёт `date.fromisoformat(...).month`. Если в итоге нужен обычный словарь, его даёт `dict(...)`.'
   - level: 3
-    text: 'Число двумя цифрами — форматная спецификация `:02d` в f-строке. Имена склеивает `", ".join(список)`.'
+    text: 'Ключ — именно число `5`, а не строка `"05"`: это `.month` у даты. Чтобы увидеть, что накопилось, напечатайте словарь внутри функции — `print` не влияет на проверку.'

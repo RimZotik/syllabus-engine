@@ -110,20 +110,20 @@ questions:
 - id: code-fix-except-type
   type: code
   q: |
-    Кофейня: `cups_cost(text)` получает число чашек текстом и возвращает сумму — чашка стоит 150 ₽. **На неверный текст функция должна вернуть подсказку**, а сейчас программа падает. Исправьте её.
-    ```input
-    2
+    Кофейня: `cups_cost(text)` получает число чашек текстом и возвращает сумму — чашка стоит 150 ₽. **На неверный текст функция должна вернуть подсказку**, а сейчас функция падает. Исправьте её.
+    ```call
+    cups_cost("2")
     ```
-    ```output
-    К оплате: 300
+    ```return
+    "К оплате: 300"
     ```
-    ```input
-    две
+    ```call
+    cups_cost("две")
     ```
-    ```output
-    Нужно целое число чашек
+    ```return
+    "Нужно целое число чашек"
     ```
-    - Пробелы по краям числа допустимы: ` 3 ` → `К оплате: 450`.
+    - Пробелы по краям числа допустимы: `cups_cost(" 3 ")` возвращает `"К оплате: 450"`.
     - Не текст (например, `None`) — ошибка в программе: такой вызов падает с `TypeError`, как сам `int`.
   starter: |
     def cups_cost(text):
@@ -134,7 +134,7 @@ questions:
             return "Нужно целое число чашек"
 
 
-    print(cups_cost(input()))
+    print(cups_cost("2"))
   solution: |
     def cups_cost(text):
         try:
@@ -144,37 +144,32 @@ questions:
             return "Нужно целое число чашек"
 
 
-    print(cups_cost(input()))
+    print(cups_cost("2"))
+    print(cups_cost("две"))
   tests:
-    stdin: "2\n"
-    asserts:
-    - name: Не текст — TypeError
-      code: |
-        what = None
-        try:
-            what = "вернула " + repr(cups_cost(None))
-        except TypeError:
-            what = "TypeError"
-        assert what == "TypeError", f"cups_cost(None) должна упасть с TypeError, как сам int, а {what}: ловите только тот тип, который int выбрасывает на неверном тексте"
-    io:
+    function: cups_cost
+    calls:
     - name: Число
-      stdin: "2\n"
-      stdout: "К оплате: 300"
+      args: ["2"]
+      expect: "К оплате: 300"
     - name: Слово
-      stdin: "две\n"
-      stdout: "Нужно целое число чашек"
+      args: ["две"]
+      expect: "Нужно целое число чашек"
     - name: Пробелы по краям
-      stdin: " 3 \n"
-      stdout: "К оплате: 450"
+      args: [" 3 "]
+      expect: "К оплате: 450"
       hidden: true
     - name: Дробное число
-      stdin: "2.5\n"
-      stdout: "Нужно целое число чашек"
+      args: ["2.5"]
+      expect: "Нужно целое число чашек"
       hidden: true
-    - name: Пустой ввод
-      stdin: "\n"
-      stdout: "Нужно целое число чашек"
+    - name: Пустая строка
+      args: [""]
+      expect: "Нужно целое число чашек"
       hidden: true
+    - name: Не текст — TypeError, как у int
+      args: [null]
+      raises: TypeError
   explain: '`int("две")` выбрасывает `ValueError`: тип у значения подходящий — текст, — но число из него не получается. `TypeError` — когда пришло значение не того типа, например `None`. `except` ловит только свой тип, поэтому `except TypeError` пропускал `ValueError` дальше, и программа останавливалась. «2.5» и пустую строку `int` тоже не разбирает, а пробелы по краям пропускает сам.'
 - id: code-fix-break-place
   type: code
@@ -225,16 +220,19 @@ questions:
   type: code
   q: |
     `line_cost(name, qty_text)` возвращает стоимость позиции заказа по словарю `PRICES`, а при неверном количестве — подсказку `количество — целое число`. **Неизвестный товар должен выбрасывать** `KeyError`, а сейчас на него тоже приходит подсказка про количество. Исправьте функцию.
-    ```input
+    ```call
     line_cost("хлеб", "2")
-    line_cost("хлеб", "два")
-    line_cost("кофе", "2")
     ```
-    ```output
+    ```return
     90
-    количество — целое число
-    KeyError: 'кофе'
     ```
+    ```call
+    line_cost("хлеб", "два")
+    ```
+    ```return
+    "количество — целое число"
+    ```
+    - `line_cost("кофе", "2")` выбрасывает `KeyError: 'кофе'`.
     - Количество не текстом (например, `None`) — ошибка в программе: `TypeError`, как у самого `int`.
   starter: |
     PRICES = {"хлеб": 45, "молоко": 89, "сыр": 320}
@@ -264,47 +262,45 @@ questions:
     print(line_cost("хлеб", "2"))
     print(line_cost("хлеб", "два"))
   tests:
-    asserts:
+    function: line_cost
+    calls:
     - name: Верный заказ
-      code: |
-        r = line_cost("хлеб", "2")
-        assert r == 90, f"line_cost(\"хлеб\", \"2\") должна вернуть 90, а вернула {r!r}"
-        r = line_cost("сыр", " 1 ")
-        assert r == 320, f"line_cost(\"сыр\", \" 1 \") должна вернуть 320, а вернула {r!r}"
-    - name: Неверное количество
-      code: |
-        for qty in ["два", "1.5", ""]:
-            r = line_cost("молоко", qty)
-            assert r == "количество — целое число", f"line_cost(\"молоко\", {qty!r}) должна вернуть подсказку, а вернула {r!r}"
+      args: ["хлеб", "2"]
+      expect: 90
+    - name: Пробелы вокруг количества
+      args: ["сыр", " 1 "]
+      expect: 320
+      hidden: true
+    - name: Количество словом
+      args: ["хлеб", "два"]
+      expect: "количество — целое число"
+    - name: Дробное количество
+      args: ["молоко", "1.5"]
+      expect: "количество — целое число"
+      hidden: true
+    - name: Пустое количество
+      args: ["молоко", ""]
+      expect: "количество — целое число"
+      hidden: true
     - name: Неизвестный товар — KeyError
-      code: |
-        what = None
-        try:
-            what = "вернула " + repr(line_cost("кофе", "2"))
-        except KeyError:
-            what = "KeyError"
-        assert what == "KeyError", f"line_cost(\"кофе\", \"2\") должна выбросить KeyError, а {what}"
+      args: ["кофе", "2"]
+      raises: KeyError
     - name: Не текст вместо количества — TypeError
-      code: |
-        what = None
-        try:
-            what = "вернула " + repr(line_cost("хлеб", None))
-        except TypeError:
-            what = "TypeError"
-        assert what == "TypeError", f"line_cost(\"хлеб\", None) должна упасть с TypeError, как сам int, а {what}: ловите только ожидаемый тип"
+      args: ["хлеб", null]
+      raises: TypeError
+      hidden: true
   explain: '`except` без типа ловит всё: и `ValueError` от `int`, и `KeyError` от словаря, и `TypeError`, если вместо текста пришёл `None`. Поэтому неизвестный товар выдавался за неверное количество. После `except` нужен тот тип, который вы ожидаете и знаете, как обработать, — `ValueError`. Остальные исключения уходят к вызывающему коду. `except Exception` здесь тоже не годится: он ловит и `KeyError`.'
 - id: code-change-raise-minutes
   type: code
   q: |
     `call_cost(minutes)` возвращает цену звонка: 3 ₽ за минуту. При отрицательных минутах она возвращает −1, и однажды это −1 попало в сумму счёта. **Измените функцию: при отрицательных минутах она выбрасывает исключение** — `ValueError` с текстом `минут не может быть меньше нуля, а пришло <минуты>`.
-    ```input
+    ```call
     call_cost(10)
-    call_cost(-5)
     ```
-    ```output
+    ```return
     30
-    ValueError: минут не может быть меньше нуля, а пришло -5
     ```
+    - `call_cost(-5)` выбрасывает `ValueError: минут не может быть меньше нуля, а пришло -5`.
     - Звонок в 0 минут стоит 0 ₽.
   starter: |
     def call_cost(minutes):
@@ -323,21 +319,34 @@ questions:
 
     print(call_cost(10))
   tests:
+    function: call_cost
+    calls:
+    - name: Обычный звонок
+      args: [10]
+      expect: 30
+    - name: Одна минута
+      args: [1]
+      expect: 3
+      hidden: true
+    - name: Ноль минут
+      args: [0]
+      expect: 0
+    - name: Отрицательные минуты — ValueError
+      args: [-5]
+      raises: ValueError
+    - name: Минус одна минута — ValueError
+      args: [-1]
+      raises: ValueError
+      hidden: true
     asserts:
-    - name: Обычный звонок и ноль минут
-      code: |
-        for m, cost in [(10, 30), (1, 3), (0, 0)]:
-            r = call_cost(m)
-            assert r == cost, f"call_cost({m}) должна вернуть {cost}, а вернула {r!r}"
-    - name: Отрицательные минуты — ValueError с текстом
+    - name: Текст исключения
       code: |
         for m in [-5, -1]:
             msg = None
             try:
-                r = call_cost(m)
+                call_cost(m)
             except ValueError as e:
                 msg = str(e)
-            assert msg is not None, f"call_cost({m}) должна выбросить ValueError, а вернула {r!r}"
             want = f"минут не может быть меньше нуля, а пришло {m}"
             assert msg == want, f"Текст исключения для {m}: «{msg}». Нужен: {want}"
   explain: 'Особое значение вроде −1 вызывающий код может забыть проверить, и оно смешается с настоящими ценами. Исключение забыть нельзя: его либо поймают, либо программа остановится с понятным текстом. Тип — `ValueError`: число минут — число, тип верный, неподходящее значение. В тексте — что ожидалось и что пришло, поэтому нужна f-строка с `minutes`. После `raise` функция прерывается, `return` уже не выполняется.'
@@ -345,16 +354,19 @@ questions:
   type: code
   q: |
     `book(text, free)` получает число гостей из формы и число свободных мест. Если в форме не число, она возвращает `Введите число гостей`. **Если мест не хватает, исключение из** `check_free` **должно дойти до вызывающего кода** — а сейчас гость видит «Введите число гостей». Исправьте `book`, `check_free` не меняйте.
-    ```input
+    ```call
     book("4", 6)
+    ```
+    ```return
+    "Столик на 4"
+    ```
+    ```call
     book("четыре", 6)
-    book("8", 6)
     ```
-    ```output
-    Столик на 4
-    Введите число гостей
-    ValueError: свободно только 6 мест, а гостей 8
+    ```return
+    "Введите число гостей"
     ```
+    - `book("8", 6)` выбрасывает `ValueError: свободно только 6 мест, а гостей 8` — исключение из `check_free`.
   starter: |
     def check_free(guests, free):
         if guests > free:
@@ -391,42 +403,61 @@ questions:
     print(book("4", 6))
     print(book("четыре", 6))
   tests:
-    asserts:
+    function: book
+    calls:
     - name: Места есть
-      code: |
-        for text, free, want in [("4", 6, "Столик на 4"), ("6", 6, "Столик на 6"), (" 2 ", 3, "Столик на 2")]:
-            r = book(text, free)
-            assert r == want, f"book({text!r}, {free}) должна вернуть «{want}», а вернула {r!r}"
-    - name: В форме не число
-      code: |
-        for text in ["четыре", "", "2.5"]:
-            r = book(text, 6)
-            assert r == "Введите число гостей", f"book({text!r}, 6) должна вернуть «Введите число гостей», а вернула {r!r}"
-    - name: Мест не хватает — ValueError от check_free
+      args: ["4", 6]
+      expect: "Столик на 4"
+    - name: Ровно столько мест
+      args: ["6", 6]
+      expect: "Столик на 6"
+      hidden: true
+    - name: Пробелы вокруг числа
+      args: [" 2 ", 3]
+      expect: "Столик на 2"
+      hidden: true
+    - name: В форме слово
+      args: ["четыре", 6]
+      expect: "Введите число гостей"
+    - name: Пустая форма
+      args: ["", 6]
+      expect: "Введите число гостей"
+      hidden: true
+    - name: Дробное число гостей
+      args: ["2.5", 6]
+      expect: "Введите число гостей"
+      hidden: true
+    - name: Мест не хватает — ValueError
+      args: ["8", 6]
+      raises: ValueError
+    - name: Свободных мест нет — ValueError
+      args: ["1", 0]
+      raises: ValueError
+      hidden: true
+    asserts:
+    - name: Мест не хватает — текст от check_free
       code: |
         for text, free in [("8", 6), ("1", 0)]:
             msg = None
             try:
-                r = book(text, free)
+                book(text, free)
             except ValueError as e:
                 msg = str(e)
-            assert msg is not None, f"book({text!r}, {free}) должна выбросить ValueError, а вернула {r!r}"
             want = f"свободно только {free} мест, а гостей {text}"
-            assert msg == want, f"Текст исключения: «{msg}». Нужен текст от check_free: {want}"
+            assert msg == want, f"Текст исключения для book({text!r}, {free}): «{msg}». Нужен текст от check_free: {want}"
   explain: '`except ValueError` ловит исключение этого типа из любой строки блока `try` — и от `int`, и из глубины `check_free`. В `try` должна остаться только строка, где ожидается неверный ввод. Работу с удачным результатом переносят в `else` — или после всей конструкции, ведь `except` заканчивается `return`. Тогда `ValueError` от `check_free` уже не попадает в этот `except` и уходит к вызывающему коду.'
 - id: code-write-average-mark
   type: code
   q: |
     `read_mark(text)` переводит запись журнала в оценку от 1 до 5, а иначе выбрасывает `ValueError`. Напишите `average_mark(records)` — **средний балл по верным записям; неверные записи пропускаются.** `read_mark` не меняйте.
-    ```input
+    ```call
     average_mark(["5", "4", "отл", "7", "3"])
-    average_mark(["н", "0"])
     ```
-    ```output
+    ```return
     4.0
-    ValueError: нет ни одной верной оценки
     ```
-    - Средний балл округлён до двух знаков: `round(x, 2)`.
+    - `average_mark(["н", "0"])` выбрасывает `ValueError: нет ни одной верной оценки`.
+    - `records` — список строк журнала; функция возвращает средний балл, округлённый до двух знаков: `round(x, 2)`.
     - Нет ни одной верной записи (в том числе пустой список) — `ValueError` с текстом `нет ни одной верной оценки`.
     - Не текст в списке (например, `None`) — ошибка в программе: `TypeError` не ловите.
   starter: |
@@ -464,28 +495,41 @@ questions:
 
     print(average_mark(["5", "4", "отл", "7", "3"]))   # 4.0
   tests:
-    asserts:
+    function: average_mark
+    calls:
     - name: Неверные записи пропускаются
-      code: |
-        for records, want in [(["5", "4", "отл", "7", "3"], 4.0), (["5", "4"], 4.5), (["2", "3", "3"], 2.67), (["н", "5", "0"], 5)]:
-            r = average_mark(records)
-            assert r == want, f"average_mark({records}) должна вернуть {want}, а вернула {r!r}"
+      args: [["5", "4", "отл", "7", "3"]]
+      expect: 4.0
+    - name: Все записи верные
+      args: [["5", "4"]]
+      expect: 4.5
+    - name: Округление до двух знаков
+      args: [["2", "3", "3"]]
+      expect: 2.67
+      hidden: true
+    - name: Одна верная запись
+      args: [["н", "5", "0"]]
+      expect: 5
+      hidden: true
     - name: Верных записей нет — ValueError
+      args: [["н", "0", "6"]]
+      raises: ValueError
+    - name: Пустой журнал — ValueError
+      args: [[]]
+      raises: ValueError
+      hidden: true
+    - name: Не текст в журнале — TypeError
+      args: [["5", null]]
+      raises: TypeError
+      hidden: true
+    asserts:
+    - name: Текст исключения
       code: |
         for records in [["н", "0", "6"], []]:
             msg = None
             try:
-                r = average_mark(records)
+                average_mark(records)
             except ValueError as e:
                 msg = str(e)
-            assert msg is not None, f"average_mark({records}) должна выбросить ValueError, а вернула {r!r}"
             assert msg == "нет ни одной верной оценки", f"Текст исключения для {records}: «{msg}». Нужен: нет ни одной верной оценки"
-    - name: Не текст в журнале — TypeError
-      code: |
-        what = None
-        try:
-            what = "вернула " + repr(average_mark(["5", None]))
-        except TypeError:
-            what = "TypeError"
-        assert what == "TypeError", f"average_mark([\"5\", None]) должна упасть с TypeError, а {what}: ловите только ValueError"
   explain: 'Что делать с неверной записью, решает тот, кто знает задачу: `read_mark` только сообщает о ней, а `average_mark` пропускает. Поэтому `try` стоит внутри цикла, вокруг одного вызова: исключение поднимается из `read_mark`, ловится, и цикл идёт к следующей записи. Пустой список верных оценок — отдельный случай: без проверки деление на `len(marks)` дало бы `ZeroDivisionError` с непонятным для журнала текстом.'

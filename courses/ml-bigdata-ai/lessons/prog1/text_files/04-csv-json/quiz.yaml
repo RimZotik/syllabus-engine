@@ -259,16 +259,19 @@ questions:
   q: |
     **Напишите `paid_total(path)`: прочитать список заказов из JSON-файла и вернуть сумму оплаченных заказов.**
     Сумма заказа — сумма `price * qty` по его товарам `items`. Заказ оплачен, если `paid` равно `true` или поля `paid` нет; `"paid": false` — не оплачен. Поля `items` может не быть — тогда заказ стоит 0.
-    ```input
-    (orders.json)
+    Файл `orders.json` — на вкладке:
+    ```
     [
       {"id": 1, "items": [{"price": 150, "qty": 2}, {"price": 320, "qty": 1}]},
       {"id": 2, "items": [{"price": 45, "qty": 3}], "paid": false},
       {"id": 3, "paid": true}
     ]
     ```
-    ```output
-    paid_total("orders.json") → 620
+    ```call
+    paid_total("orders.json")
+    ```
+    ```return
+    620
     ```
   starter: |
     import json
@@ -297,25 +300,21 @@ questions:
   tests:
     files:
       orders.json: "[\n  {\"id\": 1, \"items\": [{\"price\": 150, \"qty\": 2}, {\"price\": 320, \"qty\": 1}]},\n  {\"id\": 2, \"items\": [{\"price\": 45, \"qty\": 3}], \"paid\": false},\n  {\"id\": 3, \"paid\": true}\n]\n"
-    asserts:
+      o2.json: "[{\"id\": 5, \"paid\": true, \"items\": [{\"price\": 10, \"qty\": 5}]}, {\"id\": 6, \"items\": []}, {\"id\": 7, \"paid\": false, \"items\": [{\"price\": 1000, \"qty\": 1}]}]"
+      o3.json: "[]"
+    function: paid_total
+    calls:
     - name: Файл из условия
-      code: |
-        got = paid_total("orders.json")
-        assert got == 620, f"paid_total('orders.json') должна вернуть 620, а вернула {got!r}"
+      args: ["orders.json"]
+      expect: 620
     - name: Явное paid true и пустой список товаров
-      code: |
-        import json
-        orders = [{"id": 5, "paid": True, "items": [{"price": 10, "qty": 5}]}, {"id": 6, "items": []}, {"id": 7, "paid": False, "items": [{"price": 1000, "qty": 1}]}]
-        with open("o2.json", "w", encoding="utf-8") as f:
-            json.dump(orders, f)
-        got = paid_total("o2.json")
-        assert got == 50, f"Для {orders} нужно 50, а вернулось {got!r}"
+      args: ["o2.json"]
+      expect: 50
+      hidden: true
     - name: Пустой список заказов
-      code: |
-        with open("o3.json", "w", encoding="utf-8") as f:
-            f.write("[]")
-        got = paid_total("o3.json")
-        assert got == 0, f"Для пустого списка заказов нужен 0, а вернулось {got!r}"
+      args: ["o3.json"]
+      expect: 0
+      hidden: true
   explain: 'Обязательные поля (`price`, `qty`) берут квадратными скобками, необязательные — через `get` со значением по умолчанию: `True` для `paid` и пустой список для `items`. `false` из JSON становится `False`, и условие его отсекает. Сумма по пустому списку — честный 0.'
 - id: code-write-save-report
   type: code
@@ -385,8 +384,8 @@ questions:
   q: |
     **Напишите `journal_average(path)`: прочитать журнал CSV с разделителем `;` и столбцами `ученик;оценка` и вернуть кортеж `(средний балл, номера пропущенных строк файла)`.**
     Оценка — целое от 1 до 5, пробелы по краям допустимы. Строка с другой оценкой, с пустой или без поля оценки пропускается; номер строки файла считается с 1, заголовок — строка 1. Средний балл округлён до двух знаков; если верных оценок нет — `None`.
-    ```input
-    (journal.csv)
+    Файл `journal.csv` — на вкладке:
+    ```
     ученик;оценка
     Аня; 5
     Борис;н
@@ -394,8 +393,11 @@ questions:
     Глеб;6
     Дина
     ```
-    ```output
-    journal_average("journal.csv") → (4.5, [3, 5, 6])
+    ```call
+    journal_average("journal.csv")
+    ```
+    ```return
+    (4.5, [3, 5, 6])
     ```
   starter: |
     import csv
@@ -437,27 +439,29 @@ questions:
   tests:
     files:
       journal.csv: "ученик;оценка\nАня; 5\nБорис;н\nВера;4\nГлеб;6\nДина\n"
-    asserts:
+      j2.csv: "ученик;оценка\nА;3\nБ;\nВ;0\nГ;4.5\nД; 3 \nЕ;5\n"
+      j3.csv: "ученик;оценка\nА;н\nБ\n"
+      j4.csv: "ученик;оценка\n"
+      j5.csv: "ученик;оценка\nА;1\nБ;5\n"
+    function: journal_average
+    calls:
     - name: Файл из условия
-      code: |
-        got = journal_average("journal.csv")
-        assert got == (4.5, [3, 5, 6]), f"journal_average('journal.csv') должна вернуть (4.5, [3, 5, 6]), а вернула {got!r}"
+      args: ["journal.csv"]
+      expect_py: '(4.5, [3, 5, 6])'
     - name: Пустая оценка, ноль и дробь
-      code: |
-        with open("j2.csv", "w", encoding="utf-8") as f:
-            f.write("ученик;оценка\nА;3\nБ;\nВ;0\nГ;4.5\nД; 3 \nЕ;5\n")
-        got = journal_average("j2.csv")
-        assert got == (3.67, [3, 4, 5]), f"Для второго журнала нужно (3.67, [3, 4, 5]), а вернулось {got!r}"
+      args: ["j2.csv"]
+      expect: [3.67, [3, 4, 5]]
+      hidden: true
     - name: Верных оценок нет
-      code: |
-        with open("j3.csv", "w", encoding="utf-8") as f:
-            f.write("ученик;оценка\nА;н\nБ\n")
-        got = journal_average("j3.csv")
-        assert got == (None, [2, 3]), f"Если верных оценок нет, нужно (None, [2, 3]), а вернулось {got!r}"
+      args: ["j3.csv"]
+      expect: [null, [2, 3]]
+      hidden: true
     - name: Только заголовок
-      code: |
-        with open("j4.csv", "w", encoding="utf-8") as f:
-            f.write("ученик;оценка\n")
-        got = journal_average("j4.csv")
-        assert got == (None, []), f"Для журнала без записей нужно (None, []), а вернулось {got!r}"
+      args: ["j4.csv"]
+      expect: [null, []]
+      hidden: true
+    - name: Крайние оценки 1 и 5
+      args: ["j5.csv"]
+      expect: [3.0, []]
+      hidden: true
   explain: 'Каждая плохая строка ломается по-своему: «н» и пустое поле — `ValueError` от `int`, «6» — число вне диапазона, а у строки без `;` поля нет вовсе, и `DictReader` подставляет `None` — `int(None)` дал бы `TypeError`. Поэтому `None` проверяют до перевода. `enumerate(..., start=2)` даёт номер строки файла. Нет верных оценок — среднего нет: 0 был бы неправдой.'

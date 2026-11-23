@@ -3,51 +3,43 @@ title: Что поставит pip
 sandbox: python-browser
 difficulty: 3
 statement: |
-  **Выведите все пакеты, которые придётся установить вместе с данным: сам пакет, его зависимости, их зависимости и так далее.**
+  **Напишите функцию `to_install(deps, name)`, которая возвращает все пакеты, которые придётся установить вместе с данным: сам пакет, его зависимости, их зависимости и так далее.**
 
-  В `deps.json` — словарь «пакет → список его зависимостей»; пакета, которого нет среди ключей, считайте пакетом без зависимостей. На входе — имя пакета. Вывод — каждый пакет один раз, по алфавиту, по строке. Если введённого пакета нет среди ключей — `нет в каталоге: имя`.
+  `deps` — словарь «пакет → список его зависимостей» (в редакторе он читается из `deps.json` с вкладки); пакет, которого нет среди ключей, считайте пакетом без зависимостей. `name` — строка. Функция возвращает список: каждый пакет один раз, по алфавиту. Если `name` нет среди ключей `deps` — `KeyError`.
 
   Пример 1
-  ```input
-  requests
+  ```call
+  to_install({"requests": ["charset-normalizer", "idna", "urllib3", "certifi"]}, "requests")
   ```
-  ```output
-  certifi
-  charset-normalizer
-  idna
-  requests
-  urllib3
+  ```return
+  ["certifi", "charset-normalizer", "idna", "requests", "urllib3"]
   ```
 
   Пример 2
-  ```input
-  pandas
+  ```call
+  to_install({"pandas": ["numpy", "python-dateutil", "pytz", "tzdata"], "python-dateutil": ["six"], "numpy": []}, "pandas")
   ```
-  ```output
-  numpy
-  pandas
-  python-dateutil
-  pytz
-  six
-  tzdata
+  ```return
+  ["numpy", "pandas", "python-dateutil", "pytz", "six", "tzdata"]
   ```
 starter: |
   import json
 
-  name = input()
+
+  def to_install(deps, name):
+      pass
+
+
   with open("deps.json", encoding="utf-8") as f:
       deps = json.load(f)
-stdin: "requests\n"
+  print(to_install(deps, "requests"))
 solution: |
   import json
 
-  name = input()
-  with open("deps.json", encoding="utf-8") as f:
-      deps = json.load(f)
 
-  if name not in deps:
-      print(f"нет в каталоге: {name}")
-  else:
+  def to_install(deps, name):
+      if name not in deps:
+          raise KeyError(name)
       found = {name}
       todo = [name]
       while todo:
@@ -56,48 +48,43 @@ solution: |
               if dep not in found:
                   found.add(dep)
                   todo.append(dep)
-      for package in sorted(found):
-          print(package)
+      return sorted(found)
+
+
+  with open("deps.json", encoding="utf-8") as f:
+      deps = json.load(f)
+  print(to_install(deps, "requests"))
 tests:
   files:
-    deps.json: |
-      {
-        "requests": ["charset-normalizer", "idna", "urllib3", "certifi"],
-        "pandas": ["numpy", "python-dateutil", "pytz", "tzdata"],
-        "python-dateutil": ["six"],
-        "matplotlib": ["numpy", "pillow", "python-dateutil", "pyparsing"],
-        "numpy": [],
-        "six": []
-      }
-  io:
+    deps.json: "{\n  \"requests\": [\n    \"charset-normalizer\",\n    \"idna\",\n    \"urllib3\",\n    \"certifi\"\n  ],\n  \"pandas\": [\n    \"numpy\",\n    \"python-dateutil\",\n    \"pytz\",\n    \"tzdata\"\n  ],\n  \"python-dateutil\": [\n    \"six\"\n  ],\n  \"matplotlib\": [\n    \"numpy\",\n    \"pillow\",\n    \"python-dateutil\",\n    \"pyparsing\"\n  ],\n  \"numpy\": [],\n  \"six\": []\n}\n"
+  function: to_install
+  no_mutate: true
+  calls:
     - name: Пример 1
-      stdin: "requests\n"
-      stdout: "certifi\ncharset-normalizer\nidna\nrequests\nurllib3"
+      args: [{"requests": ["charset-normalizer", "idna", "urllib3", "certifi"]}, "requests"]
+      expect: ["certifi", "charset-normalizer", "idna", "requests", "urllib3"]
     - name: Пример 2
-      stdin: "pandas\n"
-      stdout: "numpy\npandas\npython-dateutil\npytz\nsix\ntzdata"
+      args: [{"pandas": ["numpy", "python-dateutil", "pytz", "tzdata"], "python-dateutil": ["six"], "numpy": []}, "pandas"]
+      expect: ["numpy", "pandas", "python-dateutil", "pytz", "six", "tzdata"]
     - name: Общие зависимости — по одному разу
-      stdin: "matplotlib\n"
-      stdout: "matplotlib\nnumpy\npillow\npyparsing\npython-dateutil\nsix"
+      args: [{"requests": ["charset-normalizer", "idna", "urllib3", "certifi"], "pandas": ["numpy", "python-dateutil", "pytz", "tzdata"], "python-dateutil": ["six"], "matplotlib": ["numpy", "pillow", "python-dateutil", "pyparsing"], "numpy": [], "six": []}, "matplotlib"]
+      expect: ["matplotlib", "numpy", "pillow", "pyparsing", "python-dateutil", "six"]
       hidden: true
     - name: Без зависимостей
-      stdin: "six\n"
-      stdout: "six"
+      args: [{"requests": ["charset-normalizer", "idna", "urllib3", "certifi"], "pandas": ["numpy", "python-dateutil", "pytz", "tzdata"], "python-dateutil": ["six"], "matplotlib": ["numpy", "pillow", "python-dateutil", "pyparsing"], "numpy": [], "six": []}, "six"]
+      expect: ["six"]
       hidden: true
-    - name: Нет в каталоге
-      stdin: "reqeusts\n"
-      stdout: "нет в каталоге: reqeusts"
-      hidden: true
+    - name: Нет в каталоге — KeyError
+      args: [{"requests": ["charset-normalizer", "idna", "urllib3", "certifi"], "pandas": ["numpy", "python-dateutil", "pytz", "tzdata"], "python-dateutil": ["six"], "matplotlib": ["numpy", "pillow", "python-dateutil", "pyparsing"], "numpy": [], "six": []}, "reqeusts"]
+      raises: KeyError
     - name: Глубокая цепочка
-      stdin: "app\n"
-      files:
-        deps.json: '{"app": ["web"], "web": ["http", "templates"], "http": ["sockets"], "templates": ["markup"], "markup": ["sockets"], "sockets": []}'
-      stdout: "app\nhttp\nmarkup\nsockets\ntemplates\nweb"
+      args: [{"app": ["web"], "web": ["http", "templates"], "http": ["sockets"], "templates": ["markup"], "markup": ["sockets"], "sockets": []}, "app"]
+      expect: ["app", "http", "markup", "sockets", "templates", "web"]
       hidden: true
 hints:
   - level: 1
-    text: 'Зависимости зависимостей — это уже третий, четвёртый уровень, и сколько их, заранее неизвестно. Как обойти все уровни циклом, если держать список «ещё не просмотренных» пакетов?'
+    text: 'Зависимости зависимостей — это уже третий, четвёртый уровень, и сколько их, заранее неизвестно. Как обойти все уровни циклом, если держать список «ещё не просмотренных» пакетов? Чтобы увидеть ход обхода, печатайте текущий пакет через `print` — он не влияет на проверку.'
   - level: 2
     text: 'Два набора: множество найденных (чтобы не брать пакет дважды) и список «надо просмотреть». Пока список не пуст — снять из него пакет и добавить его ещё не найденные зависимости в оба набора.'
   - level: 3
-    text: 'Начните с `found = {name}` и `todo = [name]`; цикл `while todo:`, внутри `current = todo.pop()` и перебор `deps.get(current, [])` — `get` со списком по умолчанию решает случай пакета без записи. В конце — `sorted(found)`.'
+    text: 'Начните с `found = {name}` и `todo = [name]`; цикл `while todo:`, внутри `current = todo.pop()` и перебор `deps.get(current, [])` — `get` со списком по умолчанию решает случай пакета без записи. В конце — `sorted(found)`; пакет не из каталога отсейте до цикла через `raise KeyError(name)`.'

@@ -102,13 +102,13 @@ questions:
   q: |
     **Допишите функцию `to_seconds(minutes, seconds)`: она возвращает, сколько всего секунд в `minutes` минутах и `seconds` секундах.**
 
-    Замените `...` в теле функции. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+    Замените `...` в теле функции.
 
     Пример 1
-    ```input
+    ```call
     to_seconds(2, 5)
     ```
-    ```output
+    ```return
     125
     ```
 
@@ -120,23 +120,20 @@ questions:
     def to_seconds(minutes, seconds):
         return minutes * 60 + seconds
   tests:
-    asserts:
+    function: to_seconds
+    calls:
     - name: Две минуты пять секунд
-      code: |
-        r = to_seconds(2, 5)
-        assert r == 125, "to_seconds(2, 5) должна вернуть 125, а вернула " + repr(r)
+      args: [2, 5]
+      expect: 125
     - name: Только секунды
-      code: |
-        r = to_seconds(0, 59)
-        assert r == 59, "to_seconds(0, 59) должна вернуть 59, а вернула " + repr(r)
+      args: [0, 59]
+      expect: 59
     - name: Ровно десять минут
-      code: |
-        r = to_seconds(10, 0)
-        assert r == 600, "to_seconds(10, 0) должна вернуть 600, а вернула " + repr(r)
+      args: [10, 0]
+      expect: 600
     - name: Ноль
-      code: |
-        r = to_seconds(0, 0)
-        assert r == 0, "to_seconds(0, 0) должна вернуть 0, а вернула " + repr(r)
+      args: [0, 0]
+      expect: 0
   explain: |
     В минуте 60 секунд: `minutes * 60 + seconds`. Проверки смотрят на то, что функция вернула, поэтому выражение стоит после `return`; `print` вместо `return` проверку не пройдёт — вызов вернёт `None`.
 - id: code-fix-def-order
@@ -248,21 +245,21 @@ questions:
   q: |
     **Исправьте строку с `def`: Python не принимает определение функции `tip`.**
 
-    `tip` возвращает чаевые — `percent` процентов от счёта `bill`; если процент не указан, он равен 10. Функцию вызывают так: `tip(1000)`, `tip(1000, 15)`, `tip(percent=20, bill=500)`. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+    `tip` возвращает чаевые — `percent` процентов от счёта `bill`; если процент не указан, он равен 10. Функцию вызывают так: `tip(1000)`, `tip(1000, 15)`, `tip(percent=20, bill=500)`.
 
     Пример 1
-    ```input
+    ```call
     tip(1000)
     ```
-    ```output
+    ```return
     100.0
     ```
 
     Пример 2
-    ```input
+    ```call
     tip(1000, 15)
     ```
-    ```output
+    ```return
     150.0
     ```
   starter: |
@@ -296,21 +293,21 @@ questions:
   q: |
     **Напишите функцию `phone_bill(minutes, free=300, rate=2)`, которая возвращает плату за связь за месяц.**
 
-    Первые `free` минут бесплатны, каждая минута сверх них стоит `rate` рублей. Если минут не больше `free`, функция возвращает `0`. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+    Первые `free` минут бесплатны, каждая минута сверх них стоит `rate` рублей. Если минут не больше `free`, функция возвращает `0`.
 
     Пример 1
-    ```input
+    ```call
     phone_bill(400)
     ```
-    ```output
+    ```return
     200
     ```
 
     Пример 2
-    ```input
+    ```call
     phone_bill(400, rate=3)
     ```
-    ```output
+    ```return
     300
     ```
 
@@ -325,39 +322,35 @@ questions:
             return 0
         return (minutes - free) * rate
   tests:
-    asserts:
+    function: phone_bill
+    calls:
     - name: Пример из условия
-      code: |
-        r = phone_bill(400)
-        assert r == 200, "phone_bill(400) должна вернуть 200, а вернула " + repr(r)
+      args: [400]
+      expect: 200
     - name: Другая цена минуты
-      code: |
-        r = phone_bill(400, rate=3)
-        assert r == 300, "phone_bill(400, rate=3) должна вернуть 300, а вернула " + repr(r)
+      args: [400]
+      kwargs: {"rate": 3}
+      expect: 300
     - name: Меньше бесплатных
-      code: |
-        r = phone_bill(250)
-        assert r == 0, "phone_bill(250) должна вернуть 0 — минуты в пределах бесплатных, а вернула " + repr(r)
+      args: [250]
+      expect: 0
     - name: Ровно бесплатные
-      code: |
-        r = phone_bill(300)
-        assert r == 0, "phone_bill(300) должна вернуть 0, а вернула " + repr(r)
+      args: [300]
+      expect: 0
     - name: Одна минута сверх
-      code: |
-        r = phone_bill(301)
-        assert r == 2, "phone_bill(301) должна вернуть 2, а вернула " + repr(r)
+      args: [301]
+      expect: 2
     - name: Другой пакет минут
-      code: |
-        r = phone_bill(400, free=100)
-        assert r == 600, "phone_bill(400, free=100) должна вернуть 600, а вернула " + repr(r)
+      args: [400]
+      kwargs: {"free": 100}
+      expect: 600
     - name: Все аргументы по порядку
-      code: |
-        r = phone_bill(50, 0, 1)
-        assert r == 50, "phone_bill(50, 0, 1) должна вернуть 50, а вернула " + repr(r)
+      args: [50, 0, 1]
+      expect: 50
     - name: Аргументы по имени
-      code: |
-        r = phone_bill(rate=5, minutes=310)
-        assert r == 50, "phone_bill(rate=5, minutes=310) должна вернуть 50, а вернула " + repr(r)
+      args: []
+      kwargs: {"rate": 5, "minutes": 310}
+      expect: 50
   explain: |
     Платят только за минуты сверх бесплатных: `(minutes - free) * rate`. Если минут не больше `free`, разность получится нулевой или отрицательной — поэтому сначала проверка и `return 0`, а после неё `return` с формулой. Значения по умолчанию подставляются, только когда аргумент не передали, а именованный аргумент меняет один нужный параметр.
 - id: code-write-coldest
@@ -365,21 +358,15 @@ questions:
   q: |
     **Напишите функции `to_celsius(f)` и `coldest(temps)`: перевод из градусов Фаренгейта в градусы Цельсия и самая низкая температура списка по Цельсию.**
 
-    `to_celsius(f)` возвращает `(f - 32) * 5 / 9`, округлённое через `round(…, 1)`. `coldest(temps)` получает температуры по Фаренгейту, переводит каждую через `to_celsius` и возвращает самую низкую; для пустого списка — `None`. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+    `to_celsius(f)` возвращает `(f - 32) * 5 / 9`, округлённое через `round(…, 1)`. `coldest(temps)` получает температуры по Фаренгейту, переводит каждую через `to_celsius` и возвращает самую низкую; для пустого списка — `None`.
 
-    Пример 1
-    ```input
-    to_celsius(50)
-    ```
-    ```output
-    10.0
-    ```
+    Проверка вызывает обе функции. Например, `to_celsius(50)` возвращает `10.0`, а `to_celsius(0)` — `-17.8`.
 
-    Пример 2
-    ```input
+    Пример
+    ```call
     coldest([50, 23, 68])
     ```
-    ```output
+    ```return
     -5.0
     ```
   starter: |
@@ -402,6 +389,23 @@ questions:
                 lowest = c
         return lowest
   tests:
+    function: coldest
+    calls:
+    - name: Пример из условия
+      args: [[50, 23, 68]]
+      expect: -5.0
+    - name: Пустой список
+      args: [[]]
+      expect: null
+    - name: Одна температура
+      args: [[77]]
+      expect: 25.0
+    - name: Самая низкая в середине
+      args: [[14, -4, 5]]
+      expect: -20.0
+    - name: Самая низкая в конце
+      args: [[41, 32, 23]]
+      expect: -5.0
     asserts:
     - name: Перевод 50 °F
       code: |
@@ -411,25 +415,5 @@ questions:
       code: |
         r = to_celsius(0)
         assert r == -17.8, "to_celsius(0) должна вернуть -17.8, а вернула " + repr(r)
-    - name: Пример из условия
-      code: |
-        r = coldest([50, 23, 68])
-        assert r == -5.0, "coldest([50, 23, 68]) должна вернуть -5.0, а вернула " + repr(r)
-    - name: Пустой список
-      code: |
-        r = coldest([])
-        assert r is None, "coldest([]) должна вернуть None, а вернула " + repr(r)
-    - name: Одна температура
-      code: |
-        r = coldest([77])
-        assert r == 25.0, "coldest([77]) должна вернуть 25.0, а вернула " + repr(r)
-    - name: Самая низкая в середине
-      code: |
-        r = coldest([14, -4, 5])
-        assert r == -20.0, "coldest([14, -4, 5]) должна вернуть -20.0, а вернула " + repr(r)
-    - name: Самая низкая в конце
-      code: |
-        r = coldest([41, 32, 23])
-        assert r == -5.0, "coldest([41, 32, 23]) должна вернуть -5.0, а вернула " + repr(r)
   explain: |
     `to_celsius` возвращает число, поэтому её вызов можно поставить куда угодно — в присваивание, в сравнение. В `coldest` — знакомый поиск наименьшего: начать с первой температуры и сравнивать с каждой следующей. Пустой список проверяют до того, как брать `temps[0]`, иначе будет `IndexError`.

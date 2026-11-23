@@ -105,37 +105,42 @@ questions:
 - id: k5-complete-seconds
   type: code
   q: |
-    Во вводе — длительности упражнений в минутах. **Замените `...` списковым включением: список тех же длительностей в секундах.**
-    ```input
-    3 5 2
+    `minutes` — длительности упражнений в минутах. **Замените `...` списковым включением: функция `to_seconds(minutes)` возвращает новый список тех же длительностей в секундах.**
+    ```call
+    to_seconds([3, 5, 2])
     ```
-    ```output
+    ```return
     [180, 300, 120]
     ```
+
+    Ограничения: `append` не используйте.
   starter: |
-    minutes = []
-    for w in input().split():
-        minutes.append(int(w))
-    seconds = ...
-    print(seconds)
+    def to_seconds(minutes):
+        seconds = ...
+        return seconds
   solution: |
-    minutes = []
-    for w in input().split():
-        minutes.append(int(w))
-    seconds = [m * 60 for m in minutes]
-    print(seconds)
+    def to_seconds(minutes):
+        seconds = [m * 60 for m in minutes]
+        return seconds
   tests:
-    io:
+    forbid: [append]
+    function: to_seconds
+    no_mutate: true
+    calls:
     - name: Три упражнения
-      stdin: "3 5 2\n"
-      stdout: "[180, 300, 120]"
+      args: [[3, 5, 2]]
+      expect: [180, 300, 120]
     - name: Одно упражнение
-      stdin: "10\n"
-      stdout: "[600]"
+      args: [[10]]
+      expect: [600]
       hidden: true
     - name: С перерывом в ноль минут
-      stdin: "1 0 15\n"
-      stdout: "[60, 0, 900]"
+      args: [[1, 0, 15]]
+      expect: [60, 0, 900]
+      hidden: true
+    - name: Пустой список
+      args: [[]]
+      expect: []
       hidden: true
   explain: |
     Включение читается по порядку: что положить (`m * 60`), откуда брать (`for m in minutes`). Каждая длительность даёт ровно одно значение, поэтому длина списка та же.
@@ -143,10 +148,10 @@ questions:
   type: code
   q: |
     **Исправьте `passed(marks)`, оставив включение: вернуть оценки не ниже 3, в прежнем порядке.** Сейчас Python не может её прочитать: `SyntaxError`.
-    ```input
+    ```call
     passed([5, 2, 3, 2, 4])
     ```
-    ```output
+    ```return
     [5, 3, 4]
     ```
   starter: |
@@ -175,10 +180,10 @@ questions:
   type: code
   q: |
     **Исправьте `journal_view(marks)`, оставив включение: вернуть список той же длины, где каждая двойка заменена строкой `"пересдача"`.** Сейчас она возвращает только «пересдачи».
-    ```input
+    ```call
     journal_view([5, 2, 4])
     ```
-    ```output
+    ```return
     [5, 'пересдача', 4]
     ```
   starter: |
@@ -188,33 +193,30 @@ questions:
     def journal_view(marks):
         return ["пересдача" if m == 2 else m for m in marks]
   tests:
-    asserts:
+    function: journal_view
+    calls:
     - name: Одна двойка
-      code: |
-        r = journal_view([5, 2, 4])
-        assert r == [5, "пересдача", 4], "Нужно [5, 'пересдача', 4], а вернулось " + repr(r)
+      args: [[5, 2, 4]]
+      expect: [5, "пересдача", 4]
     - name: Двоек нет
-      code: |
-        r = journal_view([3, 4])
-        assert r == [3, 4], "Нужно [3, 4], а вернулось " + repr(r)
+      args: [[3, 4]]
+      expect: [3, 4]
     - name: Все двойки
-      code: |
-        r = journal_view([2, 2])
-        assert r == ["пересдача", "пересдача"], "Нужно ['пересдача', 'пересдача'], а вернулось " + repr(r)
+      args: [[2, 2]]
+      expect: ["пересдача", "пересдача"]
     - name: Пустой журнал
-      code: |
-        r = journal_view([])
-        assert r == [], "Нужно [], а вернулось " + repr(r)
+      args: [[]]
+      expect: []
   explain: |
     `if` в конце отбирает элементы, поэтому остальные оценки пропали. Замена — условное выражение в начале: `"пересдача" if m == 2 else m`. Для каждой оценки получается ровно одно значение.
 - id: k5-write-week-check
   type: code
   q: |
     **Напишите `week_check(temps)`: вернуть два значения — все ли дни были выше нуля и была ли хоть раз жара, больше 30 градусов.**
-    ```input
+    ```call
     week_check([25, 31, 28])
     ```
-    ```output
+    ```return
     (True, True)
     ```
     Используйте `all` и `any`, без отдельных списков.
@@ -227,33 +229,34 @@ questions:
     def week_check(temps):
         return all(t > 0 for t in temps), any(t > 30 for t in temps)
   tests:
-    asserts:
+    function: week_check
+    calls:
     - name: Тёплая неделя с жарой
-      code: |
-        r = week_check([25, 31, 28])
-        assert r == (True, True), "Для [25, 31, 28] нужно (True, True), а вернулось " + repr(r)
+      args: [[25, 31, 28]]
+      expect_py: "(True, True)"
     - name: Был мороз
-      code: |
-        r = week_check([5, -2, 10])
-        assert r == (False, False), "Для [5, -2, 10] нужно (False, False), а вернулось " + repr(r)
+      args: [[5, -2, 10]]
+      expect_py: "(False, False)"
     - name: Ровно ноль и ровно 30
-      code: |
-        r = week_check([0, 30, 12])
-        assert r == (False, False), "Ноль — не выше нуля, 30 — не больше 30: нужно (False, False), а вернулось " + repr(r)
+      args: [[0, 30, 12]]
+      expect_py: "(False, False)"
     - name: Мороз и жара в одну неделю
-      code: |
-        r = week_check([-1, 35])
-        assert r == (False, True), "Для [-1, 35] нужно (False, True), а вернулось " + repr(r)
+      args: [[-1, 35]]
+      expect_py: "(False, True)"
+    - name: Ровно один градус
+      args: [[1, 2]]
+      expect_py: "(True, False)"
+      hidden: true
   explain: |
     «Все» — `all`, «хоть один» — `any`, и обоим достаточно генераторного выражения без квадратных скобок. Граница важна: `t > 0` для нуля ложно, `t > 30` для тридцати — тоже.
 - id: k5-write-stock-left
   type: code
   q: |
     `stock` — сколько товара было на складе, `sold` — сколько продали; проданы могли быть не все товары. **Напишите `left(stock, sold)` одной строкой со словарным включением: вернуть новый словарь «товар → сколько осталось» для всех товаров склада.**
-    ```input
+    ```call
     left({"хлеб": 10, "сыр": 4}, {"хлеб": 3})
     ```
-    ```output
+    ```return
     {'хлеб': 7, 'сыр': 4}
     ```
     Склад не меняется.
@@ -264,34 +267,34 @@ questions:
     def left(stock, sold):
         return {item: stock[item] - sold.get(item, 0) for item in stock}
   tests:
-    asserts:
+    function: left
+    no_mutate: true
+    calls:
+    - name: Пример из условия
+      args: [{"хлеб": 10, "сыр": 4}, {"хлеб": 3}]
+      expect: {"хлеб": 7, "сыр": 4}
     - name: Часть товаров продана
-      code: |
-        r = left({"хлеб": 10, "сыр": 4, "чай": 7}, {"хлеб": 3, "чай": 7})
-        assert r == {"хлеб": 7, "сыр": 4, "чай": 0}, "Нужно {'хлеб': 7, 'сыр': 4, 'чай': 0}, а вернулось " + repr(r)
+      args: [{"хлеб": 10, "сыр": 4, "чай": 7}, {"хлеб": 3, "чай": 7}]
+      expect: {"хлеб": 7, "сыр": 4, "чай": 0}
     - name: Ничего не продано
-      code: |
-        r = left({"мёд": 2}, {})
-        assert r == {"мёд": 2}, "Нужно {'мёд': 2}, а вернулось " + repr(r)
+      args: [{"мёд": 2}, {}]
+      expect: {"мёд": 2}
     - name: Склад не меняется
-      code: |
-        stock = {"хлеб": 5}
-        left(stock, {"хлеб": 1})
-        assert stock == {"хлеб": 5}, "Словарь склада не должен меняться, а стал " + repr(stock)
+      args: [{"хлеб": 5}, {"хлеб": 1}]
+      expect: {"хлеб": 4}
     - name: Пустой склад
-      code: |
-        r = left({}, {"хлеб": 1})
-        assert r == {}, "Для пустого склада нужен пустой словарь, а вернулось " + repr(r)
+      args: [{}, {"хлеб": 1}]
+      expect: {}
   explain: |
     Ключи берутся из склада, значение — разность. Товара, который не продавали, в `sold` нет, и `sold[item]` дал бы `KeyError`; `sold.get(item, 0)` считает его продажи нулём. Включение собирает новый словарь, склад не меняется.
 - id: k5-write-all-tags
   type: code
   q: |
     Посты блога — список словарей, у каждого ключ `"tags"` со списком меток. **Напишите `all_tags(posts)` одной строкой `return …`: вернуть отсортированный список всех разных меток строчными буквами.**
-    ```input
+    ```call
     all_tags([{"tags": ["Python", "учёба"]}, {"tags": ["python", "SQL"]}])
     ```
-    ```output
+    ```return
     ['python', 'sql', 'учёба']
     ```
   starter: |
@@ -301,30 +304,30 @@ questions:
     def all_tags(posts):
         return sorted({t.lower() for p in posts for t in p["tags"]})
   tests:
-    asserts:
+    function: all_tags
+    calls:
+    - name: Пример из условия
+      args: [[{"tags": ["Python", "учёба"]}, {"tags": ["python", "SQL"]}]]
+      expect: ["python", "sql", "учёба"]
     - name: Повторы и регистр
-      code: |
-        posts = [{"tags": ["Python", "учёба"]}, {"tags": ["python", "SQL"]}, {"tags": []}]
-        r = all_tags(posts)
-        assert r == ["python", "sql", "учёба"], "Нужно ['python', 'sql', 'учёба'], а вернулось " + repr(r)
+      args: [[{"tags": ["Python", "учёба"]}, {"tags": ["python", "SQL"]}, {"tags": []}]]
+      expect: ["python", "sql", "учёба"]
     - name: Один пост
-      code: |
-        r = all_tags([{"tags": ["Кот", "кот", "КОТ"]}])
-        assert r == ["кот"], "Нужно ['кот'], а вернулось " + repr(r)
+      args: [[{"tags": ["Кот", "кот", "КОТ"]}]]
+      expect: ["кот"]
     - name: Нет постов
-      code: |
-        r = all_tags([])
-        assert r == [], "Нужно [], а вернулось " + repr(r)
+      args: [[]]
+      expect: []
   explain: |
     Два `for` идут как вложенные циклы: для каждого поста — для каждой его метки. Фигурные скобки без двоеточия собирают множество, и оно убирает повторы, которые после `lower()` совпали. `sorted` превращает множество в упорядоченный список.
 - id: k5-change-first-over
   type: code
   q: |
     Функция ищет первый крупный заказ включением: падает с `IndexError`, когда таких нет, и проверяет все заказы. **Перепишите её обычным циклом: вернуть первый заказ больше `limit` и сразу остановиться; если такого нет — `None`.**
-    ```input
+    ```call
     first_over([500, 12000, 300, 15000], 10000)
     ```
-    ```output
+    ```return
     12000
     ```
     Заказы после найденного функция не смотрит.
@@ -338,19 +341,22 @@ questions:
                 return o
         return None
   tests:
-    asserts:
+    function: first_over
+    calls:
     - name: Крупный заказ в середине
-      code: |
-        r = first_over([500, 12000, 300, 15000], 10000)
-        assert r == 12000, "Нужно 12000, а вернулось " + repr(r)
+      args: [[500, 12000, 300, 15000], 10000]
+      expect: 12000
     - name: Крупных нет
-      code: |
-        r = first_over([500, 300], 10000)
-        assert r is None, "Нужно None, а вернулось " + repr(r)
+      args: [[500, 300], 10000]
+      expect: null
     - name: Пустой список
-      code: |
-        r = first_over([], 100)
-        assert r is None, "Нужно None, а вернулось " + repr(r)
+      args: [[], 100]
+      expect: null
+    - name: Ровно лимит — не крупный
+      args: [[10000, 12000], 10000]
+      expect: 12000
+      hidden: true
+    asserts:
     - name: Останавливается на первом
       code: |
         try:

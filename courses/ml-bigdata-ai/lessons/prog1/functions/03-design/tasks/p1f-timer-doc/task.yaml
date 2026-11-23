@@ -5,21 +5,21 @@ difficulty: 2
 statement: |
   **Напишите функцию `format_time(seconds)`, которая возвращает время в виде `M мин S с`, и оформите её для других программистов.**
 
-  `M` — целые минуты (может быть больше 59), `S` — оставшиеся секунды. Нужны строка документации — что делает функция, что принимает и возвращает, пример вызова `format_time(...)` с результатом — и аннотации типов: `seconds` — `int`, результат — `str`. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+  `M` — целые минуты (может быть больше 59), `S` — оставшиеся секунды. Нужны строка документации — что делает функция, что принимает и возвращает, пример вызова `format_time(...)` с результатом — и аннотации типов: `seconds` — `int`, результат — `str`.
 
   Пример 1
-  ```input
+  ```call
   format_time(125)
   ```
-  ```output
+  ```return
   "2 мин 5 с"
   ```
 
   Пример 2
-  ```input
+  ```call
   format_time(3725)
   ```
-  ```output
+  ```return
   "62 мин 5 с"
   ```
 
@@ -42,21 +42,30 @@ solution: |
       rest = seconds % 60
       return f"{minutes} мин {rest} с"
 tests:
-  asserts:
+  function: format_time
+  calls:
     - name: Пример из условия
-      code: assert format_time(125) == "2 мин 5 с", 'format_time(125) должно вернуть "2 мин 5 с"'
+      args: [125]
+      expect: "2 мин 5 с"
     - name: Больше часа
-      code: assert format_time(3725) == "62 мин 5 с", 'format_time(3725) должно вернуть "62 мин 5 с"'
+      args: [3725]
+      expect: "62 мин 5 с"
     - name: Меньше минуты
-      code: assert format_time(59) == "0 мин 59 с", 'format_time(59) должно вернуть "0 мин 59 с"'
+      args: [59]
+      expect: "0 мин 59 с"
     - name: Ровно минута
-      code: assert format_time(60) == "1 мин 0 с", 'format_time(60) должно вернуть "1 мин 0 с"'
+      args: [60]
+      expect: "1 мин 0 с"
     - name: Ноль секунд
-      code: assert format_time(0) == "0 мин 0 с", 'format_time(0) должно вернуть "0 мин 0 с"'
+      args: [0]
+      expect: "0 мин 0 с"
+  asserts:
     - name: Есть строка документации
-      code: assert format_time.__doc__ and format_time.__doc__.strip(), "У функции нет строки документации — текст в тройных кавычках должен стоять первой инструкцией тела"
+      code: |
+        assert format_time.__doc__ and format_time.__doc__.strip(), "У функции нет строки документации — текст в тройных кавычках должен стоять первой инструкцией тела"
     - name: В описании есть пример
-      code: assert format_time.__doc__ and "format_time(" in format_time.__doc__ and len(format_time.__doc__.strip()) >= 40, "Строка документации слишком короткая — опишите, что функция делает и что принимает, и добавьте пример вызова format_time(...) с результатом"
+      code: |
+        assert format_time.__doc__ and "format_time(" in format_time.__doc__ and len(format_time.__doc__.strip()) >= 40, "Строка документации слишком короткая — опишите, что функция делает и что принимает, и добавьте пример вызова format_time(...) с результатом"
     - name: Аннотации типов
       code: |
         assert format_time.__annotations__ == {"seconds": int, "return": str}, "Подпишите типы в строке с def: seconds — int, результат — str"

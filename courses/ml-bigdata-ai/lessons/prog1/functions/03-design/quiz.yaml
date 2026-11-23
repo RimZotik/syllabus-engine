@@ -47,13 +47,13 @@ questions:
   q: |
     **Исправьте функцию `call_cost(minutes)` так, чтобы описание в кавычках стало её строкой документации; расчёт не меняйте.**
 
-    Сейчас `help(call_cost)` описания не показывает. Функция возвращает стоимость звонков за месяц: первые 100 минут бесплатны, каждая следующая — 2 рубля. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+    Сейчас `help(call_cost)` описания не показывает. Функция возвращает стоимость звонков за месяц: первые 100 минут бесплатны, каждая следующая — 2 рубля.
 
     Пример 1
-    ```input
+    ```call
     call_cost(130)
     ```
-    ```output
+    ```return
     60
     ```
   starter: |
@@ -71,23 +71,22 @@ questions:
             return 0
         return paid * 2
   tests:
+    function: call_cost
+    calls:
+    - name: В пределах бесплатных
+      args: [100]
+      expect: 0
+    - name: Сверх бесплатных
+      args: [130]
+      expect: 60
+    - name: Мало минут
+      args: [20]
+      expect: 0
     asserts:
     - name: Строка документации
       code: |
         doc = call_cost.__doc__
         assert doc is not None and "стоимость звонков" in doc, "у call_cost нет строки документации с описанием: help(call_cost) его не покажет"
-    - name: В пределах бесплатных
-      code: |
-        r = call_cost(100)
-        assert r == 0, "call_cost(100) должна вернуть 0, а вернула " + repr(r)
-    - name: Сверх бесплатных
-      code: |
-        r = call_cost(130)
-        assert r == 60, "call_cost(130) должна вернуть 60, а вернула " + repr(r)
-    - name: Мало минут
-      code: |
-        r = call_cost(20)
-        assert r == 0, "call_cost(20) должна вернуть 0, а вернула " + repr(r)
   explain: |
     Строка документации — текст в тройных кавычках, который стоит первой инструкцией тела. Здесь первой было присваивание, поэтому строка в кавычках оставалась просто значением, которое никуда не сохранили: ошибки нет, но и описания нет. Достаточно переставить её на первое место в теле. Комментарий `#` вместо неё не подошёл бы: Python его не хранит, и `help` его не покажет.
 - id: code-change-advice
@@ -95,22 +94,22 @@ questions:
   q: |
     **Добавьте в программу-советчик совет `жарко`: при средней температуре 25 градусов и выше.**
 
-    Программа читает температуры за несколько дней — целые числа через пробел — и выводит совет по средней: 25 и выше — `жарко`, от 15 до 25 — `тепло`, ниже 15 — `холодно`. Менять нужно только одну функцию.
+    Программа разбирает строку температур, считает среднюю и выбирает совет: 25 и выше — `жарко`, от 15 до 25 — `тепло`, ниже 15 — `холодно`. Менять нужно только одну функцию. Проверка вызывает `advice` со средней температурой и смотрит, какой совет она вернула.
 
     Пример 1
-    ```input
-    20 30 28
+    ```call
+    advice(26.0)
     ```
-    ```output
-    жарко
+    ```return
+    "жарко"
     ```
 
     Пример 2
-    ```input
-    14 18 19
+    ```call
+    advice(17.0)
     ```
-    ```output
-    тепло
+    ```return
+    "тепло"
     ```
   starter: |
     def parse_temps(line):
@@ -127,7 +126,7 @@ questions:
             return "тепло"
         return "холодно"
 
-    temps = parse_temps(input())
+    temps = parse_temps("20 30 28")
     print(advice(average(temps)))
   solution: |
     def parse_temps(line):
@@ -146,39 +145,33 @@ questions:
             return "тепло"
         return "холодно"
 
-    temps = parse_temps(input())
+    temps = parse_temps("20 30 28")
     print(advice(average(temps)))
   tests:
-    stdin: "20 30 28\n"
-    io:
-    - name: Жаркие дни
-      stdin: "20 30 28\n"
-      stdout: "жарко"
-    - name: Тёплые дни
-      stdin: "14 18 19\n"
-      stdout: "тепло"
+    function: advice
+    calls:
+    - name: Жарко
+      args: [26.0]
+      expect: "жарко"
+    - name: Тепло
+      args: [17.0]
+      expect: "тепло"
+    - name: Ровно 25
+      args: [25]
+      expect: "жарко"
+    - name: Чуть ниже 25
+      args: [24.9]
+      expect: "тепло"
       hidden: true
-    - name: Холодные дни
-      stdin: "5 10\n"
-      stdout: "холодно"
+    - name: Ровно 15
+      args: [15]
+      expect: "тепло"
+      hidden: true
+    - name: Чуть ниже 15
+      args: [14.9]
+      expect: "холодно"
       hidden: true
     asserts:
-    - name: Ровно 25
-      code: |
-        r = advice(25)
-        assert r == "жарко", "advice(25) должна вернуть 'жарко', а вернула " + repr(r)
-    - name: Чуть ниже 25
-      code: |
-        r = advice(24.9)
-        assert r == "тепло", "advice(24.9) должна вернуть 'тепло', а вернула " + repr(r)
-    - name: Ровно 15
-      code: |
-        r = advice(15)
-        assert r == "тепло", "advice(15) должна вернуть 'тепло', а вернула " + repr(r)
-    - name: Чуть ниже 15
-      code: |
-        r = advice(14.9)
-        assert r == "холодно", "advice(14.9) должна вернуть 'холодно', а вернула " + repr(r)
     - name: Разбор строки не сломан
       code: |
         r = parse_temps("3 -2")
@@ -190,59 +183,40 @@ questions:
   q: |
     **Переделайте функцию `show_summary(temps)`: она должна возвращать строку `Средняя: X`, а не печатать её.**
 
-    Программа читает температуры — целые числа через пробел (хотя бы одну) — и выводит среднюю. Сейчас она выводит лишнюю строку `None`. Печатает основная программа; подпись `-> str` оставьте.
-
-    Пример 1
-    ```input
-    20 22
+    `temps` — температуры, целые числа (хотя бы одно). Сейчас программа под функцией выводит лишнюю строку `None`. Печатает основная программа; подпись `-> str` оставьте.
+    ```call
+    show_summary([20, 22])
     ```
-    ```output
-    Средняя: 21.0
+    ```return
+    "Средняя: 21.0"
     ```
   starter: |
     def show_summary(temps: list) -> str:
         print(f"Средняя: {sum(temps) / len(temps)}")
 
-    temps = []
-    for word in input().split():
-        temps.append(int(word))
-    s = show_summary(temps)
+    s = show_summary([20, 22])
     print(s)
   solution: |
     def show_summary(temps: list) -> str:
         return f"Средняя: {sum(temps) / len(temps)}"
 
-    temps = []
-    for word in input().split():
-        temps.append(int(word))
-    s = show_summary(temps)
+    s = show_summary([20, 22])
     print(s)
   tests:
-    stdin: "20 22\n"
-    io:
+    function: show_summary
+    calls:
     - name: Два дня
-      stdin: "20 22\n"
-      stdout: "Средняя: 21.0"
+      args: [[20, 22]]
+      expect: "Средняя: 21.0"
     - name: Один день
-      stdin: "15\n"
-      stdout: "Средняя: 15.0"
+      args: [[15]]
+      expect: "Средняя: 15.0"
       hidden: true
     - name: Дробная средняя
-      stdin: "10 11\n"
-      stdout: "Средняя: 10.5"
+      args: [[10, 11]]
+      expect: "Средняя: 10.5"
       hidden: true
     asserts:
-    - name: Функция возвращает строку
-      code: |
-        r = show_summary([20, 22])
-        assert r == "Средняя: 21.0", "show_summary([20, 22]) должна вернуть 'Средняя: 21.0', а вернула " + repr(r)
-    - name: Функция ничего не печатает
-      code: |
-        import io, contextlib
-        shown = io.StringIO()
-        with contextlib.redirect_stdout(shown):
-            show_summary([1, 2])
-        assert shown.getvalue() == "", "show_summary должна только возвращать строку, а она напечатала " + repr(shown.getvalue())
     - name: Подпись результата
       code: |
         assert show_summary.__annotations__.get("return") is str, "подпись результата -> str нужно оставить"

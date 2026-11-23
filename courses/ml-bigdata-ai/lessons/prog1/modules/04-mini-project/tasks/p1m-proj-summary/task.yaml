@@ -13,15 +13,29 @@ statement: |
 
   Возвращаются обычные словари, не `defaultdict`; суммы не округляются. В модуле нет `print` и работы с файлами.
 
-  Пример 1
-  ```input
+  Пример: пусть
+  ```python
   records = [{"date": date(2023, 12, 30), "category": "подарки", "amount": 2000.0},
              {"date": date(2024, 12, 5), "category": "кафе", "amount": 450.0},
              {"date": date(2024, 12, 9), "category": "подарки", "amount": 500.0}]
-  by_category(records), by_month(records), top_category(records)
   ```
-  ```output
-  ({'подарки': 2500.0, 'кафе': 450.0}, {'2023-12': 2000.0, '2024-12': 950.0}, 'подарки')
+  ```call
+  by_category(records)
+  ```
+  ```return
+  {"подарки": 2500.0, "кафе": 450.0}
+  ```
+  ```call
+  by_month(records)
+  ```
+  ```return
+  {"2023-12": 2000.0, "2024-12": 950.0}
+  ```
+  ```call
+  top_category(records)
+  ```
+  ```return
+  "подарки"
   ```
 starter: |
   """Сводки по готовым записям расходов."""

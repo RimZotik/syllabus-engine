@@ -7,25 +7,25 @@ statement: |
 
   Слова разделены любыми пробельными символами: пробел, табуляция, перевод строки, неразрывный пробел. Код в редакторе написал ИИ-ассистент: на примере 1 он отвечает верно, на примере 2 — нет. Найдите, каких случаев он не учёл.
 
+  Обе функции получают строку; `clean_review` возвращает строку, `word_count` — целое число.
+
   Пример 1
-  ```input
+  ```call
   clean_review("  Отличный   товар,  спасибо ")
-  word_count("  Отличный   товар,  спасибо ")
   ```
-  ```output
-  Отличный товар, спасибо
-  3
+  ```return
+  "Отличный товар, спасибо"
   ```
 
   Пример 2
-  ```input
+  ```call
   clean_review("Пришёл\tбыстро\n\nрекомендую")
-  word_count("Пришёл\tбыстро\n\nрекомендую")
   ```
-  ```output
-  Пришёл быстро рекомендую
-  3
+  ```return
+  "Пришёл быстро рекомендую"
   ```
+
+  Для тех же отзывов `word_count` возвращает `3` и `3`; для пустого отзыва — `0`.
 starter: |
   # Решение от ИИ-ассистента
   def clean_review(text):
@@ -52,38 +52,40 @@ solution: |
   print(clean_review("  Отличный   товар,  спасибо "))
   print(word_count("  Отличный   товар,  спасибо "))
 tests:
-  asserts:
+  function: clean_review
+  calls:
     - name: Пример 1
-      code: |
-        t = "  Отличный   товар,  спасибо "
-        got = clean_review(t)
-        assert got == "Отличный товар, спасибо", f"clean_review({t!r}) вернула {got!r}"
-        assert word_count(t) == 3, f"word_count({t!r}) должна вернуть 3, а вернула {word_count(t)}"
-    - name: Табуляция и переводы строк
-      code: |
-        t = "Пришёл\tбыстро\n\nрекомендую"
-        got = clean_review(t)
-        assert got == "Пришёл быстро рекомендую", f"clean_review({t!r}) должна вернуть 'Пришёл быстро рекомендую', а вернула {got!r}"
-        assert word_count(t) == 3, f"word_count({t!r}) должна вернуть 3, а вернула {word_count(t)}"
+      args: ["  Отличный   товар,  спасибо "]
+      expect: "Отличный товар, спасибо"
+    - name: Пример 2 — табуляция и переводы строк
+      args: ["Пришёл\tбыстро\n\nрекомендую"]
+      expect: "Пришёл быстро рекомендую"
     - name: Неразрывный пробел
-      code: |
-        t = "Цена\u00a0отличная \u00a0"
-        got = clean_review(t)
-        assert got == "Цена отличная", f"clean_review({t!r}) должна вернуть 'Цена отличная', а вернула {got!r}"
-        assert word_count(t) == 2, f"word_count({t!r}) должна вернуть 2, а вернула {word_count(t)}"
+      args: ["Цена отличная  "]
+      expect: "Цена отличная"
+    - name: Перевод строки по краям
+      args: ["\nСупер\n"]
+      expect: "Супер"
+      hidden: true
     - name: Пустой отзыв
+      args: [""]
+      expect: ""
+      hidden: true
+    - name: Отзыв из одних пробельных символов
+      args: [" \n\t "]
+      expect: ""
+      hidden: true
+  asserts:
+    - name: word_count — число слов
+      code: |
+        for t, want in [("  Отличный   товар,  спасибо ", 3), ("Пришёл\tбыстро\n\nрекомендую", 3), ("Цена отличная  ", 2), ("\nСупер\n", 1)]:
+            got = word_count(t)
+            assert got == want, f"word_count({t!r}) должна вернуть {want}, а вернула {got!r}"
+    - name: word_count — пустой отзыв
       code: |
         for t in ["", "   ", "\n\t"]:
-            got = clean_review(t)
-            assert got == "", f"clean_review({t!r}) должна вернуть пустую строку, а вернула {got!r}"
-            n = word_count(t)
-            assert n == 0, f"В {t!r} нет слов: word_count должна вернуть 0, а вернула {n}"
-    - name: Перевод строки по краям
-      code: |
-        t = "\nСупер\n"
-        got = clean_review(t)
-        assert got == "Супер", f"clean_review({t!r}) должна вернуть 'Супер', а вернула {got!r}"
-        assert word_count(t) == 1, f"word_count({t!r}) должна вернуть 1, а вернула {word_count(t)}"
+            got = word_count(t)
+            assert got == 0, f"В {t!r} нет слов: word_count должна вернуть 0, а вернула {got!r}"
 hints:
   - level: 1
     text: 'Возьмите самый короткий вход, на котором ответ неверен: например, `"а\tб"`. Что с ним делает каждая строка `clean_review`?'

@@ -3,9 +3,9 @@ title: Проверка логина
 sandbox: python-browser
 difficulty: 2
 statement: |
-  **Проверьте логины по правилам и для каждого выведите `логин: ok` или `логин: ошибка — <правило>` — первое нарушенное правило по порядку.**
+  **Напишите функцию `check_login(login)`, которая возвращает `"ok"`, если логин подходит под правила, а иначе — текст первого нарушенного правила по порядку.**
 
-  Ввод — логины по одному в строке, в конце пустая строка; логин берётся как есть, без очистки. Правила:
+  `login` — строка, берётся как есть, без очистки. Функция возвращает строку. Правила и их тексты:
   1. `длина от 3 до 16 символов`
   2. `только строчные латинские буквы, цифры и _`
   3. `начинается с буквы`
@@ -13,35 +13,49 @@ statement: |
   5. `не заканчивается на _`
 
   Пример 1
-  ```input
-  anna_2024
-  Anna
-  2anna
-  an__na
-
+  ```call
+  check_login("anna_2024")
   ```
-  ```output
-  anna_2024: ok
-  Anna: ошибка — только строчные латинские буквы, цифры и _
-  2anna: ошибка — начинается с буквы
-  an__na: ошибка — без двух _ подряд
+  ```return
+  "ok"
+  ```
+
+  Пример 2
+  ```call
+  check_login("Anna")
+  ```
+  ```return
+  "только строчные латинские буквы, цифры и _"
+  ```
+
+  Пример 3
+  ```call
+  check_login("an__na")
+  ```
+  ```return
+  "без двух _ подряд"
   ```
 
   Ограничения: модуль `re` не используйте — хватит методов строк.
 starter: |
-  # План:
-  # 1. Функция check(login) возвращает текст первого нарушенного правила
-  #    или None, если нарушений нет; правила — по порядку, как в условии
-  # 2. Для правила 2 — строка всех разрешённых символов и проверка
-  #    каждого символа логина
-  # 3. Читать логины до пустой строки и печатать результат
-stdin: "anna_2024\nAnna\n2anna\nan__na\n\n"
+  def check_login(login):
+      # План:
+      # 1. Правила — по порядку, как в условии: каждое нарушение —
+      #    сразу return с его текстом
+      # 2. Для правила 2 — строка всех разрешённых символов и проверка
+      #    каждого символа логина
+      # 3. Ни одно правило не нарушено — вернуть "ok"
+      pass
+
+
+  for login in ["anna_2024", "Anna", "2anna", "an__na"]:
+      print(login, "—", check_login(login))
 solution: |
   ALLOWED = "abcdefghijklmnopqrstuvwxyz0123456789_"
   LETTERS = "abcdefghijklmnopqrstuvwxyz"
 
 
-  def check(login):
+  def check_login(login):
       if len(login) < 3 or len(login) > 16:
           return "длина от 3 до 16 символов"
       if not all(ch in ALLOWED for ch in login):
@@ -52,42 +66,86 @@ solution: |
           return "без двух _ подряд"
       if login.endswith("_"):
           return "не заканчивается на _"
-      return None
+      return "ok"
 
 
-  login = input()
-  while login != "":
-      problem = check(login)
-      if problem is None:
-          print(f"{login}: ok")
-      else:
-          print(f"{login}: ошибка — {problem}")
-      login = input()
+  for login in ["anna_2024", "Anna", "2anna", "an__na"]:
+      print(login, "—", check_login(login))
 tests:
   forbid: [re]
-  io:
-    - name: Пример 1
-      stdin: "anna_2024\nAnna\n2anna\nan__na\n\n"
-      stdout: "anna_2024: ok\nAnna: ошибка — только строчные латинские буквы, цифры и _\n2anna: ошибка — начинается с буквы\nan__na: ошибка — без двух _ подряд"
-    - name: Длина на границах
-      stdin: "ab\nabc\nabcdefghijklmnop\nabcdefghijklmnopq\n\n"
-      stdout: "ab: ошибка — длина от 3 до 16 символов\nabc: ok\nabcdefghijklmnop: ok\nabcdefghijklmnopq: ошибка — длина от 3 до 16 символов"
+  function: check_login
+  calls:
+    - name: Верный логин
+      args: ["anna_2024"]
+      expect: "ok"
+    - name: Заглавная буква
+      args: ["Anna"]
+      expect: "только строчные латинские буквы, цифры и _"
+    - name: Начинается с цифры
+      args: ["2anna"]
+      expect: "начинается с буквы"
+    - name: Два _ подряд
+      args: ["an__na"]
+      expect: "без двух _ подряд"
+    - name: Короче 3 символов
+      args: ["ab"]
+      expect: "длина от 3 до 16 символов"
       hidden: true
-    - name: Кириллица, пробел, дефис
-      stdin: "анна\nan na\nan-na\nannа\n\n"
-      stdout: "анна: ошибка — только строчные латинские буквы, цифры и _\nan na: ошибка — только строчные латинские буквы, цифры и _\nan-na: ошибка — только строчные латинские буквы, цифры и _\nannа: ошибка — только строчные латинские буквы, цифры и _"
+    - name: Ровно 3 символа
+      args: ["abc"]
+      expect: "ok"
       hidden: true
-    - name: Подчёркивание в начале и в конце
-      stdin: "_anna\nanna_\nanna__\na_1\n\n"
-      stdout: "_anna: ошибка — начинается с буквы\nanna_: ошибка — не заканчивается на _\nanna__: ошибка — без двух _ подряд\na_1: ok"
+    - name: Ровно 16 символов
+      args: ["abcdefghijklmnop"]
+      expect: "ok"
       hidden: true
-    - name: Важен порядок правил
-      stdin: "_A\n1__\nz99\n\n"
-      stdout: "_A: ошибка — длина от 3 до 16 символов\n1__: ошибка — начинается с буквы\nz99: ok"
+    - name: 17 символов
+      args: ["abcdefghijklmnopq"]
+      expect: "длина от 3 до 16 символов"
+      hidden: true
+    - name: Кириллица
+      args: ["анна"]
+      expect: "только строчные латинские буквы, цифры и _"
+      hidden: true
+    - name: Пробел внутри
+      args: ["an na"]
+      expect: "только строчные латинские буквы, цифры и _"
+      hidden: true
+    - name: Дефис
+      args: ["an-na"]
+      expect: "только строчные латинские буквы, цифры и _"
+      hidden: true
+    - name: Кириллическая «а» в конце
+      args: ["annа"]
+      expect: "только строчные латинские буквы, цифры и _"
+      hidden: true
+    - name: Начинается с _
+      args: ["_anna"]
+      expect: "начинается с буквы"
+      hidden: true
+    - name: Кончается на _
+      args: ["anna_"]
+      expect: "не заканчивается на _"
+      hidden: true
+    - name: Два _ в конце
+      args: ["anna__"]
+      expect: "без двух _ подряд"
+      hidden: true
+    - name: _ внутри
+      args: ["a_1"]
+      expect: "ok"
+      hidden: true
+    - name: Порядок правил — сначала длина
+      args: ["_A"]
+      expect: "длина от 3 до 16 символов"
+      hidden: true
+    - name: Порядок правил — начало раньше двух _
+      args: ["1__"]
+      expect: "начинается с буквы"
       hidden: true
 hints:
   - level: 1
-    text: 'Удобно вынести проверку в функцию, которая возвращает текст первого нарушения — или `None`, если всё хорошо. Тогда порядок правил — это просто порядок `if` с `return`.'
+    text: 'Порядок правил — это просто порядок `if` с `return`: первое нарушение сразу завершает вызов. До `return "ok"` в конце доходит только логин, прошедший все проверки.'
   - level: 2
     text: '«Только разрешённые символы» — это «каждый символ логина входит в строку разрешённых». Как проверить условие для всех элементов сразу?'
   - level: 3

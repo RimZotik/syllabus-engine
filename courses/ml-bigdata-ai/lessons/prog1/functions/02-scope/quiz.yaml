@@ -158,13 +158,13 @@ questions:
   q: |
     **Исправьте функцию `average_check(checks)` от ИИ-ассистента: её вызов падает с `UnboundLocalError`.**
 
-    Функция получает список сумм покупок (хотя бы одну) и возвращает средний чек. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+    Функция получает список сумм покупок (хотя бы одну) и возвращает средний чек.
 
     Пример 1
-    ```input
+    ```call
     average_check([300, 500])
     ```
-    ```output
+    ```return
     400.0
     ```
   starter: |
@@ -178,19 +178,17 @@ questions:
         avg = total / len(checks)
         return avg
   tests:
-    asserts:
+    function: average_check
+    calls:
     - name: Два чека
-      code: |
-        r = average_check([300, 500])
-        assert r == 400.0, "average_check([300, 500]) должна вернуть 400.0, а вернула " + repr(r)
+      args: [[300, 500]]
+      expect: 400.0
     - name: Один чек
-      code: |
-        r = average_check([120])
-        assert r == 120.0, "average_check([120]) должна вернуть 120.0, а вернула " + repr(r)
+      args: [[120]]
+      expect: 120.0
     - name: Три чека
-      code: |
-        r = average_check([100, 200, 600])
-        assert r == 300.0, "average_check([100, 200, 600]) должна вернуть 300.0, а вернула " + repr(r)
+      args: [[100, 200, 600]]
+      expect: 300.0
   explain: |
     В теле есть присваивание `sum = …`, поэтому `sum` локальное во всём теле — и в первой строке, где его вызывают как встроенную функцию, а локальное `sum` ещё ни к чему не привязано. Своё имя не должно совпадать со встроенным: назовите результат, например, `avg`.
 - id: plus-assign-global
@@ -360,27 +358,22 @@ questions:
         for i in range(len(prices)):
             prices[i] = prices[i] + amount
   tests:
-    asserts:
+    function: raise_prices
+    calls:
     - name: Список изменился
-      code: |
-        shelf = [100, 250]
-        raise_prices(shelf, 10)
-        assert shelf == [110, 260], "после raise_prices(shelf, 10) список [100, 250] должен стать [110, 260], а он " + repr(shelf)
-    - name: Функция ничего не возвращает
-      code: |
-        shelf = [5]
-        r = raise_prices(shelf, 1)
-        assert r is None, "raise_prices меняет сам список и должна вернуть None, а вернула " + repr(r)
+      args: [[100, 250], 10]
+      expect: null
+      after: [[110, 260], 10]
     - name: Снижение цен
-      code: |
-        shelf = [100, 80, 300]
-        raise_prices(shelf, -20)
-        assert shelf == [80, 60, 280], "после raise_prices(shelf, -20) список [100, 80, 300] должен стать [80, 60, 280], а он " + repr(shelf)
+      args: [[100, 80, 300], -20]
+      expect: null
+      after: [[80, 60, 280], -20]
+      hidden: true
     - name: Пустая полка
-      code: |
-        shelf = []
-        raise_prices(shelf, 10)
-        assert shelf == [], "пустой список должен остаться пустым, а он " + repr(shelf)
+      args: [[], 10]
+      expect: null
+      after: [[], 10]
+      hidden: true
   explain: |
     `prices = new_prices` привязывает к новому списку только локальное имя `prices`, а список, на который указывает имя снаружи, остаётся прежним. Чтобы изменение было видно снаружи, меняют сам этот список — присваиванием по индексу: `prices[i] = prices[i] + amount`. Функция работает ради побочного эффекта, поэтому возвращает `None`.
 - id: code-fix-spoiled-list

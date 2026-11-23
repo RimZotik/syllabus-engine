@@ -3,25 +3,32 @@ title: Значение по пути в JSON
 sandbox: python-browser
 difficulty: 2
 statement: |
-  **Напишите `get_path(data, path, default=None)`: вернуть значение во вложенных словарях и списках по пути вида `customer.address.city` или `items.0.name`, а если пути нет — `default`.**
+  **Напишите функцию `get_path(data, path, default=None)`, которая возвращает значение во вложенных словарях и списках по пути вида `customer.address.city` или `items.0.name`, а если пути нет — `default`.**
 
-  Части пути разделены точкой. Если текущее значение — словарь, часть пути — ключ; если список — часть из цифр означает индекс с 0. Пути нет, если ключа нет, индекс за пределами списка, часть для списка не из цифр или текущее значение — не словарь и не список.
+  `data` — то, что вернул `json.load`: словари, списки, строки, числа, `True`/`False`, `None`. `path` — строка, части пути разделены точкой. Если текущее значение — словарь, часть пути — ключ; если список — часть из цифр означает индекс с 0. Пути нет, если ключа нет, индекс за пределами списка, часть для списка не из цифр или текущее значение — не словарь и не список. В редакторе под функцией — пример с файлом `shop.json` с вкладки.
 
   Пример 1
-  ```input
-  (shop.json)
-  {"id": 17,
-   "customer": {"name": "Аня", "address": {"city": "Казань"}},
-   "items": [{"name": "чай", "tags": ["зелёный", "листовой"]}, {"name": "сыр"}]}
-
-  get_path(data, "customer.address.city")
-  get_path(data, "items.0.tags.1")
-  get_path(data, "items.5.name", "нет")
+  ```call
+  get_path({"customer": {"address": {"city": "Казань"}}}, "customer.address.city")
   ```
-  ```output
-  Казань
-  листовой
-  нет
+  ```return
+  "Казань"
+  ```
+
+  Пример 2
+  ```call
+  get_path({"items": [{"name": "чай", "tags": ["зелёный", "листовой"]}]}, "items.0.tags.1")
+  ```
+  ```return
+  "листовой"
+  ```
+
+  Пример 3
+  ```call
+  get_path({"items": [{"name": "чай"}, {"name": "сыр"}]}, "items.5.name", "нет")
+  ```
+  ```return
+  "нет"
   ```
 starter: |
   import json
@@ -59,43 +66,80 @@ solution: |
   print(get_path(data, "customer.address.city"))
 tests:
   files:
-    shop.json: "{\"id\": 17,\n \"customer\": {\"name\": \"Аня\", \"address\": {\"city\": \"Казань\"}},\n \"items\": [{\"name\": \"чай\", \"tags\": [\"зелёный\", \"листовой\"]}, {\"name\": \"сыр\"}]}\n"
-  asserts:
-    - name: Примеры из условия
-      code: |
-        import json
-        with open("shop.json", encoding="utf-8") as f:
-            d = json.load(f)
-        for path, want in [("customer.address.city", "Казань"), ("items.0.tags.1", "листовой"), ("id", 17), ("items.1.name", "сыр")]:
-            got = get_path(d, path)
-            assert got == want, f"get_path(data, {path!r}) должна вернуть {want!r}, а вернула {got!r}"
-        got = get_path(d, "items.5.name", "нет")
-        assert got == "нет", f"get_path(data, 'items.5.name', 'нет') должна вернуть 'нет', а вернула {got!r}"
-    - name: Путь ведёт к словарю или списку
-      code: |
-        d = {"a": {"b": [1, 2]}}
-        got = get_path(d, "a.b")
-        assert got == [1, 2], f"get_path({d}, 'a.b') должна вернуть [1, 2], а вернула {got!r}"
-        got = get_path(d, "a")
-        assert got == {"b": [1, 2]}, f"get_path({d}, 'a') должна вернуть {{'b': [1, 2]}}, а вернула {got!r}"
-    - name: Пути нет
-      code: |
-        d = {"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}
-        for path in ["customer.phone", "items.name", "items.-1.name", "items.1", "id.x", "customer.name.0", "nothing"]:
-            got = get_path(d, path, "—")
-            assert got == "—", f"Пути {path!r} в {d} нет — нужно значение по умолчанию '—', а вернулось {got!r}"
-        got = get_path(d, "customer.phone")
-        assert got is None, f"Без default для отсутствующего пути нужен None, а вернулось {got!r}"
-    - name: Значения null и false — найдены
-      code: |
-        d = {"coupon": None, "paid": False, "n": [0]}
-        assert get_path(d, "coupon", "нет") is None, "Ключ coupon есть, его значение None — нужно вернуть None, а не default"
-        assert get_path(d, "paid", "нет") is False, "Ключ paid есть со значением False — нужно вернуть False"
-        assert get_path(d, "n.0", "нет") == 0, "По пути n.0 лежит 0 — нужно вернуть 0"
+    shop.json: "{\n \"id\": 17,\n \"customer\": {\n  \"name\": \"Аня\",\n  \"address\": {\n   \"city\": \"Казань\"\n  }\n },\n \"items\": [\n  {\n   \"name\": \"чай\",\n   \"tags\": [\n    \"зелёный\",\n    \"листовой\"\n   ]\n  },\n  {\n   \"name\": \"сыр\"\n  }\n ]\n}\n"
+  function: get_path
+  calls:
+    - name: Пример 1
+      args: [{"customer": {"address": {"city": "Казань"}}}, "customer.address.city"]
+      expect: "Казань"
+    - name: Пример 2
+      args: [{"items": [{"name": "чай", "tags": ["зелёный", "листовой"]}]}, "items.0.tags.1"]
+      expect: "листовой"
+    - name: Пример 3
+      args: [{"items": [{"name": "чай"}, {"name": "сыр"}]}, "items.5.name", "нет"]
+      expect: "нет"
+    - name: Ключ верхнего уровня
+      args: [{"id": 17, "customer": {"name": "Аня", "address": {"city": "Казань"}}, "items": [{"name": "чай", "tags": ["зелёный", "листовой"]}, {"name": "сыр"}]}, "id"]
+      expect: 17
+    - name: Второй элемент списка
+      args: [{"id": 17, "customer": {"name": "Аня", "address": {"city": "Казань"}}, "items": [{"name": "чай", "tags": ["зелёный", "листовой"]}, {"name": "сыр"}]}, "items.1.name"]
+      expect: "сыр"
+      hidden: true
+    - name: Путь ведёт к списку
+      args: [{"a": {"b": [1, 2]}}, "a.b"]
+      expect: [1, 2]
+      hidden: true
+    - name: Путь ведёт к словарю
+      args: [{"a": {"b": [1, 2]}}, "a"]
+      expect: {"b": [1, 2]}
+      hidden: true
+    - name: Нет ключа
+      args: [{"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}, "customer.phone", "—"]
+      expect: "—"
+    - name: Не цифры для списка
+      args: [{"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}, "items.name", "—"]
+      expect: "—"
+      hidden: true
+    - name: Отрицательный индекс
+      args: [{"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}, "items.-1.name", "—"]
+      expect: "—"
+      hidden: true
+    - name: Индекс за пределами
+      args: [{"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}, "items.1", "—"]
+      expect: "—"
+      hidden: true
+    - name: Спуск в число
+      args: [{"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}, "id.x", "—"]
+      expect: "—"
+      hidden: true
+    - name: Спуск в строку
+      args: [{"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}, "customer.name.0", "—"]
+      expect: "—"
+      hidden: true
+    - name: Нет ключа верхнего уровня
+      args: [{"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}, "nothing", "—"]
+      expect: "—"
+      hidden: true
+    - name: Без default — None
+      args: [{"customer": {"name": "Аня"}, "items": [{"name": "чай"}], "id": 17}, "customer.phone"]
+      expect: null
+      hidden: true
+    - name: Значение None — найдено
+      args: [{"coupon": null}, "coupon", "нет"]
+      expect: null
+      hidden: true
+    - name: Значение False — найдено
+      args: [{"paid": false}, "paid", "нет"]
+      expect: false
+      hidden: true
+    - name: Значение 0 — найдено
+      args: [{"n": [0]}, "n.0", "нет"]
+      expect: 0
+      hidden: true
 hints:
   - level: 1
     text: 'Идите по пути шаг за шагом: держите «текущее значение» и на каждой части пути спускайтесь на уровень глубже — как `order["customer"]["name"]`, только скобок столько, сколько частей.'
   - level: 2
-    text: 'На каждом шаге сначала узнайте, что перед вами: словарь, список или что-то другое. От этого зависит, как понимать часть пути и как проверить, что путь есть.'
+    text: 'На каждом шаге сначала узнайте, что перед вами: словарь, список или что-то другое. Тип значения показывает `type(x)`: сравните его с `dict` и `list`. От этого зависит, как понимать часть пути и как проверить, что путь есть. Чтобы увидеть, что лежит на каждом шаге, добавьте `print(current)` — он не влияет на проверку.'
   - level: 3
     text: 'Не путайте «пути нет» и «по пути лежит `None` или `False`»: проверяйте наличие ключа через `in`, а не истинность значения. Для списка — `isdigit()` и сравнение индекса с длиной.'

@@ -179,15 +179,18 @@ questions:
   type: code
   q: |
     **Допишите `read_numbers(path)`: вернуть список целых чисел из файла — по числу в строке; пустые строки и строки из одних пробелов пропускаются.**
-    ```input
-    (prices.txt)
+    Файл `prices.txt` — на вкладке:
+    ```
     45
      320
 
     89
     ```
-    ```output
-    read_numbers("prices.txt") → [45, 320, 89]
+    ```call
+    read_numbers("prices.txt")
+    ```
+    ```return
+    [45, 320, 89]
     ```
   starter: |
     def read_numbers(path):
@@ -213,34 +216,36 @@ questions:
   tests:
     files:
       prices.txt: "45\n 320\n\n89\n"
-    asserts:
+      t.txt: "\n  \n7\n\t\n-3\n0"
+      empty.txt: ""
+    function: read_numbers
+    calls:
     - name: Файл из условия
-      code: |
-        got = read_numbers("prices.txt")
-        assert got == [45, 320, 89], f"read_numbers('prices.txt') должна вернуть [45, 320, 89], а вернула {got!r}"
-    - name: Другой файл
-      code: |
-        with open("t.txt", "w", encoding="utf-8") as f:
-            f.write("\n  \n7\n\t\n-3\n0")
-        got = read_numbers("t.txt")
-        assert got == [7, -3, 0], f"Для файла '\\n  \\n7\\n\\t\\n-3\\n0' нужно [7, -3, 0], а вернулось {got!r}"
+      args: ["prices.txt"]
+      expect: [45, 320, 89]
+    - name: Пробельные строки, минус и ноль
+      args: ["t.txt"]
+      expect: [7, -3, 0]
+      hidden: true
     - name: Пустой файл
-      code: |
-        with open("empty.txt", "w", encoding="utf-8") as f:
-            pass
-        got = read_numbers("empty.txt")
-        assert got == [], f"Для пустого файла нужен [], а вернулось {got!r}"
+      args: ["empty.txt"]
+      expect: []
+      hidden: true
   explain: 'У строки файла на конце `\n`, но `int` сам пропускает пробельные символы по краям, так что `int(" 320\n")` — 320. А пустая строка файла — это `"\n"`, и `int` на ней упадёт: её сначала проверяют через `strip()`, пустая строка ложна.'
 - id: code-change-missing-file
   type: code
   q: |
     **Измените `load_marks(path)`: если файла нет, вернуть пустой список.** Остальное поведение не меняется: строка, которая не число, по-прежнему даёт `ValueError`.
-    ```input
+    ```call
     load_marks("marks.txt")
+    ```
+    ```return
+    [5, 4, 3]
+    ```
+    ```call
     load_marks("нет_такого.txt")
     ```
-    ```output
-    [5, 4, 3]
+    ```return
     []
     ```
   starter: |
@@ -263,25 +268,19 @@ questions:
   tests:
     files:
       marks.txt: "5\n4\n3\n"
-    asserts:
+      bad.txt: "5\nпять\n"
+    function: load_marks
+    calls:
     - name: Файл есть
-      code: |
-        got = load_marks("marks.txt")
-        assert got == [5, 4, 3], f"load_marks('marks.txt') должна вернуть [5, 4, 3], а вернула {got!r}"
+      args: ["marks.txt"]
+      expect: [5, 4, 3]
     - name: Файла нет
-      code: |
-        got = load_marks("нет_такого.txt")
-        assert got == [], f"Для отсутствующего файла нужен [], а вернулось {got!r}"
+      args: ["нет_такого.txt"]
+      expect: []
     - name: Не число в файле — ValueError
-      code: |
-        with open("bad.txt", "w", encoding="utf-8") as f:
-            f.write("5\nпять\n")
-        what = None
-        try:
-            what = "вернула " + repr(load_marks("bad.txt"))
-        except ValueError:
-            what = "ValueError"
-        assert what == "ValueError", f"Для файла со строкой «пять» нужен ValueError, а функция {what}: ловите только отсутствие файла"
+      args: ["bad.txt"]
+      raises: ValueError
+      hidden: true
   explain: 'Отсутствующий файл — `FileNotFoundError`, и ловят именно его. `except Exception` или `except` без типа заодно спрятали бы `ValueError` от неверной оценки — и испорченный журнал выглядел бы как пустой. `try` охватывает весь `with`: исключение возникает уже в `open`.'
 - id: code-write-passed-file
   type: code
@@ -345,13 +344,17 @@ questions:
   q: |
     **Напишите `shift_latin(text, k)`: сдвинуть каждую строчную латинскую букву на `k` позиций по алфавиту по кругу (после `z` — снова `a`); остальные символы не менять.**
     `k` — любое целое, в том числе отрицательное и больше 26.
-    ```input
+    ```call
     shift_latin("hello, world!", 3)
+    ```
+    ```return
+    "khoor, zruog!"
+    ```
+    ```call
     shift_latin("abc xyz", -1)
     ```
-    ```output
-    khoor, zruog!
-    zab wxy
+    ```return
+    "zab wxy"
     ```
   starter: |
     def shift_latin(text, k):
@@ -372,22 +375,38 @@ questions:
 
     print(shift_latin("hello, world!", 3))
   tests:
-    asserts:
-    - name: Примеры из условия
-      code: |
-        for args, want in [(("hello, world!", 3), "khoor, zruog!"), (("abc xyz", -1), "zab wxy")]:
-            got = shift_latin(*args)
-            assert got == want, f"shift_latin{args} должна вернуть {want!r}, а вернула {got!r}"
-    - name: Сдвиг через z и больше 26
-      code: |
-        for args, want in [(("xyz", 3), "abc"), (("abc", 27), "bcd"), (("abc", -27), "zab"), (("python", 26), "python")]:
-            got = shift_latin(*args)
-            assert got == want, f"shift_latin{args} должна вернуть {want!r}, а вернула {got!r}"
+    function: shift_latin
+    calls:
+    - name: Пример 1
+      args: ["hello, world!", 3]
+      expect: "khoor, zruog!"
+    - name: Пример 2 — сдвиг назад
+      args: ["abc xyz", -1]
+      expect: "zab wxy"
+    - name: Через z
+      args: ["xyz", 3]
+      expect: "abc"
+      hidden: true
+    - name: Больше 26
+      args: ["abc", 27]
+      expect: "bcd"
+      hidden: true
+    - name: Меньше −26
+      args: ["abc", -27]
+      expect: "zab"
+      hidden: true
+    - name: Ровно 26
+      args: ["python", 26]
+      expect: "python"
+      hidden: true
     - name: Другие символы не меняются
-      code: |
-        for args, want in [(("ABC Привет 123", 5), "ABC Привет 123"), (("", 4), "")]:
-            got = shift_latin(*args)
-            assert got == want, f"shift_latin{args} должна вернуть {want!r}, а вернула {got!r}"
+      args: ["ABC Привет 123", 5]
+      expect: "ABC Привет 123"
+      hidden: true
+    - name: Пустая строка
+      args: ["", 4]
+      expect: ""
+      hidden: true
   explain: '`ord` даёт номер символа, и у букв a–z номера идут подряд: номер минус `ord("a")` — место буквы в алфавите от 0 до 25. К месту прибавляют сдвиг и берут остаток от деления на 26 — так счёт идёт по кругу; в Python остаток от отрицательного числа тоже от 0 до 25. `chr` возвращает символ по новому номеру.'
 - id: code-write-log-visit
   type: code

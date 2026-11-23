@@ -8,15 +8,15 @@ statement: |
   Место продают присваиванием `hall[r][s] = "X"`. Код в редакторе написал ИИ-ассистент: пустой зал выглядит правильно, но после первой же продажи место занято во всех рядах сразу.
 
   Пример 1
-  ```input
+  ```call
   empty_hall(2, 3)
   ```
-  ```output
+  ```return
   [['.', '.', '.'], ['.', '.', '.']]
   ```
 
-  Пример 2
-  ```input
+  Пример 2 — продажа одного места
+  ```python
   hall = empty_hall(3, 4)
   hall[0][1] = "X"
   print(hall)
@@ -24,6 +24,8 @@ statement: |
   ```output
   [['.', 'X', '.', '.'], ['.', '.', '.', '.'], ['.', '.', '.', '.']]
   ```
+
+  Ограничения: `rows` и `seats` — целые от 0 до 30.
 starter: |
   # Решение от ИИ-ассистента
   def empty_hall(rows, seats):
@@ -45,10 +47,19 @@ solution: |
   hall[0][1] = "X"
   print(hall)
 tests:
-  asserts:
+  function: empty_hall
+  calls:
     - name: Пустой зал нужного размера
-      code: |
-        assert empty_hall(2, 3) == [[".", ".", "."], [".", ".", "."]], "empty_hall(2, 3) — два ряда по три свободных места"
+      args: [2, 3]
+      expect: [[".", ".", "."], [".", ".", "."]]
+    - name: Зал без рядов
+      args: [0, 5]
+      expect: []
+    - name: Один ряд
+      args: [1, 4]
+      expect: [[".", ".", ".", "."]]
+      hidden: true
+  asserts:
     - name: Продажа занимает одно место
       code: |
         h = empty_hall(3, 4)
@@ -60,9 +71,6 @@ tests:
         for a in range(4):
             for b in range(a + 1, 4):
                 assert h[a] is not h[b], "Ряды должны быть разными списками, а не псевдонимами одного"
-    - name: Зал без рядов
-      code: |
-        assert empty_hall(0, 5) == [], "empty_hall(0, 5) — пустой список рядов"
     - name: Два зала независимы
       code: |
         a = empty_hall(1, 2)

@@ -10,22 +10,22 @@ statement: |
   `check_parcel_cost(f)` проверяет переданную функцию `f` через `assert`: обычные веса, стыки групп с обеих сторон, края допустимого веса и вес вне диапазона. Для верной функции набор молчит, для неверной — падает с `AssertionError`. Платформа запустит его на верной функции и на нескольких сломанных версиях — каждую он должен поймать; вашу `parcel_cost` она проверит своими проверками. Вызов `check_parcel_cost(parcel_cost)` оставляйте в коде, только когда он проходит.
 
   Пример 1
-  ```input
+  ```call
   parcel_cost(500)
-  parcel_cost(501)
   ```
-  ```output
+  ```return
   150
-  300
   ```
 
   Пример 2
-  ```input
-  parcel_cost(12000)
+  ```call
+  parcel_cost(501)
   ```
-  ```output
-  ValueError: вес должен быть от 1 до 10000 г, а не 12000
+  ```return
+  300
   ```
+
+  Пример 3: `parcel_cost(12000)` выбрасывает `ValueError("вес должен быть от 1 до 10000 г, а не 12000")`.
 starter: |
   def check_parcel_cost(f):
       """Мои проверки: f — проверяемая функция."""
@@ -83,18 +83,52 @@ solution: |
 
   check_parcel_cost(parcel_cost)
 tests:
+  function: parcel_cost
+  calls:
+    - name: Ваша функция — лёгкая посылка
+      args: [200]
+      expect: 150
+    - name: Ваша функция — средняя посылка
+      args: [1200]
+      expect: 300
+    - name: Ваша функция — тяжёлая посылка
+      args: [5000]
+      expect: 600
+    - name: Ваша функция — стык 500 г
+      args: [500]
+      expect: 150
+    - name: Ваша функция — сразу за 500 г
+      args: [501]
+      expect: 300
+    - name: Ваша функция — стык 2000 г
+      args: [2000]
+      expect: 300
+      hidden: true
+    - name: Ваша функция — сразу за 2000 г
+      args: [2001]
+      expect: 600
+      hidden: true
+    - name: Ваша функция — край 1 г
+      args: [1]
+      expect: 150
+      hidden: true
+    - name: Ваша функция — край 10000 г
+      args: [10000]
+      expect: 600
+      hidden: true
+    - name: Ваша функция — 0 г
+      args: [0]
+      raises: ValueError
+    - name: Ваша функция — 10001 г
+      args: [10001]
+      raises: ValueError
+      hidden: true
+    - name: Ваша функция — отрицательный вес
+      args: [-3]
+      raises: ValueError
+      hidden: true
   asserts:
-    - name: Ваша функция — обычные веса
-      code: |
-        for grams, cost in [(200, 150), (1200, 300), (5000, 600)]:
-            got = parcel_cost(grams)
-            assert got == cost, f"parcel_cost({grams}) должна вернуть {cost}, а вернула {got}"
-    - name: Ваша функция — стыки групп и края
-      code: |
-        for grams, cost in [(1, 150), (500, 150), (501, 300), (2000, 300), (2001, 600), (10000, 600)]:
-            got = parcel_cost(grams)
-            assert got == cost, f"parcel_cost({grams}) должна вернуть {cost}, а вернула {got}"
-    - name: Ваша функция — вес вне диапазона
+    - name: Ваша функция — текст исключения
       code: |
         for bad in [0, -3, 10001, 12000]:
             msg = None
@@ -102,8 +136,7 @@ tests:
                 parcel_cost(bad)
             except ValueError as e:
                 msg = str(e)
-            assert msg is not None, f"parcel_cost({bad}) должна выбросить ValueError"
-            assert msg == f"вес должен быть от 1 до 10000 г, а не {bad}", f"Текст исключения для {bad}: «{msg}»"
+            assert msg == f"вес должен быть от 1 до 10000 г, а не {bad}", f"Сообщение исключения для {bad}: «{msg}». Нужно: вес должен быть от 1 до 10000 г, а не {bad}"
     - name: Ваши проверки принимают верную функцию
       code: |
         assert "check_parcel_cost" in globals(), "Нужна функция check_parcel_cost(f) с вашими проверками"

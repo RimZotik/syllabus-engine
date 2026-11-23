@@ -5,21 +5,21 @@ difficulty: 2
 statement: |
   **Найдите своими `assert` ошибки в функции `grade(score)` от ИИ-ассистента и исправьте её.**
 
-  Шкала: 85 и выше — `5`, от 70 до 84 — `4`, от 50 до 69 — `3`, меньше 50 — `2`. Допишите под функцией проверки на каждой границе и рядом с ней, запустите и исправляйте функцию, пока все ваши проверки не пройдут. В примерах «Ввод» — вызов функции, «Вывод» — значение, которое она возвращает.
+  Шкала: 85 и выше — `5`, от 70 до 84 — `4`, от 50 до 69 — `3`, меньше 50 — `2`. Допишите под функцией проверки на каждой границе и рядом с ней, запустите и исправляйте функцию, пока все ваши проверки не пройдут.
 
   Пример 1
-  ```input
+  ```call
   grade(90)
   ```
-  ```output
+  ```return
   5
   ```
 
   Пример 2
-  ```input
+  ```call
   grade(60)
   ```
-  ```output
+  ```return
   3
   ```
 
@@ -67,17 +67,52 @@ solution: |
   assert grade(50) == 3
   assert grade(49) == 2
 tests:
-  asserts:
-    - name: Внутри диапазонов
-      code: assert grade(90) == 5 and grade(75) == 4 and grade(60) == 3 and grade(30) == 2, "grade(90), grade(75), grade(60) и grade(30) должны вернуть 5, 4, 3 и 2"
+  function: grade
+  calls:
+    - name: Внутри пятёрки
+      args: [90]
+      expect: 5
+    - name: Внутри тройки
+      args: [60]
+      expect: 3
+    - name: Внутри четвёрки
+      args: [75]
+      expect: 4
+    - name: Внутри двойки
+      args: [30]
+      expect: 2
     - name: Граница пятёрки
-      code: assert grade(85) == 5 and grade(84) == 4, "grade(85) должно вернуть 5, а grade(84) — 4"
+      args: [85]
+      expect: 5
+      hidden: true
+    - name: Под границей пятёрки
+      args: [84]
+      expect: 4
+      hidden: true
     - name: Граница четвёрки
-      code: assert grade(70) == 4 and grade(69) == 3, "grade(70) должно вернуть 4, а grade(69) — 3"
+      args: [70]
+      expect: 4
+      hidden: true
+    - name: Под границей четвёрки
+      args: [69]
+      expect: 3
+      hidden: true
     - name: Граница тройки
-      code: assert grade(50) == 3 and grade(49) == 2, "grade(50) должно вернуть 3, а grade(49) — 2"
-    - name: Крайние баллы
-      code: assert grade(100) == 5 and grade(0) == 2, "grade(100) должно вернуть 5, а grade(0) — 2"
+      args: [50]
+      expect: 3
+      hidden: true
+    - name: Под границей тройки
+      args: [49]
+      expect: 2
+      hidden: true
+    - name: Наибольший балл
+      args: [100]
+      expect: 5
+      hidden: true
+    - name: Ноль баллов
+      args: [0]
+      expect: 2
+      hidden: true
 hints:
   - level: 1
     text: 'Где у этой шкалы границы? Для каждой выпишите два значения: последнее, при котором оценка ещё ниже, и первое, при котором уже выше. Совпадают ли ответы функции с описанием?'

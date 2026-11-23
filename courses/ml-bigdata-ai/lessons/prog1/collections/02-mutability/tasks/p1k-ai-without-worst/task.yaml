@@ -8,18 +8,18 @@ statement: |
   В списке не меньше двух оценок; если самых низких несколько, не учитывается только одна. Код в редакторе написал ИИ-ассистент: среднее он считает верно, но после вызова журнал испорчен, а повторный вызов даёт другой ответ.
 
   Пример 1
-  ```input
+  ```call
   average_without_worst([5, 4, 2])
   ```
-  ```output
+  ```return
   4.5
   ```
 
   Пример 2
-  ```input
+  ```call
   average_without_worst([5, 2, 2])
   ```
-  ```output
+  ```return
   3.5
   ```
 starter: |
@@ -43,27 +43,28 @@ solution: |
   print(average_without_worst(journal))
   print(journal)
 tests:
-  asserts:
+  function: average_without_worst
+  no_mutate: true
+  calls:
     - name: Среднее без худшей
-      code: |
-        assert average_without_worst([5, 4, 2]) == 4.5, "average_without_worst([5, 4, 2]) должно вернуть 4.5"
+      args: [[5, 4, 2]]
+      expect: 4.5
     - name: Журнал не меняется
-      code: |
-        j = [5, 4, 2]
-        average_without_worst(j)
-        assert j == [5, 4, 2], "После вызова список должен остаться [5, 4, 2]: функция не должна менять журнал"
+      args: [[5, 4, 2]]
+      expect: 4.5
+    - name: Убирается только одна худшая
+      args: [[5, 2, 2]]
+      expect: 3.5
+    - name: Все оценки одинаковые
+      args: [[3, 3]]
+      expect: 3.0
+  asserts:
     - name: Повторный вызов — тот же ответ
       code: |
         j = [3, 5, 4, 3]
         first = average_without_worst(j)
         second = average_without_worst(j)
         assert first == second == 4.0, "Оба вызова для [3, 5, 4, 3] должны вернуть 4.0"
-    - name: Убирается только одна худшая
-      code: |
-        assert average_without_worst([5, 2, 2]) == 3.5, "Для [5, 2, 2] убирается одна двойка: среднее 5 и 2 — 3.5"
-    - name: Все оценки одинаковые
-      code: |
-        assert average_without_worst([3, 3]) == 3.0, "average_without_worst([3, 3]) должно вернуть 3.0"
 hints:
   - level: 1
     text: '`marks` внутри функции и `journal` снаружи — сколько здесь списков? Что делает с этим списком `remove`?'

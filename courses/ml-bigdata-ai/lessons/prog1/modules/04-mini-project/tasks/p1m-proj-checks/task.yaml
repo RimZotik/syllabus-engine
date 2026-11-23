@@ -11,15 +11,7 @@ statement: |
 
   Наборы будут запущены на верных функциях и на нескольких сломанных — какие поломки, заранее не сказано. Упасть набор может с `AssertionError` или с исключением самой проверяемой функции. Проверьте обычные, граничные и «плохие» случаи; «плохой» вход, на котором верная функция выбрасывает `ValueError`, — проверка флагом.
 
-  Пример 1
-  ```input
-  check_parse_amount(верная parse_amount)
-  check_parse_amount(parse_amount, которая пропускает "nan")
-  ```
-  ```output
-  (ничего)
-  AssertionError: f('nan') должна выбросить ValueError
-  ```
+  Пример: `check_parse_amount` на верной `parse_amount` ничего не делает; на `parse_amount`, которая пропускает `"nan"`, падает с `AssertionError: f('nan') должна выбросить ValueError`.
 starter: |
   from datetime import date
 

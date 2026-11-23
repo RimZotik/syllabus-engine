@@ -105,89 +105,94 @@ questions:
 - id: k1-complete-slices
   type: code
   q: |
-    Во вводе — температуры по дням через пробел. Замените оба `...` срезами: **в первой строке — температуры чётных дней (2-го, 4-го, …), во второй — все в обратном порядке.**
-    ```input
-    1 2 3 4 5
+    **Замените оба `...` срезами: функция `day_views(temps)` возвращает два списка — температуры чётных дней (2-го, 4-го, …) и все температуры в обратном порядке.**
+
+    `temps` — температуры по дням, целые числа. Функция возвращает кортеж из двух новых списков, а сам `temps` не меняет.
+    ```call
+    day_views([1, 2, 3, 4, 5])
     ```
-    ```output
-    2 4
-    5 4 3 2 1
+    ```return
+    ([2, 4], [5, 4, 3, 2, 1])
     ```
   starter: |
-    temps = input().split()
-    even_days = ...
-    backwards = ...
-    print(" ".join(even_days))
-    print(" ".join(backwards))
+    def day_views(temps):
+        even_days = ...
+        backwards = ...
+        return even_days, backwards
   solution: |
-    temps = input().split()
-    even_days = temps[1::2]
-    backwards = temps[::-1]
-    print(" ".join(even_days))
-    print(" ".join(backwards))
+    def day_views(temps):
+        even_days = temps[1::2]
+        backwards = temps[::-1]
+        return even_days, backwards
   tests:
-    io:
+    function: day_views
+    no_mutate: true
+    calls:
     - name: Пять дней
-      stdin: "1 2 3 4 5\n"
-      stdout: "2 4\n5 4 3 2 1"
+      args: [[1, 2, 3, 4, 5]]
+      expect_py: "([2, 4], [5, 4, 3, 2, 1])"
     - name: Два дня
-      stdin: "-3 8\n"
-      stdout: "8\n8 -3"
+      args: [[-3, 8]]
+      expect_py: "([8], [8, -3])"
       hidden: true
     - name: Неделя
-      stdin: "10 12 9 7 15 14 11\n"
-      stdout: "12 7 14\n11 14 15 7 9 12 10"
+      args: [[10, 12, 9, 7, 15, 14, 11]]
+      expect_py: "([12, 7, 14], [11, 14, 15, 7, 9, 12, 10])"
+      hidden: true
+    - name: Один день
+      args: [[7]]
+      expect_py: "([], [7])"
       hidden: true
   explain: |
-    Второй день — индекс 1, дальше через один: начало 1, конец не указан, шаг 2 — `temps[1::2]`. Отрицательный шаг идёт с конца: `temps[::-1]` — новый список задом наперёд, сам `temps` не меняется.
+    Второй день — индекс 1, дальше через один: начало 1, конец не указан, шаг 2 — `temps[1::2]`. Отрицательный шаг идёт с конца: `temps[::-1]` — новый список задом наперёд, сам `temps` не меняется. А `temps.reverse()` перевернул бы переданный список и вернул `None`.
 - id: k1-fix-sort-none
   type: code
   q: |
-    Программа читает оценки через пробел и падает с `TypeError`. **Исправьте её: она выводит худшую и лучшую оценку.**
-    ```input
-    4 5 3
+    Функция `worst_and_best(line)` получает строку оценок через пробел и падает с `TypeError`. **Исправьте её: вернуть худшую и лучшую оценку — кортеж из двух чисел.**
+    ```call
+    worst_and_best("4 5 3")
     ```
-    ```output
-    Худшая: 3
-    Лучшая: 5
+    ```return
+    (3, 5)
     ```
   starter: |
-    marks = []
-    for w in input().split():
-        marks.append(int(w))
-    marks = marks.sort()
-    print("Худшая:", marks[0])
-    print("Лучшая:", marks[-1])
+    def worst_and_best(line):
+        marks = []
+        for w in line.split():
+            marks.append(int(w))
+        marks = marks.sort()
+        return marks[0], marks[-1]
   solution: |
-    marks = []
-    for w in input().split():
-        marks.append(int(w))
-    marks.sort()
-    print("Худшая:", marks[0])
-    print("Лучшая:", marks[-1])
+    def worst_and_best(line):
+        marks = []
+        for w in line.split():
+            marks.append(int(w))
+        marks.sort()
+        return marks[0], marks[-1]
   tests:
-    io:
+    function: worst_and_best
+    calls:
     - name: Три оценки
-      stdin: "4 5 3\n"
-      stdout: "Худшая: 3\nЛучшая: 5"
+      args: ["4 5 3"]
+      expect_py: "(3, 5)"
     - name: Одна оценка
-      stdin: "4\n"
-      stdout: "Худшая: 4\nЛучшая: 4"
+      args: ["4"]
+      expect_py: "(4, 4)"
       hidden: true
     - name: Повторы
-      stdin: "5 2 3 5 2\n"
-      stdout: "Худшая: 2\nЛучшая: 5"
+      args: ["5 2 3 5 2"]
+      expect_py: "(2, 5)"
       hidden: true
   explain: |
-    `sort` переставляет элементы в самом списке и возвращает `None`, поэтому `marks = marks.sort()` привязывает имя к `None`, и `None[0]` — `TypeError`. Достаточно вызвать `marks.sort()` без присваивания. Подойдёт и `marks = sorted(marks)`: `sorted` возвращает новый список.
+    `sort` переставляет элементы в самом списке и возвращает `None`, поэтому `marks = marks.sort()` привязывает имя к `None`, и `None[0]` падает. Нужен просто вызов `marks.sort()` отдельной строкой — или `marks = sorted(marks)`: `sorted` возвращает новый список.
 - id: k1-next-year
   type: code
   q: |
     Дата — кортеж `(день, месяц, год)`. **Напишите `next_year(date)`: вернуть ту же дату на год позже — тоже кортежем.**
-    ```input
+    ```call
     next_year((12, 4, 2008))
     ```
-    ```output
+    ```return
     (12, 4, 2009)
     ```
   starter: |
@@ -199,30 +204,28 @@ questions:
         day, month, year = date
         return (day, month, year + 1)
   tests:
-    asserts:
+    function: next_year
+    strict_types: true
+    calls:
     - name: Двенадцатое апреля
-      code: |
-        r = next_year((12, 4, 2008))
-        assert r == (12, 4, 2009), "next_year((12, 4, 2008)) должна вернуть (12, 4, 2009), а вернула " + repr(r)
+      args_py: "((12, 4, 2008),)"
+      expect_py: "(12, 4, 2009)"
     - name: Результат — кортеж
-      code: |
-        r = next_year((31, 12, 1999))
-        assert type(r) == tuple, "Дата должна остаться кортежем, а вернулось значение типа " + type(r).__name__
-        assert r == (31, 12, 2000), "next_year((31, 12, 1999)) должна вернуть (31, 12, 2000), а вернула " + repr(r)
+      args_py: "((31, 12, 1999),)"
+      expect_py: "(31, 12, 2000)"
     - name: Первое января
-      code: |
-        r = next_year((1, 1, 2024))
-        assert r == (1, 1, 2025), "next_year((1, 1, 2024)) должна вернуть (1, 1, 2025), а вернула " + repr(r)
+      args_py: "((1, 1, 2024),)"
+      expect_py: "(1, 1, 2025)"
   explain: |
     Элемент кортежа заменить нельзя: `date[2] += 1` даёт `TypeError`. Новую дату собирают заново — после распаковки или из элементов по индексу: `(date[0], date[1], date[2] + 1)`.
 - id: k1-fix-drop-negative
   type: code
   q: |
     **Исправьте `drop_negative(values)`: вернуть новый список показаний термометра без отрицательных, в прежнем порядке.** Сейчас на некоторых данных она ошибается.
-    ```input
+    ```call
     drop_negative([3, -1, 4])
     ```
-    ```output
+    ```return
     [3, 4]
     ```
     Переданный список не меняется.
@@ -240,79 +243,75 @@ questions:
                 result.append(v)
         return result
   tests:
-    asserts:
+    function: drop_negative
+    no_mutate: true
+    calls:
     - name: Отрицательное в середине
-      code: |
-        r = drop_negative([3, -1, 4])
-        assert r == [3, 4], "drop_negative([3, -1, 4]) должна вернуть [3, 4], а вернула " + repr(r)
+      args: [[3, -1, 4]]
+      expect: [3, 4]
     - name: Два отрицательных подряд
-      code: |
-        r = drop_negative([-1, -2, 5])
-        assert r == [5], "drop_negative([-1, -2, 5]) должна вернуть [5], а вернула " + repr(r)
+      args: [[-1, -2, 5]]
+      expect: [5]
     - name: Список не меняется
-      code: |
-        data = [2, -7, -7, 0]
-        r = drop_negative(data)
-        assert r == [2, 0], "drop_negative([2, -7, -7, 0]) должна вернуть [2, 0], а вернула " + repr(r)
-        assert data == [2, -7, -7, 0], "Переданный список не должен меняться, а стал " + repr(data)
+      args: [[2, -7, -7, 0]]
+      expect: [2, 0]
     - name: Пустой список
-      code: |
-        r = drop_negative([])
-        assert r == [], "drop_negative([]) должна вернуть [], а вернула " + repr(r)
+      args: [[]]
+      expect: []
   explain: |
     Цикл `for` идёт по индексам: после `remove` элементы сдвигаются, и следующий за удалённым пропускается — `[-1, -2, 5]` даёт `[-2, 5]`. К тому же `remove` портит переданный список. Пока идёт цикл, длину списка не меняют: нужные элементы собирают в новый список.
 - id: k1-zip-excellent
   type: code
   q: |
-    В первой строке — имена учеников, во второй — их оценки в том же порядке. **Выведите имена тех, у кого 5, каждое в своей строке.**
-    ```input
-    Аня Борис Вера
-    5 4 5
+    **Напишите `excellent(names, marks)`: вернуть список имён тех, у кого оценка 5, в порядке списка.**
+
+    `names` — имена учеников, `marks` — их оценки (целые числа) в том же порядке. Если имён и оценок разное число, функция возвращает `None`.
+    ```call
+    excellent(["Аня", "Борис", "Вера"], [5, 4, 5])
     ```
-    ```output
-    Аня
-    Вера
+    ```return
+    ['Аня', 'Вера']
     ```
-    Если имён и оценок разное число, выведите только `Списки разной длины`.
   starter: |
-    names = input().split()
-    marks = input().split()
+    def excellent(names, marks):
+        return []
   solution: |
-    names = input().split()
-    marks = input().split()
-    if len(names) != len(marks):
-        print("Списки разной длины")
-    else:
+    def excellent(names, marks):
+        if len(names) != len(marks):
+            return None
+        result = []
         for name, mark in zip(names, marks):
-            if mark == "5":
-                print(name)
+            if mark == 5:
+                result.append(name)
+        return result
   tests:
-    io:
+    function: excellent
+    calls:
     - name: Две пятёрки
-      stdin: "Аня Борис Вера\n5 4 5\n"
-      stdout: "Аня\nВера"
+      args: [["Аня", "Борис", "Вера"], [5, 4, 5]]
+      expect: ["Аня", "Вера"]
     - name: Оценка потерялась
-      stdin: "Аня Борис Вера\n5 5\n"
-      stdout: "Списки разной длины"
+      args: [["Аня", "Борис", "Вера"], [5, 5]]
+      expect: null
       hidden: true
     - name: Пятёрок нет
-      stdin: "Глеб Дина\n3 4\n"
-      stdout: ""
+      args: [["Глеб", "Дина"], [3, 4]]
+      expect: []
       hidden: true
     - name: Одна пятёрка в конце
-      stdin: "Аня Борис Вера Глеб\n4 4 3 5\n"
-      stdout: "Глеб"
+      args: [["Аня", "Борис", "Вера", "Глеб"], [4, 4, 3, 5]]
+      expect: ["Глеб"]
       hidden: true
   explain: |
-    `zip` идёт по двум спискам сразу и выдаёт пары «имя, оценка». На списках разной длины он молча останавливается на коротком, поэтому длины сравнивают заранее. Оценки после `split` — строки, их сравнивают со строкой `"5"` (или переводят в `int`).
+    `zip` идёт по двум спискам сразу и выдаёт пары «имя, оценка». На списках разной длины он молча останавливается на коротком, поэтому длины сравнивают заранее и возвращают `None`. Пятёрки отбирают условием в цикле и дописывают имя в новый список, который возвращают после цикла.
 - id: k1-change-extreme-days
   type: code
   q: |
     Функция `coldest_day` возвращает номер (с 1) самого холодного дня. **Переделайте её в `extreme_days(temps)`: вернуть два значения — номер самого холодного и номер самого тёплого дня.**
-    ```input
+    ```call
     extreme_days([5, -2, 7, 3, 9])
     ```
-    ```output
+    ```return
     (2, 5)
     ```
     При равных температурах — первый из таких дней. В списке хотя бы один день.
@@ -357,10 +356,10 @@ questions:
   type: code
   q: |
     **Напишите `warmer_days(temps)`: вернуть номера дней (с 1), когда было теплее, чем накануне.**
-    ```input
+    ```call
     warmer_days([5, 7, 6, 8])
     ```
-    ```output
+    ```return
     [2, 4]
     ```
     Первый день сравнивать не с чем. Список `temps` не меняется.
@@ -376,28 +375,26 @@ questions:
                 result.append(i + 1)
         return result
   tests:
-    asserts:
+    function: warmer_days
+    no_mutate: true
+    calls:
     - name: Пример из условия
-      code: |
-        r = warmer_days([5, 7, 6, 8])
-        assert r == [2, 4], "warmer_days([5, 7, 6, 8]) должна вернуть [2, 4], а вернула " + repr(r)
+      args: [[5, 7, 6, 8]]
+      expect: [2, 4]
     - name: Та же температура — не теплее
-      code: |
-        r = warmer_days([4, 4, 5])
-        assert r == [3], "warmer_days([4, 4, 5]) должна вернуть [3], а вернула " + repr(r)
-    - name: Один день и ни одного
-      code: |
-        assert warmer_days([3]) == [], "Для одного дня — пустой список, а вернулось " + repr(warmer_days([3]))
-        assert warmer_days([]) == [], "Для пустого списка — пустой список, а вернулось " + repr(warmer_days([]))
+      args: [[4, 4, 5]]
+      expect: [3]
+    - name: Один день
+      args: [[3]]
+      expect: []
+    - name: Ни одного дня
+      args: [[]]
+      expect: []
     - name: Холодает всю неделю
-      code: |
-        r = warmer_days([9, 7, 4, 1])
-        assert r == [], "warmer_days([9, 7, 4, 1]) должна вернуть [], а вернула " + repr(r)
+      args: [[9, 7, 4, 1]]
+      expect: []
     - name: Список не меняется
-      code: |
-        data = [-3, -1, -2, 0]
-        r = warmer_days(data)
-        assert r == [2, 4], "warmer_days([-3, -1, -2, 0]) должна вернуть [2, 4], а вернула " + repr(r)
-        assert data == [-3, -1, -2, 0], "Список не должен меняться, а стал " + repr(data)
+      args: [[-3, -1, -2, 0]]
+      expect: [2, 4]
   explain: |
     Индекс `i` идёт со второго дня, `range(1, len(temps))`, и каждый день сравнивается с предыдущим, `temps[i - 1]`; номер дня — `i + 1`. Можно и парами: `zip(temps, temps[1:])` даёт «вчера, сегодня» для каждой пары соседних дней. На одном дне и пустом списке пар нет, и вернётся пустой список.

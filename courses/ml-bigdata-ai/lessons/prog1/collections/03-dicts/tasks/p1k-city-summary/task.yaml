@@ -8,7 +8,7 @@ statement: |
   Заказ — словарь с ключами `"city"`, `"sum"` и `"paid"` (`True` или `False`). Неоплаченные заказы не учитываются; город без оплаченных заказов в сводку не попадает. Список `orders` функция не меняет.
 
   Пример 1
-  ```input
+  ```call
   city_summary([
       {"city": "Казань", "sum": 1200, "paid": True},
       {"city": "Омск", "sum": 500, "paid": False},
@@ -16,15 +16,15 @@ statement: |
       {"city": "Тула", "sum": 800, "paid": True},
   ])
   ```
-  ```output
+  ```return
   {'Казань': (2, 1500), 'Тула': (1, 800)}
   ```
 
   Пример 2
-  ```input
+  ```call
   city_summary([{"city": "Омск", "sum": 500, "paid": False}])
   ```
-  ```output
+  ```return
   {}
   ```
 starter: |
@@ -46,39 +46,32 @@ solution: |
           summary[order["city"]] = (count + 1, total + order["sum"])
       return summary
 tests:
-  asserts:
-    - name: Пример из условия
-      code: |
-        orders = [
-            {"city": "Казань", "sum": 1200, "paid": True},
-            {"city": "Омск", "sum": 500, "paid": False},
-            {"city": "Казань", "sum": 300, "paid": True},
-            {"city": "Тула", "sum": 800, "paid": True},
-        ]
-        assert city_summary(orders) == {"Казань": (2, 1500), "Тула": (1, 800)}, "Ожидалось {'Казань': (2, 1500), 'Тула': (1, 800)}"
+  function: city_summary
+  no_mutate: true
+  strict_types: true
+  calls:
+    - name: Пример 1
+      args: [[{"city": "Казань", "sum": 1200, "paid": true}, {"city": "Омск", "sum": 500, "paid": false}, {"city": "Казань", "sum": 300, "paid": true}, {"city": "Тула", "sum": 800, "paid": true}]]
+      expect_py: "{'Казань': (2, 1500), 'Тула': (1, 800)}"
+    - name: Пример 2
+      args: [[{"city": "Омск", "sum": 500, "paid": false}]]
+      expect: {}
     - name: Неоплаченные не считаются
-      code: |
-        orders = [
-            {"city": "Омск", "sum": 500, "paid": False},
-            {"city": "Омск", "sum": 700, "paid": True},
-            {"city": "Омск", "sum": 100, "paid": False},
-        ]
-        assert city_summary(orders) == {"Омск": (1, 700)}, "Из трёх заказов Омска оплачен один: {'Омск': (1, 700)}"
+      args: [[{"city": "Омск", "sum": 500, "paid": false}, {"city": "Омск", "sum": 700, "paid": true}, {"city": "Омск", "sum": 100, "paid": false}]]
+      expect_py: "{'Омск': (1, 700)}"
     - name: Нет оплаченных заказов
-      code: |
-        assert city_summary([{"city": "Тула", "sum": 100, "paid": False}]) == {}, "Если оплаченных заказов нет — пустой словарь"
+      args: [[{"city": "Тула", "sum": 100, "paid": false}, {"city": "Омск", "sum": 40, "paid": false}]]
+      expect: {}
     - name: Пустая таблица
-      code: |
-        assert city_summary([]) == {}, "Для пустого списка заказов — пустой словарь"
+      args: [[]]
+      expect: {}
     - name: Значение — кортеж
-      code: |
-        s = city_summary([{"city": "Тула", "sum": 100, "paid": True}])
-        assert s == {"Тула": (1, 100)} and type(s["Тула"]) == tuple, "Значение — кортеж (число заказов, сумма): {'Тула': (1, 100)}"
-    - name: Таблица не меняется
-      code: |
-        orders = [{"city": "Тула", "sum": 100, "paid": True}, {"city": "Омск", "sum": 50, "paid": False}]
-        city_summary(orders)
-        assert orders == [{"city": "Тула", "sum": 100, "paid": True}, {"city": "Омск", "sum": 50, "paid": False}], "Функция не должна менять заказы"
+      args: [[{"city": "Тула", "sum": 100, "paid": true}]]
+      expect_py: "{'Тула': (1, 100)}"
+    - name: Неоплаченный в конце
+      args: [[{"city": "Тула", "sum": 100, "paid": true}, {"city": "Омск", "sum": 50, "paid": false}]]
+      expect_py: "{'Тула': (1, 100)}"
+      hidden: true
 hints:
   - level: 1
     text: 'Это группировка, как «ученики по классам», только под ключом-городом копится не список имён, а два накопителя сразу. Что взять для города, который встретился впервые?'

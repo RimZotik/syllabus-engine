@@ -3,23 +3,23 @@ title: Количество из поля формы
 sandbox: python-browser
 difficulty: 1
 statement: |
-  **Напишите `safe_int(text, default)`: вернуть целое число из текста, а если текст не разбирается как целое число — вернуть `default`.**
+  **Напишите функцию `safe_int(text, default)`, которая возвращает целое число из текста, а если текст не разбирается как целое число — возвращает `default`.**
 
-  Пробелы по краям числа допустимы. Если вместо текста пришло что-то другое, например `None`, функция падает с `TypeError`, как сам `int`.
+  `text` — строка из поля формы, `default` — любое значение. Пробелы по краям числа допустимы. Если вместо текста пришло что-то другое, например `None`, функция падает с `TypeError`, как сам `int`.
 
   Пример 1
-  ```input
+  ```call
   safe_int(" 12 ", 1)
   ```
-  ```output
+  ```return
   12
   ```
 
   Пример 2
-  ```input
+  ```call
   safe_int("2.5", 0)
   ```
-  ```output
+  ```return
   0
   ```
 
@@ -47,32 +47,34 @@ solution: |
   print(safe_int("три", 1))
 tests:
   forbid: [isdigit, isdecimal, isnumeric]
-  asserts:
+  function: safe_int
+  calls:
     - name: Целое число
-      code: |
-        assert safe_int("3", 1) == 3, "safe_int(\"3\", 1) должно вернуть 3"
-        assert safe_int("-4", 0) == -4, "safe_int(\"-4\", 0) должно вернуть -4"
+      args: ["3", 1]
+      expect: 3
+    - name: Отрицательное число
+      args: ["-4", 0]
+      expect: -4
     - name: Пробелы по краям
-      code: |
-        assert safe_int(" 12 ", 1) == 12, "safe_int(\" 12 \", 1) должно вернуть 12"
-    - name: Не целое число
-      code: |
-        assert safe_int("три", 1) == 1, "safe_int(\"три\", 1) должно вернуть 1"
-        assert safe_int("2.5", 0) == 0, "safe_int(\"2.5\", 0) должно вернуть 0: дробь — не целое число"
+      args: [" 12 ", 1]
+      expect: 12
+    - name: Слово вместо числа
+      args: ["три", 1]
+      expect: 1
+    - name: Дробь — не целое число
+      args: ["2.5", 0]
+      expect: 0
     - name: Пустая строка
-      code: |
-        assert safe_int("", 7) == 7, "safe_int(\"\", 7) должно вернуть 7"
-    - name: default может быть любым
-      code: |
-        assert safe_int("много", None) is None, "safe_int(\"много\", None) должно вернуть None — то, что передали в default"
+      args: ["", 7]
+      expect: 7
+      hidden: true
+    - name: default может быть любым, даже None
+      args: ["много", null]
+      expect: null
+      hidden: true
     - name: Не текст — по-прежнему TypeError
-      code: |
-        caught = None
-        try:
-            safe_int(None, 0)
-        except TypeError:
-            caught = "TypeError"
-        assert caught == "TypeError", "safe_int(None, 0) должна упасть с TypeError: ловите только исключение неверного значения"
+      args: [null, 0]
+      raises: TypeError
 hints:
   - level: 1
     text: 'Какое исключение выбрасывает `int`, когда текст не разбирается как целое число? А какое — когда ему дали `None`?'

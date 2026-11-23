@@ -224,7 +224,7 @@ questions:
   q: |
     **Допишите `parse_message(line)`: для строки чата `[ДД.ММ.ГГГГ ЧЧ:ММ] автор: текст` вернуть кортеж `(момент как datetime, автор, текст)`, для другой строки — `None`.**
     В тексте сообщения тоже может быть двоеточие. Несуществующая дата — `ValueError`, как у `strptime`.
-    ```input
+    ```python
     parse_message("[17.05.2024 14:30] Аня: встреча в 15:00")
     parse_message("продолжение прошлого сообщения")
     ```
@@ -351,16 +351,18 @@ questions:
   q: |
     **Исправьте `load_settings(path)`: вернуть новый словарь — настройки по умолчанию `DEFAULTS`, поверх которых записаны значения из JSON-файла.**
     Нет файла — копия `DEFAULTS`. Битый JSON — `json.JSONDecodeError` уходит к вызывающему коду. `DEFAULTS` не меняется никогда, в том числе когда вызывающий код меняет полученный словарь. Сейчас функция нарушает два из этих правил.
-    ```input
-    (settings.json)
-    {"тема": "тёмная"}
-
+    Файл `settings.json` — на вкладке: `{"тема": "тёмная"}`.
+    ```call
     load_settings("settings.json")
+    ```
+    ```return
+    {"тема": "тёмная", "размер": 14, "язык": "ru"}
+    ```
+    ```call
     load_settings("нет.json")
     ```
-    ```output
-    {'тема': 'тёмная', 'размер': 14, 'язык': 'ru'}
-    {'тема': 'светлая', 'размер': 14, 'язык': 'ru'}
+    ```return
+    {"тема": "светлая", "размер": 14, "язык": "ru"}
     ```
   starter: |
     import json
@@ -401,15 +403,20 @@ questions:
   tests:
     files:
       settings.json: "{\"тема\": \"тёмная\"}"
+      broken.json: "{'тема': 'тёмная',}"
+    function: load_settings
+    calls:
+    - name: Файл есть
+      args: ["settings.json"]
+      expect: {"тема": "тёмная", "размер": 14, "язык": "ru"}
+    - name: Файла нет
+      args: ["нет.json"]
+      expect: {"тема": "светлая", "размер": 14, "язык": "ru"}
+    - name: Битый JSON — JSONDecodeError
+      args: ["broken.json"]
+      raises: JSONDecodeError
+      hidden: true
     asserts:
-    - name: Файл есть, файла нет
-      code: |
-        got = load_settings("settings.json")
-        want = {"тема": "тёмная", "размер": 14, "язык": "ru"}
-        assert got == want, f"load_settings('settings.json') должна вернуть {want}, а вернула {got}"
-        got = load_settings("нет.json")
-        want = {"тема": "светлая", "размер": 14, "язык": "ru"}
-        assert got == want, f"Без файла нужны настройки по умолчанию {want}, а вернулось {got}"
     - name: DEFAULTS не меняется
       code: |
         before = {"тема": "светлая", "размер": 14, "язык": "ru"}
@@ -419,17 +426,6 @@ questions:
         assert DEFAULTS == before, f"DEFAULTS изменился: {DEFAULTS}. Функция должна возвращать новый словарь"
         again = load_settings("нет.json")
         assert again["размер"] == 14, f"После правки полученного словаря следующий вызов вернул размер {again['размер']}, а нужен 14"
-    - name: Битый JSON — JSONDecodeError
-      code: |
-        import json
-        with open("broken.json", "w", encoding="utf-8") as f:
-            f.write("{'тема': 'тёмная',}")
-        what = None
-        try:
-            what = "вернула " + repr(load_settings("broken.json"))
-        except json.JSONDecodeError:
-            what = "JSONDecodeError"
-        assert what == "JSONDecodeError", f"Для битого JSON нужен JSONDecodeError, а функция {what}: ловите только отсутствие файла"
   explain: '`settings = DEFAULTS` не копирует словарь, а даёт ему второе имя: `update` меняет сами настройки по умолчанию, и следующий вызов видит чужие значения. Нужна копия — `dict(DEFAULTS)`. `except Exception` прятал битый JSON: испорченный файл выглядел бы как отсутствующий, и пользователь молча терял бы настройки. Ловят только `FileNotFoundError`.'
 - id: s-code-write-shift-hours
   type: code
@@ -496,6 +492,11 @@ questions:
       files:
         shifts.csv: "сотрудник;начало;конец\nЖеня;2024-05-17 09:00;2024-05-17 18:00\nЗоя;17.05.2024 9;17.05.2024 18:00\n"
       stdout: "Пропущено строк: 2"
+      hidden: true
+    - name: Нулевая смена — не пропуск
+      files:
+        shifts.csv: "сотрудник;начало;конец\nИра;17.05.2024 09:00;17.05.2024 09:00\nИра;17.05.2024 10:00;17.05.2024 09:59\n"
+      stdout: "Ира: 0.00 ч\nПропущено строк: 1"
       hidden: true
   explain: 'С полными датами переход через полночь и даже через Новый год решает сам `datetime`: разность — `timedelta`, а `total_seconds() / 3600` — часы с дробной частью. Атрибут `seconds` здесь дал бы неверный ответ для смены длиннее суток. Неразборчивое время `strptime` превращает в `ValueError` — его ловят для одной строки и идут дальше.'
 - id: s-code-write-chat-stats
@@ -565,6 +566,11 @@ questions:
       files:
         chat.txt: ""
       stdout: "Сообщений нет"
+      hidden: true
+    - name: Равные счета — по алфавиту, а не по порядку в файле
+      files:
+        chat.txt: "[17.05.2024 10:00] Яна: привет\n[17.05.2024 11:00] Алина: пока\n"
+      stdout: "Алина: 1\nЯна: 1\nСамый активный час: 10"
       hidden: true
   explain: 'Шаблон проверяет форму всей строки — `fullmatch` после `rstrip("\n")`, иначе строка-продолжение, в которой случайно есть похожий кусок, тоже бы посчиталась. Нужные части — в группах: час и автор. Автор — `[^:]+`, всё до первого двоеточия. Два правила порядка — ключ-кортеж; час хранится строкой из двух цифр, и строки «07» и «18» сравниваются так же, как числа.'
 - id: s-code-extend-split-log

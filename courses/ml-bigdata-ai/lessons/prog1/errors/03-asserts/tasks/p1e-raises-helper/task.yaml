@@ -8,12 +8,16 @@ statement: |
   Исключение другого типа функция не ловит — оно уходит дальше. С таким помощником проверка «функция выбрасывает `ValueError`» умещается в одну строку: `assert raises_value_error(parse_age, "200")`.
 
   Пример 1
-  ```input
+  ```call
   raises_value_error(int, "сто")
+  ```
+  ```return
+  True
+  ```
+  ```call
   raises_value_error(int, "100")
   ```
-  ```output
-  True
+  ```return
   False
   ```
 starter: |

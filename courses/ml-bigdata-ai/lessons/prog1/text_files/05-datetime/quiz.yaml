@@ -90,78 +90,102 @@ questions:
 - id: code-fix-percent-m
   type: code
   q: |
-    **Исправьте программу: она получает дату `ДД.ММ.ГГГГ` и печатает её в ISO 8601 — `ГГГГ-ММ-ДД`.** Сейчас для 17 мая она печатает 17 января.
-    ```input
-    17.05.2024
+    **Исправьте функцию `ru_to_iso(text)`: она получает дату `ДД.ММ.ГГГГ` и возвращает её строкой в ISO 8601 — `ГГГГ-ММ-ДД`.** Сейчас для 17 мая она возвращает 17 января.
+    ```call
+    ru_to_iso("17.05.2024")
     ```
-    ```output
-    2024-05-17
+    ```return
+    "2024-05-17"
     ```
   starter: |
     from datetime import datetime
 
-    d = datetime.strptime(input(), "%d.%M.%Y").date()
-    print(d.isoformat())
+
+    def ru_to_iso(text):
+        d = datetime.strptime(text, "%d.%M.%Y").date()
+        return d.isoformat()
+
+
+    print(ru_to_iso("17.05.2024"))
   solution: |
     from datetime import datetime
 
-    d = datetime.strptime(input(), "%d.%m.%Y").date()
-    print(d.isoformat())
+
+    def ru_to_iso(text):
+        d = datetime.strptime(text, "%d.%m.%Y").date()
+        return d.isoformat()
+
+
+    print(ru_to_iso("17.05.2024"))
   tests:
-    io:
+    function: ru_to_iso
+    calls:
     - name: Пример из условия
-      stdin: "17.05.2024\n"
-      stdout: "2024-05-17"
+      args: ["17.05.2024"]
+      expect: "2024-05-17"
     - name: Конец года
-      stdin: "31.12.2023\n"
-      stdout: "2023-12-31"
+      args: ["31.12.2023"]
+      expect: "2023-12-31"
       hidden: true
     - name: 29 февраля
-      stdin: "29.02.2024\n"
-      stdout: "2024-02-29"
+      args: ["29.02.2024"]
+      expect: "2024-02-29"
       hidden: true
   explain: '`%M` — минуты, а месяц — `%m`. Ошибки не было: «05» прочитано как пять минут, а месяц остался по умолчанию — январь. Тихая ошибка: её видно только по результату, поэтому формат проверяют на дате, где месяц не январь.'
 - id: code-fix-weekday-name
   type: code
   q: |
-    **Исправьте программу: она получает дату `ДД.ММ.ГГГГ` и печатает день недели словом.** Сейчас для пятницы она печатает «суббота».
-    ```input
-    17.05.2024
+    **Исправьте функцию `weekday_name(text)`: она получает дату `ДД.ММ.ГГГГ` и возвращает день недели словом.** Сейчас для пятницы она возвращает «суббота».
+    ```call
+    weekday_name("17.05.2024")
     ```
-    ```output
-    пятница
+    ```return
+    "пятница"
     ```
   starter: |
     from datetime import datetime
 
     DAYS = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
-    d = datetime.strptime(input(), "%d.%m.%Y")
-    print(DAYS[d.isoweekday()])
+
+
+    def weekday_name(text):
+        d = datetime.strptime(text, "%d.%m.%Y")
+        return DAYS[d.isoweekday()]
+
+
+    print(weekday_name("17.05.2024"))
   solution: |
     from datetime import datetime
 
     DAYS = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
-    d = datetime.strptime(input(), "%d.%m.%Y")
-    print(DAYS[d.weekday()])
+
+
+    def weekday_name(text):
+        d = datetime.strptime(text, "%d.%m.%Y")
+        return DAYS[d.weekday()]
+
+
+    print(weekday_name("17.05.2024"))
   tests:
-    io:
+    function: weekday_name
+    calls:
     - name: Пятница
-      stdin: "17.05.2024\n"
-      stdout: "пятница"
+      args: ["17.05.2024"]
+      expect: "пятница"
     - name: Воскресенье
-      stdin: "19.05.2024\n"
-      stdout: "воскресенье"
+      args: ["19.05.2024"]
+      expect: "воскресенье"
       hidden: true
     - name: Понедельник
-      stdin: "01.01.2024\n"
-      stdout: "понедельник"
+      args: ["01.01.2024"]
+      expect: "понедельник"
       hidden: true
-  explain: '`isoweekday()` считает с единицы: понедельник — 1, воскресенье — 7. А индексы списка — с нуля, поэтому всё сдвигалось на день, а на воскресенье программа падала с `IndexError`. С индексами списка совпадает `weekday()`: понедельник — 0.'
+  explain: '`isoweekday()` считает с единицы: понедельник — 1, воскресенье — 7. А индексы списка — с нуля, поэтому всё сдвигалось на день, а на воскресенье функция падала с `IndexError`. С индексами списка совпадает `weekday()`: понедельник — 0.'
 - id: code-complete-days-until
   type: code
   q: |
     **Допишите `days_until(deadline_text, today)`: вернуть, сколько дней осталось до срока `ДД.ММ.ГГГГ` от даты `today`.** Срок сегодня — 0, срок прошёл — отрицательное число.
-    ```input
+    ```python
     days_until("31.12.2024", date(2024, 5, 17))
     days_until("10.05.2024", date(2024, 5, 17))
     ```
@@ -207,55 +231,65 @@ questions:
 - id: code-fix-midnight-trip
   type: code
   q: |
-    **Исправьте программу: она получает время начала и конца поездки `ЧЧ:ММ` и печатает длительность в минутах.** Поездка короче суток и может проходить через полночь; сейчас для ночной поездки выходит отрицательное число.
-    ```input
-    22:40
-    01:15
+    **Исправьте функцию `trip_minutes(start_text, end_text)`: она получает время начала и конца поездки строками `ЧЧ:ММ` и возвращает длительность в минутах — целое число.** Поездка короче суток и может проходить через полночь; сейчас для ночной поездки выходит отрицательное число.
+    ```call
+    trip_minutes("22:40", "01:15")
     ```
-    ```output
+    ```return
     155
     ```
   starter: |
     from datetime import datetime
 
-    start = datetime.strptime(input(), "%H:%M")
-    end = datetime.strptime(input(), "%H:%M")
-    print(int((end - start).total_seconds() // 60))
+
+    def trip_minutes(start_text, end_text):
+        start = datetime.strptime(start_text, "%H:%M")
+        end = datetime.strptime(end_text, "%H:%M")
+        return int((end - start).total_seconds() // 60)
+
+
+    print(trip_minutes("22:40", "01:15"))
   solution: |
     from datetime import datetime, timedelta
 
-    start = datetime.strptime(input(), "%H:%M")
-    end = datetime.strptime(input(), "%H:%M")
-    if end < start:
-        end += timedelta(days=1)
-    print(int((end - start).total_seconds() // 60))
+
+    def trip_minutes(start_text, end_text):
+        start = datetime.strptime(start_text, "%H:%M")
+        end = datetime.strptime(end_text, "%H:%M")
+        if end < start:
+            end += timedelta(days=1)
+        return int((end - start).total_seconds() // 60)
+
+
+    print(trip_minutes("22:40", "01:15"))
   tests:
-    io:
+    function: trip_minutes
+    calls:
     - name: Через полночь
-      stdin: "22:40\n01:15\n"
-      stdout: "155"
+      args: ["22:40", "01:15"]
+      expect: 155
     - name: Днём
-      stdin: "09:05\n10:00\n"
-      stdout: "55"
+      args: ["09:05", "10:00"]
+      expect: 55
       hidden: true
     - name: Ровно до полуночи и сразу после
-      stdin: "23:59\n00:00\n"
-      stdout: "1"
+      args: ["23:59", "00:00"]
+      expect: 1
       hidden: true
     - name: Почти сутки
-      stdin: "10:00\n09:59\n"
-      stdout: "1439"
+      args: ["10:00", "09:59"]
+      expect: 1439
       hidden: true
   explain: 'Время без даты `strptime` ставит на одну и ту же дату, поэтому 01:15 оказывается *раньше* 22:40. Раз поездка короче суток, конец раньше начала означает «на следующий день» — к концу прибавляют `timedelta(days=1)`.'
 - id: code-change-to-iso-msk
   type: code
   q: |
     **Измените `to_iso(text)`: время `ДД.ММ.ГГГГ ЧЧ:ММ` — московское (UTC+3), и результат должен быть в ISO 8601 со смещением.** Сейчас функция возвращает время без пояса.
-    ```input
+    ```call
     to_iso("12.05.2024 14:30")
     ```
-    ```output
-    2024-05-12T14:30:00+03:00
+    ```return
+    "2024-05-12T14:30:00+03:00"
     ```
   starter: |
     from datetime import datetime, timedelta, timezone
@@ -281,16 +315,20 @@ questions:
 
     print(to_iso("12.05.2024 14:30"))
   tests:
-    asserts:
+    function: to_iso
+    calls:
     - name: Пример из условия
-      code: |
-        got = to_iso("12.05.2024 14:30")
-        assert got == "2024-05-12T14:30:00+03:00", f"Нужно '2024-05-12T14:30:00+03:00', а вернулось {got!r}"
-    - name: Полночь и конец года
-      code: |
-        for text, want in [("01.01.2025 00:00", "2025-01-01T00:00:00+03:00"), ("31.12.2024 23:59", "2024-12-31T23:59:00+03:00")]:
-            got = to_iso(text)
-            assert got == want, f"to_iso({text!r}) должна вернуть {want!r}, а вернула {got!r}"
+      args: ["12.05.2024 14:30"]
+      expect: "2024-05-12T14:30:00+03:00"
+    - name: Полночь
+      args: ["01.01.2025 00:00"]
+      expect: "2025-01-01T00:00:00+03:00"
+      hidden: true
+    - name: Конец года
+      args: ["31.12.2024 23:59"]
+      expect: "2024-12-31T23:59:00+03:00"
+      hidden: true
+    asserts:
     - name: Пояс компьютера не важен
       code: |
         # Компьютер с часами по UTC: astimezone считает наивное время местным, то есть UTC
@@ -321,13 +359,17 @@ questions:
   type: code
   q: |
     **Напишите `to_local(iso_text, offset_hours)`: момент в ISO 8601 со смещением показать по местным часам пояса UTC+`offset_hours` в виде `ДД.ММ.ГГГГ ЧЧ:ММ`.**
-    ```input
+    ```call
     to_local("2024-05-17T23:30:00+00:00", 3)
+    ```
+    ```return
+    "18.05.2024 02:30"
+    ```
+    ```call
     to_local("2024-05-17T14:30:00+03:00", 5)
     ```
-    ```output
-    18.05.2024 02:30
-    17.05.2024 16:30
+    ```return
+    "17.05.2024 16:30"
     ```
     - `offset_hours` — целое, бывает отрицательным.
   starter: |
@@ -351,27 +393,36 @@ questions:
 
     print(to_local("2024-05-17T23:30:00+00:00", 3))
   tests:
-    asserts:
-    - name: Примеры из условия
-      code: |
-        for args, want in [(("2024-05-17T23:30:00+00:00", 3), "18.05.2024 02:30"), (("2024-05-17T14:30:00+03:00", 5), "17.05.2024 16:30")]:
-            got = to_local(*args)
-            assert got == want, f"to_local{args} должна вернуть {want!r}, а вернула {got!r}"
+    function: to_local
+    calls:
+    - name: Пример 1
+      args: ["2024-05-17T23:30:00+00:00", 3]
+      expect: "18.05.2024 02:30"
+    - name: Пример 2
+      args: ["2024-05-17T14:30:00+03:00", 5]
+      expect: "17.05.2024 16:30"
     - name: Отрицательное смещение и смена года
-      code: |
-        for args, want in [(("2025-01-01T02:00:00+00:00", -5), "31.12.2024 21:00"), (("2024-05-17T10:00:00+05:00", 0), "17.05.2024 05:00"), (("2024-02-28T22:00:00+00:00", 3), "29.02.2024 01:00")]:
-            got = to_local(*args)
-            assert got == want, f"to_local{args} должна вернуть {want!r}, а вернула {got!r}"
+      args: ["2025-01-01T02:00:00+00:00", -5]
+      expect: "31.12.2024 21:00"
+      hidden: true
+    - name: Смещение 0
+      args: ["2024-05-17T10:00:00+05:00", 0]
+      expect: "17.05.2024 05:00"
+      hidden: true
+    - name: Через 29 февраля
+      args: ["2024-02-28T22:00:00+00:00", 3]
+      expect: "29.02.2024 01:00"
+      hidden: true
     - name: Тот же пояс
-      code: |
-        got = to_local("2024-05-17T09:05:00+03:00", 3)
-        assert got == "17.05.2024 09:05", f"Нужно '17.05.2024 09:05', а вернулось {got!r}"
+      args: ["2024-05-17T09:05:00+03:00", 3]
+      expect: "17.05.2024 09:05"
+      hidden: true
   explain: '`fromisoformat` разбирает и смещение — получается осведомлённое значение, один точный момент. `astimezone` показывает тот же момент на других часах: дата меняется сама, если через полночь. `strftime` с `%d`, `%m`, `%H`, `%M` даёт две цифры с ведущим нулём.'
 - id: code-write-working-days
   type: code
   q: |
     **Напишите `working_days(start, end)`: сколько будних дней (понедельник — пятница) от даты `start` до `end` включительно.** Если `start` позже `end` — 0.
-    ```input
+    ```python
     working_days(date(2024, 5, 13), date(2024, 5, 19))
     working_days(date(2024, 5, 17), date(2024, 5, 20))
     ```

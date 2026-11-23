@@ -3,38 +3,51 @@ title: Упрощённая проверка почты
 sandbox: python-browser
 difficulty: 3
 statement: |
-  **Для каждого адреса выведите `да`, если он подходит под упрощённое правило ниже, иначе — `нет`.**
+  **Напишите функцию `is_email(s)`, которая возвращает `True`, если адрес подходит под упрощённое правило ниже, иначе — `False`.**
 
-  Ввод — адреса по одному в строке, в конце пустая строка. Правило (настоящее правило записи адреса намного сложнее, здесь оно не нужно):
+  `s` — строка, берётся как есть. Правило (настоящее правило записи адреса намного сложнее, здесь оно не нужно):
   - ровно один `@`;
   - до `@` — от 1 до 64 символов: латинские буквы, цифры, `.`, `_`, `-`;
   - после `@` — домен: две или больше частей через точку, каждая часть — одна или больше латинских букв, цифр или `-`;
   - последняя часть домена — только латинские буквы, не меньше двух.
 
   Пример 1
-  ```input
-  anna.petrova_1@yandex.ru
-  ivan@mail.spb.ru
-  anna@mail
-  анна@mail.ru
-
+  ```call
+  is_email("anna.petrova_1@yandex.ru")
   ```
-  ```output
-  да
-  да
-  нет
-  нет
+  ```return
+  True
+  ```
+
+  Пример 2
+  ```call
+  is_email("anna@mail")
+  ```
+  ```return
+  False
+  ```
+
+  Пример 3
+  ```call
+  is_email("анна@mail.ru")
+  ```
+  ```return
+  False
   ```
 starter: |
   import re
 
-  # План:
-  # 1. Функция is_email(s): проверить число «@», разрезать на имя и домен
-  # 2. Имя — проверка формы всей строки: набор символов и длина
-  # 3. Домен — разрезать по точкам и проверить каждую часть,
-  #    отдельно последнюю
-  # 4. Читать адреса до пустой строки и печатать «да» или «нет»
-stdin: "anna.petrova_1@yandex.ru\nivan@mail.spb.ru\nanna@mail\nанна@mail.ru\n\n"
+
+  def is_email(s):
+      # План:
+      # 1. Проверить число «@», разрезать на имя и домен
+      # 2. Имя — проверка формы всей строки: набор символов и длина
+      # 3. Домен — разрезать по точкам и проверить каждую часть,
+      #    отдельно последнюю
+      pass
+
+
+  print(is_email("ivan@mail.spb.ru"))
 solution: |
   import re
 
@@ -54,34 +67,85 @@ solution: |
       return bool(re.fullmatch(r"[A-Za-z]{2,}", parts[-1]))
 
 
-  line = input()
-  while line != "":
-      print("да" if is_email(line) else "нет")
-      line = input()
+  print(is_email("ivan@mail.spb.ru"))
 tests:
-  io:
+  function: is_email
+  calls:
     - name: Пример 1
-      stdin: "anna.petrova_1@yandex.ru\nivan@mail.spb.ru\nanna@mail\nанна@mail.ru\n\n"
-      stdout: "да\nда\nнет\nнет"
-    - name: Верные адреса
-      stdin: "a@b.co\nIVAN@MAIL.RU\nmy-shop@my-site.com\n\n"
-      stdout: "да\nда\nда"
+      args: ["anna.petrova_1@yandex.ru"]
+      expect: true
+    - name: Домен из трёх частей
+      args: ["ivan@mail.spb.ru"]
+      expect: true
+    - name: Пример 2 — домен из одной части
+      args: ["anna@mail"]
+      expect: false
+    - name: Пример 3 — кириллица в имени
+      args: ["анна@mail.ru"]
+      expect: false
+    - name: Короткий верный адрес
+      args: ["a@b.co"]
+      expect: true
       hidden: true
-    - name: Ошибки в «@» и имени
-      stdin: "anna@@mail.ru\n@mail.ru\nanna mail@mail.ru\nannamail.ru\n\n"
-      stdout: "нет\nнет\nнет\nнет"
+    - name: Заглавные буквы
+      args: ["IVAN@MAIL.RU"]
+      expect: true
       hidden: true
-    - name: Ошибки в домене
-      stdin: "anna@mail..ru\nanna@.ru\nanna@mail.ru.\nanna@mail_ru.com\n\n"
-      stdout: "нет\nнет\nнет\nнет"
+    - name: Дефисы
+      args: ["my-shop@my-site.com"]
+      expect: true
       hidden: true
-    - name: Последняя часть домена
-      stdin: "anna@mail.r\nanna@mail.ru1\nanna@mail.рф\n\n"
-      stdout: "нет\nнет\nнет"
+    - name: Два «@»
+      args: ["anna@@mail.ru"]
+      expect: false
       hidden: true
-    - name: Длина имени
-      stdin: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.ru\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.ru\n\n"
-      stdout: "да\nнет"
+    - name: Пустое имя
+      args: ["@mail.ru"]
+      expect: false
+      hidden: true
+    - name: Пробел в имени
+      args: ["anna mail@mail.ru"]
+      expect: false
+      hidden: true
+    - name: Нет «@»
+      args: ["annamail.ru"]
+      expect: false
+      hidden: true
+    - name: Две точки подряд
+      args: ["anna@mail..ru"]
+      expect: false
+      hidden: true
+    - name: Точка в начале домена
+      args: ["anna@.ru"]
+      expect: false
+      hidden: true
+    - name: Точка в конце
+      args: ["anna@mail.ru."]
+      expect: false
+      hidden: true
+    - name: Подчёркивание в домене
+      args: ["anna@mail_ru.com"]
+      expect: false
+      hidden: true
+    - name: Последняя часть из одной буквы
+      args: ["anna@mail.r"]
+      expect: false
+      hidden: true
+    - name: Цифра в последней части
+      args: ["anna@mail.ru1"]
+      expect: false
+      hidden: true
+    - name: Кириллица в последней части
+      args: ["anna@mail.рф"]
+      expect: false
+      hidden: true
+    - name: Имя из 64 символов
+      args: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.ru"]
+      expect: true
+      hidden: true
+    - name: Имя из 65 символов
+      args: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.ru"]
+      expect: false
       hidden: true
 hints:
   - level: 1

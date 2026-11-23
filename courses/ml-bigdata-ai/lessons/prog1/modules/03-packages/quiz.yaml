@@ -45,10 +45,10 @@ questions:
     Версии — строки из чисел через точку, части сравниваются как числа, слева направо.
 
     Пример 1
-    ```input
+    ```call
     newer("2.10.0", "2.9.4")
     ```
-    ```output
+    ```return
     True
     ```
   starter: |
@@ -60,17 +60,31 @@ questions:
         """True, если версия a новее версии b."""
         return tuple(int(x) for x in a.split(".")) > tuple(int(x) for x in b.split("."))
   tests:
-    asserts:
-    - name: Число в части больше девяти
-      code: |
-        for a, b, want in [("2.10.0", "2.9.4", True), ("2.9.4", "2.10.0", False), ("10.0.0", "9.9.9", True)]:
-            r = newer(a, b)
-            assert r == want, f"newer(\"{a}\", \"{b}\") должна вернуть {want}, а вернула {r!r}"
-    - name: Обычные и равные версии
-      code: |
-        for a, b, want in [("2.32.4", "2.32.3", True), ("1.26.18", "2.8.0", False), ("3.5.2", "3.5.2", False)]:
-            r = newer(a, b)
-            assert r == want, f"newer(\"{a}\", \"{b}\") должна вернуть {want}, а вернула {r!r}"
+    function: newer
+    calls:
+    - name: newer(2.10.0, 2.9.4)
+      args: ["2.10.0", "2.9.4"]
+      expect: true
+    - name: newer(2.9.4, 2.10.0)
+      args: ["2.9.4", "2.10.0"]
+      expect: false
+      hidden: true
+    - name: newer(10.0.0, 9.9.9)
+      args: ["10.0.0", "9.9.9"]
+      expect: true
+      hidden: true
+    - name: newer(2.32.4, 2.32.3)
+      args: ["2.32.4", "2.32.3"]
+      expect: true
+      hidden: true
+    - name: newer(1.26.18, 2.8.0)
+      args: ["1.26.18", "2.8.0"]
+      expect: false
+      hidden: true
+    - name: newer(3.5.2, 3.5.2)
+      args: ["3.5.2", "3.5.2"]
+      expect: false
+      hidden: true
   explain: 'Строки сравниваются посимвольно: в `"2.10.0"` и `"2.9.4"` третий символ `"1"` меньше `"9"`, и строка 2.10 выходит «старше». Версию делят на части по точке, каждую переводят в `int` и сравнивают кортежи: кортежи сравниваются по порядку элементов, как раз как части версии.'
 - id: code-parse-pin
   type: code
@@ -80,20 +94,14 @@ questions:
     Пробелы по краям строки и вокруг `==` убираются. Если в строке нет `==` — `ValueError` с текстом `версия не зафиксирована: строка` (строка — без пробелов по краям).
 
     Пример 1
-    ```input
+    ```call
     parse_pin("  requests == 2.32.3\n")
     ```
-    ```output
-    ('requests', '2.32.3')
+    ```return
+    ("requests", "2.32.3")
     ```
 
-    Пример 2
-    ```input
-    parse_pin("certifi>=2017.4.17")
-    ```
-    ```output
-    ValueError: версия не зафиксирована: certifi>=2017.4.17
-    ```
+    Пример 2: `parse_pin("certifi>=2017.4.17")` выбрасывает `ValueError: версия не зафиксирована: certifi>=2017.4.17`.
   starter: |
     def parse_pin(line):
         """'requests==2.32.3' → ('requests', '2.32.3'); без == — ValueError."""
@@ -107,13 +115,36 @@ questions:
         name, version = line.split("==")
         return name.strip(), version.strip()
   tests:
+    function: parse_pin
+    calls:
+    - name: Пробелы и перевод строки
+      args: ["  requests == 2.32.3\n"]
+      expect_py: '("requests", "2.32.3")'
+    - name: Без пробелов
+      args: ["requests==2.32.3"]
+      expect: ["requests", "2.32.3"]
+      hidden: true
+    - name: Пробелы вокруг ==
+      args: ["  urllib3 == 2.8.0\n"]
+      expect: ["urllib3", "2.8.0"]
+      hidden: true
+    - name: Дефис в имени
+      args: ["charset-normalizer==3.5.2"]
+      expect: ["charset-normalizer", "3.5.2"]
+      hidden: true
+    - name: Нижняя граница — ValueError
+      args: ["certifi>=2017.4.17"]
+      raises: ValueError
+    - name: Нет версии — ValueError
+      args: ["  pandas\n"]
+      raises: ValueError
+      hidden: true
+    - name: Диапазон — ValueError
+      args: ["idna<4,>=2.5"]
+      raises: ValueError
+      hidden: true
     asserts:
-    - name: Закреплённые версии
-      code: |
-        for line, want in [("requests==2.32.3", ("requests", "2.32.3")), ("  urllib3 == 2.8.0\n", ("urllib3", "2.8.0")), ("charset-normalizer==3.5.2", ("charset-normalizer", "3.5.2"))]:
-            r = parse_pin(line)
-            assert r == want, f"parse_pin({line!r}) должна вернуть {want}, а вернула {r!r}"
-    - name: Без == — ValueError с текстом
+    - name: Без == — текст исключения
       code: |
         for line, shown in [("certifi>=2017.4.17", "certifi>=2017.4.17"), ("  pandas\n", "pandas"), ("idna<4,>=2.5", "idna<4,>=2.5")]:
             msg = None
@@ -121,8 +152,7 @@ questions:
                 parse_pin(line)
             except ValueError as e:
                 msg = str(e)
-            assert msg is not None, f"parse_pin({line!r}) должна выбросить ValueError"
-            assert msg == f"версия не зафиксирована: {shown}", f"Текст исключения: «{msg}». Нужен: версия не зафиксирована: {shown}"
+            assert msg == f"версия не зафиксирована: {shown}", f"Текст исключения для {line!r}: «{msg}». Нужен: версия не зафиксирована: {shown}"
   explain: 'Сначала строку чистят от пробелов по краям — и для разбора, и для текста ошибки. Наличие `==` проверяют до `split`: иначе строка без него даст список из одного элемента, и распаковка в два имени упадёт со своим, непонятным для человека `ValueError`.'
 - id: code-readme-call
   type: code
@@ -194,18 +224,18 @@ questions:
     `spec` — одно или несколько условий через запятую, все должны выполняться; условие — оператор `==`, `>=` или `<` и версия, вокруг условия могут стоять пробелы. Версии сравниваются по частям как числа; у версий в одном сравнении одинаковое число частей не гарантировано: `4` равно `4.0.0`.
 
     Пример 1
-    ```input
+    ```call
     fits("2.8.0", "<3,>=1.21.1")
     ```
-    ```output
+    ```return
     True
     ```
 
     Пример 2
-    ```input
+    ```call
     fits("1.21.0", "<3,>=1.21.1")
     ```
-    ```output
+    ```return
     False
     ```
   starter: |
@@ -246,24 +276,64 @@ questions:
                 return False
         return True
   tests:
-    asserts:
-    - name: Ограничения из дерева requests
-      code: |
-        cases = [("2.8.0", "<3,>=1.21.1", True), ("1.21.0", "<3,>=1.21.1", False), ("1.26.18", "<3,>=1.21.1", True),
-                 ("3.0.0", "<3,>=1.21.1", False), ("3.5.2", "<4,>=2", True), ("4.0.0", "<4,>=2", False),
-                 ("2", "<4,>=2", True), ("2026.11.20", ">=2017.4.17", True)]
-        for version, spec, want in cases:
-            r = fits(version, spec)
-            assert r == want, f"fits(\"{version}\", \"{spec}\") должна вернуть {want}, а вернула {r!r}"
-    - name: Точная версия и числа больше девяти
-      code: |
-        cases = [("2.32.3", "==2.32.3", True), ("2.32.4", "==2.32.3", False), ("4", "==4.0.0", True),
-                 ("2.10.0", ">=2.9", True), ("2.9.0", ">=2.10", False), ("2.10", "<2.9", False)]
-        for version, spec, want in cases:
-            r = fits(version, spec)
-            assert r == want, f"fits(\"{version}\", \"{spec}\") должна вернуть {want}, а вернула {r!r}"
-    - name: Пробелы вокруг условий
-      code: |
-        r = fits("2.5", " >=2.0 , <3 ")
-        assert r is True, f"fits(\"2.5\", \" >=2.0 , <3 \") должна вернуть True, а вернула {r!r}"
+    function: fits
+    calls:
+    - name: Тест 1
+      args: ["2.8.0", "<3,>=1.21.1"]
+      expect: true
+    - name: Тест 2
+      args: ["1.21.0", "<3,>=1.21.1"]
+      expect: false
+    - name: Тест 3
+      args: ["1.26.18", "<3,>=1.21.1"]
+      expect: true
+      hidden: true
+    - name: Тест 4
+      args: ["3.0.0", "<3,>=1.21.1"]
+      expect: false
+      hidden: true
+    - name: Тест 5
+      args: ["3.5.2", "<4,>=2"]
+      expect: true
+      hidden: true
+    - name: Тест 6
+      args: ["4.0.0", "<4,>=2"]
+      expect: false
+      hidden: true
+    - name: Тест 7
+      args: ["2", "<4,>=2"]
+      expect: true
+      hidden: true
+    - name: Тест 8
+      args: ["2026.11.20", ">=2017.4.17"]
+      expect: true
+      hidden: true
+    - name: Тест 9
+      args: ["2.32.3", "==2.32.3"]
+      expect: true
+      hidden: true
+    - name: Тест 10
+      args: ["2.32.4", "==2.32.3"]
+      expect: false
+      hidden: true
+    - name: Тест 11
+      args: ["4", "==4.0.0"]
+      expect: true
+      hidden: true
+    - name: Тест 12
+      args: ["2.10.0", ">=2.9"]
+      expect: true
+      hidden: true
+    - name: Тест 13
+      args: ["2.9.0", ">=2.10"]
+      expect: false
+      hidden: true
+    - name: Тест 14
+      args: ["2.10", "<2.9"]
+      expect: false
+      hidden: true
+    - name: Тест 15
+      args: ["2.5", " >=2.0 , <3 "]
+      expect: true
+      hidden: true
   explain: 'Запятая значит «и», поэтому условия проверяют по очереди и при первом невыполненном возвращают `False`. Оператор узнают по началу условия (`startswith`), а версия — всё, что после него. Версии сравнивают кортежами чисел — `as_tuple` дополняет их нулями, чтобы `4` и `4.0.0` совпали.'

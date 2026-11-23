@@ -3,62 +3,74 @@ title: Проверка файла зависимостей
 sandbox: python-browser
 difficulty: 2
 statement: |
-  **Проверьте `requirements.txt`: выведите строки, где версия не закреплена через `==`, и сколько пакетов закреплено.**
+  **Напишите функцию `audit(path)`, которая проверяет файл зависимостей и возвращает кортеж `(незакреплённые строки, сколько закреплено, сколько пакетов всего)`.**
 
-  Всё после `#` — комментарий; строки, где после удаления комментария и пробелов ничего не осталось, пропускайте. Для каждой незакреплённой строки — `не закреплено: строка` (без комментария и пробелов по краям), в порядке файла. Последняя строка — `закреплено: N из M`, где M — число пакетов в файле. Входа нет.
+  `path` — путь к файлу вида `requirements.txt`. Закреплённая строка — та, где версия задана через `==`. Всё после `#` — комментарий; строки, где после удаления комментария и пробелов ничего не осталось, пропускайте. Незакреплённые строки — список строк без комментария и пробелов по краям, в порядке файла; два других значения — целые числа. Файлы — на вкладках над редактором; `requirements.txt`:
+  ```
+  # зависимости проекта «Отчёты»
+  requests==2.32.3
+  pandas>=2.0          # нужна новая группировка
+
+  matplotlib
+  numpy==2.1.3
+  openpyxl==3.1.5  # чтение Excel
+  ```
 
   Пример 1
-  ```input
-  (входа нет; requirements.txt — на вкладке)
+  ```call
+  audit("requirements.txt")
   ```
-  ```output
-  не закреплено: pandas>=2.0
-  не закреплено: matplotlib
-  закреплено: 3 из 5
+  ```return
+  (["pandas>=2.0", "matplotlib"], 3, 5)
   ```
 starter: |
-  # Прочитайте requirements.txt построчно.
+  def audit(path):
+      # Прочитайте файл построчно.
+      pass
+
+
+  print(audit("requirements.txt"))
 solution: |
-  pinned = 0
-  total = 0
-  with open("requirements.txt", encoding="utf-8") as f:
-      for line in f:
-          line = line.split("#")[0].strip()
-          if line == "":
-              continue
-          total += 1
-          if "==" in line:
-              pinned += 1
-          else:
-              print(f"не закреплено: {line}")
-  print(f"закреплено: {pinned} из {total}")
+  def audit(path):
+      unpinned = []
+      pinned = 0
+      total = 0
+      with open(path, encoding="utf-8") as f:
+          for line in f:
+              line = line.split("#")[0].strip()
+              if line == "":
+                  continue
+              total += 1
+              if "==" in line:
+                  pinned += 1
+              else:
+                  unpinned.append(line)
+      return unpinned, pinned, total
+
+
+  print(audit("requirements.txt"))
 tests:
   files:
-    requirements.txt: |
-      # зависимости проекта «Отчёты»
-      requests==2.32.3
-      pandas>=2.0          # нужна новая группировка
-
-      matplotlib
-      numpy==2.1.3
-      openpyxl==3.1.5  # чтение Excel
-  io:
-    - name: Пример из условия
-      stdout: "не закреплено: pandas>=2.0\nне закреплено: matplotlib\nзакреплено: 3 из 5"
+    requirements.txt: "# зависимости проекта «Отчёты»\nrequests==2.32.3\npandas>=2.0          # нужна новая группировка\n\nmatplotlib\nnumpy==2.1.3\nopenpyxl==3.1.5  # чтение Excel\n"
+    pinned.txt: "certifi==2026.11.20\ncharset-normalizer==3.5.2\nidna==3.20\nrequests==2.32.3\nurllib3==2.8.0\n"
+    ranges.txt: "#\n   # пусто\n\nurllib3<3,>=1.21.1\n  scikit-learn ~= 1.5  # почти точно\n"
+    empty.txt: ""
+  function: audit
+  calls:
+    - name: Пример 1
+      args: ["requirements.txt"]
+      expect_py: '(["pandas>=2.0", "matplotlib"], 3, 5)'
     - name: Всё закреплено
-      files:
-        requirements.txt: "certifi==2026.11.20\ncharset-normalizer==3.5.2\nidna==3.20\nrequests==2.32.3\nurllib3==2.8.0\n"
-      stdout: "закреплено: 5 из 5"
+      args: ["pinned.txt"]
+      expect: [[], 5, 5]
       hidden: true
     - name: Только комментарии и диапазоны
-      files:
-        requirements.txt: "#\n   # пусто\n\nurllib3<3,>=1.21.1\n  scikit-learn ~= 1.5  # почти точно\n"
-      stdout: "не закреплено: urllib3<3,>=1.21.1\nне закреплено: scikit-learn ~= 1.5\nзакреплено: 0 из 2"
+      args: ["ranges.txt"]
+      expect: [["urllib3<3,>=1.21.1", "scikit-learn ~= 1.5"], 0, 2]
       hidden: true
     - name: Пустой файл
-      files:
-        requirements.txt: ""
-      stdout: "закреплено: 0 из 0"
+      args: ["empty.txt"]
+      expect: [[], 0, 0]
       hidden: true
 hints:
   - level: 1
@@ -66,4 +78,4 @@ hints:
   - level: 2
     text: 'Комментарий отрезает `split("#")[0]` — всё до первой решётки; пробелы по краям убирает `strip()`. Пустой после этого строке в подсчёте не место.'
   - level: 3
-    text: 'Два счётчика до цикла: сколько пакетов и сколько закреплено. Закреплено — если в очищенной строке есть `"=="`, проверка `in`.'
+    text: 'Два счётчика до цикла: сколько пакетов и сколько закреплено. Закреплено — если в очищенной строке есть `"=="`, проверка `in`; остальные строки — в список. Три значения возвращают через запятую: `return a, b, c`.'

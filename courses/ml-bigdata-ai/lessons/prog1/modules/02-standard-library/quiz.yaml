@@ -62,41 +62,50 @@ questions:
 - id: code-fix-counter-words
   type: code
   q: |
-    **Исправьте программу: она должна вывести самое частое слово строки и сколько раз оно встретилось.**
+    **Исправьте функцию `top_word(line)`: она должна вернуть пару `(слово, сколько раз)` для самого частого слова строки.**
 
-    На входе — слова через пробел. Вывод — `слово: число`; при равенстве — слово, встреченное раньше.
+    `line` — слова через пробел, хотя бы одно. При равенстве — слово, встреченное раньше.
 
     Пример 1
-    ```input
-    мама мыла раму мама
+    ```call
+    top_word("мама мыла раму мама")
     ```
-    ```output
-    мама: 2
+    ```return
+    ("мама", 2)
     ```
   starter: |
     from collections import Counter
 
-    counts = Counter(input())
-    word, n = counts.most_common(1)[0]
-    print(f"{word}: {n}")
+
+    def top_word(line):
+        counts = Counter(line)
+        return counts.most_common(1)[0]
+
+
+    print(top_word("мама мыла раму мама"))
   solution: |
     from collections import Counter
 
-    counts = Counter(input().split())
-    word, n = counts.most_common(1)[0]
-    print(f"{word}: {n}")
+
+    def top_word(line):
+        counts = Counter(line.split())
+        return counts.most_common(1)[0]
+
+
+    print(top_word("мама мыла раму мама"))
   tests:
-    io:
+    function: top_word
+    calls:
     - name: Пример из условия
-      stdin: "мама мыла раму мама\n"
-      stdout: "мама: 2"
+      args: ["мама мыла раму мама"]
+      expect_py: '("мама", 2)'
     - name: Равные частоты
-      stdin: "чай кофе кофе чай сок\n"
-      stdout: "чай: 2"
+      args: ["чай кофе кофе чай сок"]
+      expect: ["чай", 2]
       hidden: true
     - name: Одно слово
-      stdin: "привет\n"
-      stdout: "привет: 1"
+      args: ["привет"]
+      expect: ["привет", 1]
       hidden: true
   explain: '`Counter` считает элементы того, что перебирает, а перебор строки даёт символы: самым частым выходит буква «а» или пробел. Словами строка становится после `split()`.'
 - id: code-fix-environ-int
@@ -107,7 +116,7 @@ questions:
     Значение возвращайте целым числом.
 
     Пример 1
-    ```input
+    ```python
     os.environ["MAX_ITEMS"] = "12"
     max_items()
     ```
@@ -224,12 +233,14 @@ questions:
     Броски — `random.randint(1, 6)`, `seed` задаётся через `random.seed(seed)` один раз, перед первым броском.
 
     Пример 1
-    ```input
-    roll_dice(5, 42) == roll_dice(5, 42)
+    ```call
+    roll_dice(5, 42)
     ```
-    ```output
-    True
+    ```return
+    [6, 1, 1, 6, 3]
     ```
+
+    Повторный вызов `roll_dice(5, 42)` вернёт тот же список.
   starter: |
     import random
 
@@ -253,24 +264,27 @@ questions:
             rolls.append(random.randint(1, 6))
         return rolls
   tests:
-    asserts:
-    - name: Те же броски, что у эталона
-      code: |
-        import random as _r
-        for n, s in [(5, 42), (10, 7), (1, 3)]:
-            _r.seed(s)
-            want = [_r.randint(1, 6) for _ in range(n)]
-            got = roll_dice(n, s)
-            assert got == want, f"roll_dice({n}, {s}) должна вернуть {want}, а вернула {got}"
-    - name: Одинаковый seed — одинаковый список
-      code: |
-        a = roll_dice(8, 2024)
-        b = roll_dice(8, 2024)
-        assert a == b, f"Два вызова с seed 2024 дали разное: {a} и {b}"
+    function: roll_dice
+    calls:
+    - name: Пять бросков
+      args: [5, 42]
+      expect: [6, 1, 1, 6, 3]
+    - name: Десять бросков
+      args: [10, 7]
+      expect: [3, 2, 4, 6, 1, 1, 5, 1, 3, 5]
+      hidden: true
+    - name: Один бросок
+      args: [1, 3]
+      expect: [2]
+      hidden: true
+    - name: Восемь бросков
+      args: [8, 2024]
+      expect: [4, 2, 6, 5, 3, 2, 6, 4]
+      hidden: true
     - name: Ноль бросков
-      code: |
-        r = roll_dice(0, 1)
-        assert r == [], f"roll_dice(0, 1) должна вернуть [], а вернула {r}"
+      args: [0, 1]
+      expect: []
+      hidden: true
   explain: '`random.seed(seed)` внутри цикла каждый раз начинает последовательность заново, и каждый бросок — её первое число. Seed задают один раз перед бросками: тогда вызов с тем же seed повторит весь список, а внутри списка числа идут дальше по последовательности.'
 - id: code-write-median-courier
   type: code

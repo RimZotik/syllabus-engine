@@ -12,24 +12,16 @@ statement: |
   В песочнице окружение снаружи не задать: проверки сами присваивают `os.environ[...]` перед вызовом.
 
   Пример 1
-  ```input
-  os.environ["SHOP_KEY"] = "a8f3"
-  os.environ["SHOP_DISCOUNT"] = "15"
+  Сначала `os.environ["SHOP_KEY"] = "a8f3"` и `os.environ["SHOP_DISCOUNT"] = "15"`, затем
+  ```call
   read_settings()
   ```
-  ```output
-  {'key': 'a8f3', 'discount': 15, 'currency': '₽'}
+  ```return
+  {"key": "a8f3", "discount": 15, "currency": "₽"}
   ```
 
   Пример 2
-  ```input
-  os.environ["SHOP_KEY"] = "a8f3"
-  os.environ["SHOP_DISCOUNT"] = "пять"
-  read_settings()
-  ```
-  ```output
-  ValueError: SHOP_DISCOUNT должна быть целым числом от 0 до 100, а не «пять»
-  ```
+  Если `os.environ["SHOP_DISCOUNT"] = "пять"`, вызов `read_settings()` выбрасывает `ValueError("SHOP_DISCOUNT должна быть целым числом от 0 до 100, а не «пять»")`.
 starter: |
   import os
 
